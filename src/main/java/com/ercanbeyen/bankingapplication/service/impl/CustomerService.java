@@ -51,8 +51,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Predicate<Customer> customerPredicate = customer -> {
-            Boolean addressCondition = (options.getCity() == null || options.getCity() == customer.getAddress().getCity());
-
             LocalDate filteringDay = options.getBirthDate();
             LocalDate customerBirthday = customer.getBirthDate();
             Boolean birthDayCondition = (filteringDay == null)
@@ -60,7 +58,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
             Boolean createTimeCondition = (options.getCreateTime() == null || options.getCreateTime().isEqual(options.getCreateTime()));
 
-            return (addressCondition && birthDayCondition && createTimeCondition);
+            return (birthDayCondition && createTimeCondition);
         };
 
         List<CustomerDto> customerDtos = new ArrayList<>();
@@ -113,7 +111,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         customer.setEmail(requestCustomer.getEmail());
         customer.setGender(requestCustomer.getGender());
         customer.setBirthDate(requestCustomer.getBirthDate());
-        customer.setAddress(requestCustomer.getAddress());
 
         return customerMapper.entityToDto(customerRepository.save(customer));
     }
