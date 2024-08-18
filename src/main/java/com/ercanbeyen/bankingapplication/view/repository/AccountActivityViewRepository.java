@@ -1,6 +1,6 @@
-package com.ercanbeyen.bankingapplication.repository;
+package com.ercanbeyen.bankingapplication.view.repository;
 
-import com.ercanbeyen.bankingapplication.view.AccountActivityView;
+import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

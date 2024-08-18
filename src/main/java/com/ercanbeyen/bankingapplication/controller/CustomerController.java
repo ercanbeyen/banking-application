@@ -57,7 +57,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getAccounts(id, options));
     }
 
-    @GetMapping("/{id}/transactions")
+    @GetMapping("/{id}/account-activities")
     public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") Integer id, AccountActivityFilteringOptions options) {
         return ResponseEntity.ok(customerService.getAccountActivities(id, options));
     }

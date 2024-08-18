@@ -26,6 +26,11 @@ public class Address {
     private String details;
     @Enumerated(EnumType.STRING)
     private Ownership ownership;
-    @ManyToMany(mappedBy = "addresses")
+    @ManyToMany
+    @JoinTable(
+            name = "customers_addresses",
+            joinColumns = {@JoinColumn(name = "customer_national_id")},
+            inverseJoinColumns = {@JoinColumn(name = "address_id")}
+    )
     private Set<Customer> customers = new HashSet<>();
 }

@@ -34,12 +34,7 @@ public non-sealed class Customer extends BaseEntity {
     @Column(name = "birth_date")
     private LocalDate birthDate;
     @Getter
-    @ManyToMany
-    @JoinTable(
-            name = "customers_addresses",
-            joinColumns = {@JoinColumn(name = "customer_national_id")},
-            inverseJoinColumns = {@JoinColumn(name = "address_id")}
-    )
+    @ManyToMany(mappedBy = "customers")
     private Set<Address> addresses = new HashSet<>();
     @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinColumn(name = "profile_photo")

@@ -1,4 +1,4 @@
-package com.ercanbeyen.bankingapplication.view;
+package com.ercanbeyen.bankingapplication.view.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;

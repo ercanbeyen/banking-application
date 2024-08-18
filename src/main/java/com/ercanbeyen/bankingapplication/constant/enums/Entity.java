@@ -13,7 +13,8 @@ public enum Entity {
     ACCOUNT_ACTIVITY("AccountActivity"),
     REGULAR_TRANSFER_ORDER("RegularTransferOrder"),
     RATING("Rating"),
-    EXCHANGE("Exchange");
+    EXCHANGE("Exchange"),
+    ADDRESS("Address");
 
     private final String value;
 
