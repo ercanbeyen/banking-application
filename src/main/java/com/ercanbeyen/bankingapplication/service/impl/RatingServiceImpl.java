@@ -114,11 +114,11 @@ public class RatingServiceImpl implements RatingService {
     }
 
     private Rating findById(UUID id) {
-        String value = Entity.RATING.getValue();
+        String entity = Entity.RATING.getValue();
         Rating rating = ratingRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return rating;
     }

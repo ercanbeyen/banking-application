@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -11,7 +12,6 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AddressMapper;
 import com.ercanbeyen.bankingapplication.repository.AddressRepository;
-import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.AddressService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,6 @@ public class AddressServiceImpl implements AddressService {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         List<AddressDto> addressDtos = new ArrayList<>();
-
         addressRepository.findAll()
                 .forEach(address -> addressDtos.add(addressMapper.entityToDto(address)));
 
@@ -46,12 +45,7 @@ public class AddressServiceImpl implements AddressService {
     @Override
     public AddressDto getEntity(String id) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-
-        Address address = addressRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.ADDRESS.getValue())));
-
-        log.info(LogMessages.RESOURCE_FOUND, Entity.ADDRESS.getValue());
-
+        Address address = findById(id);
         return addressMapper.entityToDto(address);
     }
 
@@ -80,18 +74,15 @@ public class AddressServiceImpl implements AddressService {
     public AddressDto updateEntity(String id, AddressDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        Address address = addressRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.ADDRESS.getValue())));
-
-        log.info(LogMessages.RESOURCE_FOUND, Entity.ADDRESS.getValue());
+        Address address = findById(id);
+        checkRequestBeforeUpdateEntity(request, address.getType());
 
         Set<Customer> customers = new HashSet<>();
-
-        request.customerNationalIds().forEach(nationalId -> customers.add(customerService.findByNationalId(nationalId)));
+        request.customerNationalIds()
+                .forEach(nationalId -> customers.add(customerService.findByNationalId(nationalId)));
 
         address.setCustomers(customers);
         address.setCity(request.city());
-        address.setType(request.type());
         address.setDetails(request.details());
         address.setOwnership(request.ownership());
         address.setPhoneNumber(request.phoneNumber());
@@ -115,5 +106,21 @@ public class AddressServiceImpl implements AddressService {
                         });
 
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, Entity.NOTIFICATION.getValue(), id);
+    }
+
+    private Address findById(String id) {
+        String entity = Entity.ADDRESS.getValue();
+        Address address = addressRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+
+        log.info(LogMessages.RESOURCE_FOUND, entity);
+
+        return address;
+    }
+
+    private static void checkRequestBeforeUpdateEntity(AddressDto request, AddressType addressType) {
+        if (request.type() != addressType) {
+            throw new ResourceConflictException("Address type should not be changed");
+        }
     }
 }

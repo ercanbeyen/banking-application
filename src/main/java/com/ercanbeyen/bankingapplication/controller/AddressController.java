@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.dto.AddressDto;
 import com.ercanbeyen.bankingapplication.dto.request.CreateAddressRequest;
 import com.ercanbeyen.bankingapplication.service.AddressService;
+import com.ercanbeyen.bankingapplication.util.AddressUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -28,12 +29,14 @@ public class AddressController {
 
     @PostMapping
     public ResponseEntity<AddressDto> createEntity(@RequestBody @Valid CreateAddressRequest request) {
+        AddressUtils.checkAddressType(request.type(), request.companyName());
         return ResponseEntity.ok(addressService.createEntity(request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AddressDto> updateEntity(@PathVariable("id") String id, @RequestBody @Valid AddressDto addressDto) {
-        return ResponseEntity.ok(addressService.updateEntity(id, addressDto));
+    public ResponseEntity<AddressDto> updateEntity(@PathVariable("id") String id, @RequestBody @Valid AddressDto request) {
+        AddressUtils.checkAddressType(request.type(), request.companyName());
+        return ResponseEntity.ok(addressService.updateEntity(id, request));
     }
 
     @DeleteMapping("/{id}")

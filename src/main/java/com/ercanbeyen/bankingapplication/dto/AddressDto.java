@@ -25,6 +25,7 @@ public record AddressDto(
         String details,
         String phoneNumber,
         @NotNull(message = "Ownership should not be null")
-        Ownership ownership) {
+        Ownership ownership,
+        String companyName) {
 
 }

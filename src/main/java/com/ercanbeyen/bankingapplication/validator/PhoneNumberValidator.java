@@ -3,7 +3,6 @@ package com.ercanbeyen.bankingapplication.validator;
 import com.ercanbeyen.bankingapplication.annotation.PhoneNumberRequest;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import org.springframework.util.StringUtils;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -17,7 +16,7 @@ public class PhoneNumberValidator implements ConstraintValidator<PhoneNumberRequ
 
     @Override
     public boolean isValid(String phoneNumber, ConstraintValidatorContext constraintValidatorContext) {
-        if (!StringUtils.hasLength(phoneNumber)) {
+        if (phoneNumber == null || phoneNumber.isBlank()) {
             return false;
         }
 

@@ -33,4 +33,5 @@ public class Address {
             inverseJoinColumns = {@JoinColumn(name = "address_id")}
     )
     private Set<Customer> customers = new HashSet<>();
+    private String companyName; // field for type WORK
 }

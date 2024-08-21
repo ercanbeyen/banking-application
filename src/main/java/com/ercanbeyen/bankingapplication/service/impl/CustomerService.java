@@ -230,8 +230,14 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
      */
     public Customer findByNationalId(String nationalId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        return customerRepository.findByNationalId(nationalId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.CUSTOMER.getValue())));
+
+        String entity = Entity.CUSTOMER.getValue();
+        Customer customer = customerRepository.findByNationalId(nationalId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+
+        log.info(LogMessages.RESOURCE_FOUND, entity);
+
+        return customer;
     }
 
     /***
@@ -245,11 +251,11 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     }
 
     private Customer findById(Integer id) {
-        String value = Entity.CUSTOMER.getValue();
+        String entity = Entity.CUSTOMER.getValue();
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return customer;
     }

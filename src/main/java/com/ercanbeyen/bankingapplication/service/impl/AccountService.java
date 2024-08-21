@@ -229,11 +229,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     }
 
     public Account findById(Integer id) {
-        String value = Entity.ACCOUNT.getValue();
+        String entity = Entity.ACCOUNT.getValue();
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return account;
     }

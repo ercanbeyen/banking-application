@@ -116,11 +116,11 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     }
 
     private Exchange findById(Integer id) {
-        String value = Entity.EXCHANGE.getValue();
+        String entity = Entity.EXCHANGE.getValue();
         Exchange exchange = exchangeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return exchange;
     }
