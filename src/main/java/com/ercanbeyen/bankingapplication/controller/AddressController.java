@@ -41,13 +41,6 @@ public class AddressController {
         return ResponseEntity.ok(addressService.updateEntity(id, request));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteEntity(@PathVariable("id") String id) {
-        addressService.deleteEntity(id);
-        return ResponseEntity.noContent()
-                .build();
-    }
-
     @PutMapping("/{addressId}/customers/{customerNationalId}")
     public ResponseEntity<MessageResponse<String>> modifyRelationshipBetweenAddressAndCustomer(
             @PathVariable("addressId") String addressId,

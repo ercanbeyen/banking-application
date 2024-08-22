@@ -11,6 +11,5 @@ public interface AddressService {
     AddressDto getEntity(String id);
     AddressDto createEntity(CreateAddressRequest request);
     AddressDto updateEntity(String id, AddressDto request);
-    void deleteEntity(String id);
     String modifyRelationshipBetweenAddressAndCustomer(String addressId, String customerNationalId, AddressActivity activity);
 }

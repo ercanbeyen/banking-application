@@ -87,23 +87,6 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public void deleteEntity(String id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-
-        String entity = Entity.ADDRESS.getValue();
-
-        addressRepository.findById(id)
-                .ifPresentOrElse(
-                        address -> addressRepository.deleteById(id),
-                        () -> {
-                            log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
-                            throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
-                        });
-
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
-    }
-
-    @Override
     public String modifyRelationshipBetweenAddressAndCustomer(String addressId, String customerNationalId, AddressActivity activity) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
@@ -122,6 +105,8 @@ public class AddressServiceImpl implements AddressService {
             }
 
             address.getCustomers().add(customer);
+            addressRepository.save(address);
+
             response = String.format("%s is successfully related with %s", customerEntity, addressEntity);
         } else {
             if (!isCustomerRelatedWithAddress.test(address, customer)) {
@@ -129,10 +114,17 @@ public class AddressServiceImpl implements AddressService {
             }
 
             address.getCustomers().remove(customer);
+
+            if (address.getCustomers().isEmpty()) {
+                log.info("No more related customers exist, so address is going to be deleted");
+                addressRepository.delete(address);
+            } else {
+                log.info("Still related customers exist, so just update the database");
+                addressRepository.save(address);
+            }
+
             response = String.format("Relation of %s is successfully terminated with %s", customerEntity, addressEntity);
         }
-
-        addressRepository.save(address);
 
         return response;
     }
