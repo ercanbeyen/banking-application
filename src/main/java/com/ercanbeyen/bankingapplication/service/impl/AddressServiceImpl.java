@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AddressActivity;
 import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
@@ -19,9 +20,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
+import java.util.function.BiPredicate;
 
 @Service
 @RequiredArgsConstructor
@@ -77,11 +77,6 @@ public class AddressServiceImpl implements AddressService {
         Address address = findById(id);
         checkRequestBeforeUpdateEntity(request, address.getType());
 
-        Set<Customer> customers = new HashSet<>();
-        request.customerNationalIds()
-                .forEach(nationalId -> customers.add(customerService.findByNationalId(nationalId)));
-
-        address.setCustomers(customers);
         address.setCity(request.city());
         address.setDetails(request.details());
         address.setOwnership(request.ownership());
@@ -105,7 +100,41 @@ public class AddressServiceImpl implements AddressService {
                             throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
                         });
 
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, Entity.NOTIFICATION.getValue(), id);
+        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
+    }
+
+    @Override
+    public String modifyRelationshipBetweenAddressAndCustomer(String addressId, String customerNationalId, AddressActivity activity) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Address address = findById(addressId);
+        Customer customer = customerService.findByNationalId(customerNationalId);
+
+        BiPredicate<Address, Customer> isCustomerRelatedWithAddress = (givenAddress, givenCustomer) -> givenAddress.getCustomers().contains(givenCustomer);
+
+        String customerEntity = Entity.CUSTOMER.getValue();
+        String addressEntity = Entity.ADDRESS.getValue();
+        String response;
+
+        if (activity == AddressActivity.ADD) {
+            if (isCustomerRelatedWithAddress.test(address, customer)) {
+                throw new ResourceConflictException(String.format("%s is already related with %s", customerEntity, addressEntity));
+            }
+
+            address.getCustomers().add(customer);
+            response = String.format("%s is successfully related with %s", customerEntity, addressEntity);
+        } else {
+            if (!isCustomerRelatedWithAddress.test(address, customer)) {
+                throw new ResourceConflictException(String.format("%s is not already related with %s", customerEntity, addressEntity));
+            }
+
+            address.getCustomers().remove(customer);
+            response = String.format("Relation of %s is successfully terminated with %s", customerEntity, addressEntity);
+        }
+
+        addressRepository.save(address);
+
+        return response;
     }
 
     private Address findById(String id) {

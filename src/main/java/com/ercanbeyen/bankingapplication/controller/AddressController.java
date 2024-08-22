@@ -1,7 +1,9 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AddressActivity;
 import com.ercanbeyen.bankingapplication.dto.AddressDto;
 import com.ercanbeyen.bankingapplication.dto.request.CreateAddressRequest;
+import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.AddressService;
 import com.ercanbeyen.bankingapplication.util.AddressUtils;
 import jakarta.validation.Valid;
@@ -44,5 +46,14 @@ public class AddressController {
         addressService.deleteEntity(id);
         return ResponseEntity.noContent()
                 .build();
+    }
+
+    @PutMapping("/{addressId}/customers/{customerNationalId}")
+    public ResponseEntity<MessageResponse<String>> modifyRelationshipBetweenAddressAndCustomer(
+            @PathVariable("addressId") String addressId,
+            @PathVariable("customerNationalId") String customerNationalId,
+            @RequestParam("activity") AddressActivity activity) {
+        MessageResponse<String> response = new MessageResponse<>(addressService.modifyRelationshipBetweenAddressAndCustomer(addressId, customerNationalId, activity));
+        return ResponseEntity.ok(response);
     }
 }
