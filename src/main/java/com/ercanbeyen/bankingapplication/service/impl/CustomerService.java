@@ -9,10 +9,7 @@ import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
-import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
-import com.ercanbeyen.bankingapplication.mapper.NotificationMapper;
-import com.ercanbeyen.bankingapplication.mapper.RegularTransferOrderMapper;
+import com.ercanbeyen.bankingapplication.mapper.*;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
@@ -42,6 +39,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
     private final RegularTransferOrderMapper regularTransferOrderMapper;
+    private final AddressMapper addressMapper;
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
@@ -210,13 +208,27 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return notificationDtos;
     }
 
-    public List<RegularTransferOrderDto> getRegularTransferOrdersOfCustomer(Integer customerId, Integer accountId) {
+    public List<AddressDto> getAddresses(Integer id) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Customer customer = findById(id);
+        List<AddressDto> addressDtos = new ArrayList<>();
+
+        customer.getAddresses()
+                .forEach(address -> addressDtos.add(addressMapper.entityToDto(address)));
+
+        return addressDtos;
+    }
+
+    public List<RegularTransferOrderDto> getRegularTransferOrders(Integer customerId, Integer accountId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Customer customer = findById(customerId);
+        String entity = Entity.ACCOUNT.getValue();
         Account account = customer.getAccount(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.ACCOUNT.getValue())));
-        log.info(LogMessages.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return account.getRegularTransferOrders()
                 .stream()
