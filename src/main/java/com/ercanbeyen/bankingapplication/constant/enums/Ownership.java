@@ -4,5 +4,6 @@ public enum Ownership {
     FAMILY_PROPERTY,
     RENT,
     PUBLIC_HOUSING,
-    OWNER
+    OWNER,
+    EMPLOYEE
 }

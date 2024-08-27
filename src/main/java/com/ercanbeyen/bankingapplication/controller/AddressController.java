@@ -31,13 +31,13 @@ public class AddressController {
 
     @PostMapping
     public ResponseEntity<AddressDto> createEntity(@RequestBody @Valid CreateAddressRequest request) {
-        AddressUtils.checkAddressType(request.type(), request.companyName());
+        AddressUtils.checkAddressCreateRequest(request);
         return ResponseEntity.ok(addressService.createEntity(request));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AddressDto> updateEntity(@PathVariable("id") String id, @RequestBody @Valid AddressDto request) {
-        AddressUtils.checkAddressType(request.type(), request.companyName());
+        AddressUtils.checkAddressUpdateRequest(request);
         return ResponseEntity.ok(addressService.updateEntity(id, request));
     }
 
