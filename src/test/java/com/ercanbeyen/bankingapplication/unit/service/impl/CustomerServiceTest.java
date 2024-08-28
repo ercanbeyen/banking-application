@@ -78,7 +78,7 @@ class CustomerServiceTest {
         // given
         List<CustomerDto> expected = List.of(customerDtos.getFirst());
         CustomerFilteringOptions filteringOptions = new CustomerFilteringOptions();
-        filteringOptions.setBirthDate(LocalDate.of(2005, 8, 15));
+        filteringOptions.setBirthDate(LocalDate.of(1980, 8, 15));
 
         doReturn(customers)
                 .when(customerRepository)

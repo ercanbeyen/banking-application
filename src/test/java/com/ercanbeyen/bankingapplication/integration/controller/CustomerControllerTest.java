@@ -104,6 +104,7 @@ class CustomerControllerTest {
         CustomerDto request = MockCustomerFactory.generateCustomerDtoRequests().getFirst();
 
         given()
+                //.accept(ContentType.JSON)
                 .contentType(ContentType.JSON)
                 .body("""
                         {
@@ -112,7 +113,7 @@ class CustomerControllerTest {
                             "nationalId": "12345678911",
                             "phoneNumber": "+905322864661",
                             "email": "test1@email.com",
-                            "birthDate": "2005-08-15",
+                            "birthDate": "1980-08-15",
                             "gender": "MALE"
                         }
                         """)

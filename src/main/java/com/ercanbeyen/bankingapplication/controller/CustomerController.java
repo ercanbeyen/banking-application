@@ -7,9 +7,12 @@ import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
+import com.ercanbeyen.bankingapplication.util.CustomerUtils;
 import com.ercanbeyen.bankingapplication.util.PhotoUtils;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -25,6 +28,20 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public CustomerController(CustomerService customerService) {
         super(customerService);
         this.customerService = customerService;
+    }
+
+    @PostMapping
+    @Override
+    public ResponseEntity<CustomerDto> createEntity(@RequestBody @Valid CustomerDto request) {
+        CustomerUtils.checkRequest(request);
+        return new ResponseEntity<>(customerService.createEntity(request), HttpStatus.CREATED);
+    }
+
+    @PutMapping("/{id}")
+    @Override
+    public ResponseEntity<CustomerDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid CustomerDto request) {
+        CustomerUtils.checkRequest(request);
+        return ResponseEntity.ok(customerService.updateEntity(id, request));
     }
 
     @PostMapping("/{id}")
