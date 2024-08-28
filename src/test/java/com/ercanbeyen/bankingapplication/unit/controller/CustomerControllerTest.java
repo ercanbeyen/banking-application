@@ -102,7 +102,7 @@ class CustomerControllerTest {
                 .createEntity(any());
 
         // when
-        ResponseEntity<CustomerDto> responseEntity = customerController.createEntity(MockCustomerFactory.generateCustomerDtoRequests().getFirst());
+        ResponseEntity<CustomerDto> responseEntity = customerController.createEntity(customerDtos.getFirst());
 
         // then
         verify(customerService, times(1)).createEntity(any());

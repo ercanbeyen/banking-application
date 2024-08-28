@@ -153,7 +153,7 @@ class CustomerServiceTest {
         // given
         Customer customer = customers.getFirst();
         CustomerDto expected = customerDtos.getFirst();
-        CustomerDto request = MockCustomerFactory.generateCustomerDtoRequests().getFirst();
+        CustomerDto request = customerDtos.getFirst();
 
         doReturn(customer)
                 .when(customerMapper)
@@ -185,7 +185,7 @@ class CustomerServiceTest {
     @DisplayName("Exception path test: Create customer case")
     void givenCustomerDto_whenCreateEntity_thenThrowResourceConflictException() {
         // given
-        CustomerDto request = MockCustomerFactory.generateCustomerDtoRequests().getFirst();
+        CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
         String expected = String.format(ResponseMessages.ALREADY_EXISTS, Entity.CUSTOMER.getValue());
 
         doReturn(customers).when(customerRepository).findAll();

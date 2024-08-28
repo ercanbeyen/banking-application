@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class MockCustomerFactory {
+    private MockCustomerFactory() {}
+
     public static List<Customer> generateMockCustomers() {
         int id = 1;
 
@@ -86,9 +88,5 @@ public class MockCustomerFactory {
         customerDto3.setBirthDate(LocalDate.of(1993, 2, 20));
 
         return List.of(customerDto1, customerDto2, customerDto3);
-    }
-
-    public static List<CustomerDto> generateCustomerDtoRequests() {
-        return generateMockCustomerDtos();
     }
 }

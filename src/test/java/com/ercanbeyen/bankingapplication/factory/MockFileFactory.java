@@ -8,6 +8,8 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.IOException;
 
 public class MockFileFactory {
+    private MockFileFactory() {}
+
     public static File generateMockFile() throws IOException {
         MultipartFile multipartFile = generateMultipartFile();
         return new File(multipartFile.getName(), multipartFile.getContentType(), multipartFile.getBytes());
