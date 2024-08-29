@@ -1,16 +1,12 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Gender;
-import com.ercanbeyen.bankingapplication.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Objects;
-import java.util.Optional;
+import java.util.*;
 
 @Setter
 @Entity
@@ -38,11 +34,8 @@ public non-sealed class Customer extends BaseEntity {
     @Column(name = "birth_date")
     private LocalDate birthDate;
     @Getter
-    @Embedded
-    @AttributeOverride(name = "city", column = @Column(name = "city"))
-    @AttributeOverride(name = "zipCode", column = @Column(name = "zip_code"))
-    @AttributeOverride(name = "details", column = @Column(name = "address_details", length = 500))
-    private Address address;
+    @ManyToMany(mappedBy = "customers")
+    private Set<Address> addresses = new HashSet<>();
     @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinColumn(name = "profile_photo")
     private File profilePhoto;

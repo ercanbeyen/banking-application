@@ -122,11 +122,11 @@ public class RegularTransferOrderService implements BaseService<RegularTransferO
     }
 
     private RegularTransferOrder findById(Integer id) {
-        String value = Entity.REGULAR_TRANSFER_ORDER.getValue();
+        String entity = Entity.REGULAR_TRANSFER_ORDER.getValue();
         RegularTransferOrder regularTransferOrder = regularTransferOrderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return regularTransferOrder;
     }

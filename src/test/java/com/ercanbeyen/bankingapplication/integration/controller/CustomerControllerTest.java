@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
+import com.google.gson.Gson;
 import io.restassured.RestAssured;
 import io.restassured.builder.MultiPartSpecBuilder;
 import io.restassured.http.ContentType;
@@ -47,6 +48,8 @@ class CustomerControllerTest {
     private Integer port;
     @Autowired
     private CustomerRepository customerRepository;
+    @Autowired
+    private Gson gson;
 
     private static final String CUSTOMER_COLLECTION_ENDPOINT = "/api/v1/customers";
     public static final String CUSTOMER_RESOURCE_ENDPOINT = CUSTOMER_COLLECTION_ENDPOINT + "/{id}";
@@ -101,21 +104,12 @@ class CustomerControllerTest {
     @Order(2)
     @DisplayName("Happy path test: Create customer case")
     void givenCustomerDto_whenCreateEntity_thenReturnCustomerDto() {
-        CustomerDto request = MockCustomerFactory.generateCustomerDtoRequests().getFirst();
+        CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
+        String body = gson.toJson(request);
 
         given()
                 .contentType(ContentType.JSON)
-                .body("""
-                        {
-                            "name": "Test-Name1",
-                            "surname": "Test-Surname1",
-                            "nationalId": "12345678911",
-                            "phoneNumber": "+905322864661",
-                            "email": "test1@email.com",
-                            "birthDate": "2005-08-15",
-                            "gender": "MALE"
-                        }
-                        """)
+                .body(body)
                 .when()
                 .post(CUSTOMER_COLLECTION_ENDPOINT)
                 .then()
@@ -170,26 +164,19 @@ class CustomerControllerTest {
     @Order(6)
     @DisplayName("Exception path test: Update customer case")
     void givenIdAndCustomerDto_whenUpdateEntity_thenThrowMethodArgumentNotValidException() {
+        CustomerDto customerDto = MockCustomerFactory.generateMockCustomerDtos().getFirst();
+        customerDto.setPhoneNumber("905322864662");
+        String body = gson.toJson(customerDto);
+
         given()
                 .contentType(ContentType.JSON)
-                .body("""
-                         {
-                             "name": "Test-Name1",
-                             "surname": "Test-Surname1",
-                             "nationalId": "12345678911",
-                             "phoneNumber": "905322864662",
-                             "email": "test1@email.com",
-                             "birthDate": "2005-08-15",
-                             "gender": "MALE"
-                         }
-                        """)
+                .body(body)
                 .when()
                 .put(CUSTOMER_RESOURCE_ENDPOINT, 1)
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.BAD_REQUEST.value())
                 .body("phoneNumber", equalTo(ResponseMessages.INVALID_PHONE_NUMBER));
-
     }
 
     @Test

@@ -60,7 +60,7 @@ class CustomerControllerTest {
     void givenFilteringOptions_whenGetEntity_thenReturnCustomerDtos() {
         // given
         CustomerFilteringOptions filteringOptions = new CustomerFilteringOptions();
-        filteringOptions.setBirthDate(LocalDate.of(2005, 8, 15));
+        filteringOptions.setBirthDate(LocalDate.of(1980, 8, 15));
 
         doReturn(customerDtos)
                 .when(customerService)
@@ -77,7 +77,7 @@ class CustomerControllerTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Get Customer case")
+    @DisplayName("Happy path test: Get customer case")
     void givenId_whenGetCustomer_thenReturnCustomerDto() {
         // given
         doReturn(customerDtos.getFirst())
@@ -102,7 +102,7 @@ class CustomerControllerTest {
                 .createEntity(any());
 
         // when
-        ResponseEntity<CustomerDto> responseEntity = customerController.createEntity(MockCustomerFactory.generateCustomerDtoRequests().getFirst());
+        ResponseEntity<CustomerDto> responseEntity = customerController.createEntity(customerDtos.getFirst());
 
         // then
         verify(customerService, times(1)).createEntity(any());

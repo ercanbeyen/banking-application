@@ -6,12 +6,12 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
-import com.ercanbeyen.bankingapplication.view.AccountActivityView;
+import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
 import com.ercanbeyen.bankingapplication.repository.AccountActivityRepository;
-import com.ercanbeyen.bankingapplication.repository.AccountActivityViewRepository;
+import com.ercanbeyen.bankingapplication.view.repository.AccountActivityViewRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
 import lombok.RequiredArgsConstructor;
@@ -56,9 +56,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     @Override
     public AccountActivityDto getAccountActivity(String id) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-
         AccountActivity accountActivity = findById(id);
-
         return accountActivityMapper.entityToDto(accountActivity);
     }
 
@@ -89,11 +87,11 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     }
 
     private AccountActivity findById(String id) {
-        String value = Entity.ACCOUNT_ACTIVITY.getValue();
+        String entity = Entity.ACCOUNT_ACTIVITY.getValue();
         AccountActivity accountActivity = accountActivityRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return accountActivity;
     }

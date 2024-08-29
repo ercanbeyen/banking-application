@@ -6,19 +6,20 @@
 
 ### Summary
 It is a banking application includes basic banking operations. Abstract crud approach is used throughout the development.<br/>
-There are 10 entities in this project
+There are 11 entities in this project
 
 Entities:
 - Customer
 - Account
 - File
 - Notification
-- Transaction
+- Account Activity
 - Regular Transfer Order
 - News Report
 - News
 - Rating
 - Exchange
+- Address
 
 ### Requirements
 - Customer's national id, email and phone number must be unique.
@@ -70,6 +71,10 @@ $ mvn clean install
 $ docker-compose build
 $ docker-compose up
 ```
+
+If you want to skip the tests while creating the jar file, you should replace the first command above with the following command
+
+`$ mvn clean install -D skipTests`
 
 In order to debug the application, you should follow the below steps
 

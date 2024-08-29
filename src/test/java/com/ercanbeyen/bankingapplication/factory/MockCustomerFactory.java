@@ -8,6 +8,8 @@ import java.time.LocalDate;
 import java.util.List;
 
 public class MockCustomerFactory {
+    private MockCustomerFactory() {}
+
     public static List<Customer> generateMockCustomers() {
         int id = 1;
 
@@ -19,7 +21,7 @@ public class MockCustomerFactory {
         customer1.setEmail("test1@email.com");
         customer1.setPhoneNumber("+905328465701");
         customer1.setGender(Gender.MALE);
-        customer1.setBirthDate(LocalDate.of(2005, 8, 15));
+        customer1.setBirthDate(LocalDate.of(1980, 8, 15));
 
         id++;
 
@@ -31,7 +33,7 @@ public class MockCustomerFactory {
         customer2.setEmail("test2@email.com");
         customer2.setPhoneNumber("+905328465702");
         customer2.setGender(Gender.FEMALE);
-        customer2.setBirthDate(LocalDate.of(2007, 4, 6));
+        customer2.setBirthDate(LocalDate.of(1985, 4, 6));
 
         id++;
 
@@ -43,7 +45,7 @@ public class MockCustomerFactory {
         customer3.setEmail("test3@email.com");
         customer3.setPhoneNumber("+905328465702");
         customer3.setGender(Gender.FEMALE);
-        customer3.setBirthDate(LocalDate.of(2003, 2, 20));
+        customer3.setBirthDate(LocalDate.of(1993, 2, 20));
 
         return List.of(customer1, customer2, customer3);
     }
@@ -59,7 +61,7 @@ public class MockCustomerFactory {
         customerDto1.setEmail("test1@email.com");
         customerDto1.setPhoneNumber("+905328465701");
         customerDto1.setGender(Gender.MALE);
-        customerDto1.setBirthDate(LocalDate.of(2005, 8, 15));
+        customerDto1.setBirthDate(LocalDate.of(1980, 8, 15));
 
         id++;
 
@@ -71,7 +73,7 @@ public class MockCustomerFactory {
         customerDto2.setEmail("test2@email.com");
         customerDto2.setPhoneNumber("+905328465702");
         customerDto2.setGender(Gender.FEMALE);
-        customerDto2.setBirthDate(LocalDate.of(2007, 4, 6));
+        customerDto2.setBirthDate(LocalDate.of(1985, 4, 6));
 
         id++;
 
@@ -83,12 +85,8 @@ public class MockCustomerFactory {
         customerDto3.setEmail("test3@email.com");
         customerDto3.setPhoneNumber("+905328465703");
         customerDto3.setGender(Gender.FEMALE);
-        customerDto3.setBirthDate(LocalDate.of(2003, 2, 20));
+        customerDto3.setBirthDate(LocalDate.of(1993, 2, 20));
 
         return List.of(customerDto1, customerDto2, customerDto3);
-    }
-
-    public static List<CustomerDto> generateCustomerDtoRequests() {
-        return generateMockCustomerDtos();
     }
 }

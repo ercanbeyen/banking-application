@@ -9,10 +9,7 @@ import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
-import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
-import com.ercanbeyen.bankingapplication.mapper.NotificationMapper;
-import com.ercanbeyen.bankingapplication.mapper.RegularTransferOrderMapper;
+import com.ercanbeyen.bankingapplication.mapper.*;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
@@ -42,6 +39,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
     private final RegularTransferOrderMapper regularTransferOrderMapper;
+    private final AddressMapper addressMapper;
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
@@ -51,8 +49,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Predicate<Customer> customerPredicate = customer -> {
-            Boolean addressCondition = (options.getCity() == null || options.getCity() == customer.getAddress().getCity());
-
             LocalDate filteringDay = options.getBirthDate();
             LocalDate customerBirthday = customer.getBirthDate();
             Boolean birthDayCondition = (filteringDay == null)
@@ -60,7 +56,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
             Boolean createTimeCondition = (options.getCreateTime() == null || options.getCreateTime().isEqual(options.getCreateTime()));
 
-            return (addressCondition && birthDayCondition && createTimeCondition);
+            return (birthDayCondition && createTimeCondition);
         };
 
         List<CustomerDto> customerDtos = new ArrayList<>();
@@ -113,7 +109,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         customer.setEmail(requestCustomer.getEmail());
         customer.setGender(requestCustomer.getGender());
         customer.setBirthDate(requestCustomer.getBirthDate());
-        customer.setAddress(requestCustomer.getAddress());
 
         return customerMapper.entityToDto(customerRepository.save(customer));
     }
@@ -213,13 +208,27 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return notificationDtos;
     }
 
-    public List<RegularTransferOrderDto> getRegularTransferOrdersOfCustomer(Integer customerId, Integer accountId) {
+    public List<AddressDto> getAddresses(Integer id) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Customer customer = findById(id);
+        List<AddressDto> addressDtos = new ArrayList<>();
+
+        customer.getAddresses()
+                .forEach(address -> addressDtos.add(addressMapper.entityToDto(address)));
+
+        return addressDtos;
+    }
+
+    public List<RegularTransferOrderDto> getRegularTransferOrders(Integer customerId, Integer accountId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Customer customer = findById(customerId);
+        String entity = Entity.ACCOUNT.getValue();
         Account account = customer.getAccount(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.ACCOUNT.getValue())));
-        log.info(LogMessages.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return account.getRegularTransferOrders()
                 .stream()
@@ -233,8 +242,14 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
      */
     public Customer findByNationalId(String nationalId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        return customerRepository.findByNationalId(nationalId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.CUSTOMER.getValue())));
+
+        String entity = Entity.CUSTOMER.getValue();
+        Customer customer = customerRepository.findByNationalId(nationalId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+
+        log.info(LogMessages.RESOURCE_FOUND, entity);
+
+        return customer;
     }
 
     /***
@@ -248,11 +263,11 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     }
 
     private Customer findById(Integer id) {
-        String value = Entity.CUSTOMER.getValue();
+        String entity = Entity.CUSTOMER.getValue();
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return customer;
     }

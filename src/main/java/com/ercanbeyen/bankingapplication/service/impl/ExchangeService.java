@@ -8,13 +8,13 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.ExchangeDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Exchange;
-import com.ercanbeyen.bankingapplication.view.ExchangeView;
+import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.ExchangeMapper;
 import com.ercanbeyen.bankingapplication.option.ExchangeFilteringOptions;
 import com.ercanbeyen.bankingapplication.repository.ExchangeRepository;
-import com.ercanbeyen.bankingapplication.repository.ExchangeViewRepository;
+import com.ercanbeyen.bankingapplication.view.repository.ExchangeViewRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtils;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
@@ -116,11 +116,11 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     }
 
     private Exchange findById(Integer id) {
-        String value = Entity.EXCHANGE.getValue();
+        String entity = Entity.EXCHANGE.getValue();
         Exchange exchange = exchangeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, value)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, value);
+        log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return exchange;
     }
