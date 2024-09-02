@@ -121,6 +121,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account account = findById(id);
         checkIsAccountClosed(account);
+        AccountUtils.checkCurrentAccountBeforeUpdateBalance(account.getBalance(), amount, activityType);
         checkDailyAccountActivityLimit(account, amount, activityType);
 
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account, null);

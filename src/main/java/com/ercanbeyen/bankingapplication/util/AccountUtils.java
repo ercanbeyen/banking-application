@@ -15,6 +15,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 @Slf4j
@@ -22,7 +23,7 @@ import java.util.function.Predicate;
 public class AccountUtils {
     private final List<Integer> DEPOSIT_PERIODS = List.of(1, 3, 6, 12);
     private final Double MAXIMUM_TRANSFER_LIMIT = 1_000_000D;
-    private final int LOWEST_THRESHOLD = 0;
+    private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
         checkAccountType(accountDto);
@@ -58,7 +59,19 @@ public class AccountUtils {
         }
     }
 
+    public void checkCurrentAccountBeforeUpdateBalance(Double balance, Double request, AccountActivityType activityType) {
+        if (activityType == AccountActivityType.WITHDRAWAL) {
+            AccountUtils.checkBalance(balance, request);
+        } else {
+            log.warn("Account activity is %s. So no need to check balance");
+        }
+    }
+
     public void checkBalance(Double balance, Double threshold) {
+        if (Optional.ofNullable(threshold).isEmpty()) {
+            threshold = LOWEST_THRESHOLD;
+        }
+
         if (balance < threshold) {
             throw new ResourceExpectationFailedException("Insufficient funds");
         }
@@ -98,7 +111,7 @@ public class AccountUtils {
         boolean isInterestRatioValid = interestRatio >= LOWEST_THRESHOLD;
 
         if (!isBalanceValid || !isInterestRatioValid) {
-            throw new ResourceConflictException(String.format("Balance and interest ratio must be greater than or equal to %d", LOWEST_THRESHOLD));
+            throw new ResourceConflictException(String.format("Balance and interest ratio must be greater than or equal to %s", LOWEST_THRESHOLD));
         }
     }
 
