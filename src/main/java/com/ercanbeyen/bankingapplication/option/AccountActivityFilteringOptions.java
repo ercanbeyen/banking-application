@@ -13,5 +13,5 @@ public record AccountActivityFilteringOptions(
         @NotNull(message = "Minimum amount should not be null")
         @Min(value = 0, message = "Minimum amount value should be at least {value}")
         Double minimumAmount,
-        LocalDate createAt) {
+        LocalDate createdAt) {
 }

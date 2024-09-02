@@ -9,6 +9,7 @@ import java.util.List;
 
 public interface AccountActivityService {
     List<AccountActivityDto> getAccountActivities(AccountActivityFilteringOptions options);
+    List<AccountActivityDto> getAccountActivitiesOfParticularAccount(AccountActivityFilteringOptions options);
     AccountActivityDto getAccountActivity(String id);
     void createAccountActivity(AccountActivityRequest request);
     List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer receiverAccountId);

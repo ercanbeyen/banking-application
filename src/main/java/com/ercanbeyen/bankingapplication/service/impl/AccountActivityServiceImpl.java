@@ -5,7 +5,9 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
+import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
@@ -21,6 +23,8 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.function.Predicate;
 
 @Service
@@ -35,22 +39,77 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     public List<AccountActivityDto> getAccountActivities(AccountActivityFilteringOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        Predicate<AccountActivity> transactionPredicate = accountActivity -> (options.type() == null || options.type() == accountActivity.getType())
+        Predicate<AccountActivity> accountActivityPredicate = accountActivity -> (options.type() == null || options.type() == accountActivity.getType())
                 && (options.senderAccountId() == null || options.senderAccountId().equals(accountActivity.getSenderAccount().getId()))
                 && (options.receiverAccountId() == null || options.receiverAccountId().equals(accountActivity.getReceiverAccount().getId()))
                 && (options.minimumAmount() == null || options.minimumAmount() <= accountActivity.getAmount())
-                && (options.createAt() == null || (options.createAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
+                && (options.createdAt() == null || (options.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
 
         List<AccountActivityDto> accountActivityDtos = new ArrayList<>();
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
 
         accountActivityRepository.findAll()
                 .stream()
-                .filter(transactionPredicate)
+                .filter(accountActivityPredicate)
                 .sorted(activityComparator)
                 .forEach(accountActivity -> accountActivityDtos.add(accountActivityMapper.entityToDto(accountActivity)));
 
         return accountActivityDtos;
+    }
+
+    @Override
+    public List<AccountActivityDto> getAccountActivitiesOfParticularAccount(AccountActivityFilteringOptions options) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        List<AccountActivityDto> accountActivityDtos = new ArrayList<>();
+
+        for (AccountActivity accountActivity : accountActivityRepository.findAll()) {
+            if (checkAccountActivity(options, accountActivity)) {
+                accountActivityDtos.add(accountActivityMapper.entityToDto(accountActivity));
+            }
+        }
+
+        return accountActivityDtos;
+    }
+
+    private static boolean checkAccountActivity(AccountActivityFilteringOptions options, AccountActivity accountActivity) {
+        boolean typeCheck = Optional.ofNullable(options.type()).isEmpty() || options.type() == accountActivity.getType();
+        boolean amountCheck = Optional.ofNullable(options.minimumAmount()).isEmpty() || options.minimumAmount() <= accountActivity.getAmount();
+        boolean createdAtCheck = Optional.ofNullable(options.createdAt()).isEmpty() || options.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate());
+
+        if (!typeCheck || !amountCheck || !createdAtCheck) {
+            return false;
+        }
+
+        return checkAccountId(options, accountActivity);
+    }
+
+    private static boolean checkAccountId(AccountActivityFilteringOptions options, AccountActivity accountActivity) {
+        Integer senderAccountId = options.senderAccountId();
+        Integer receiverAccountId = options.receiverAccountId();
+
+        Optional<Account> maybeSenderAccount = Optional.ofNullable(accountActivity.getSenderAccount());
+        Optional<Account> maybeReceiverAccount = Optional.ofNullable(accountActivity.getReceiverAccount());
+
+        boolean senderAccountPresents = maybeSenderAccount.isPresent() && Optional.ofNullable(senderAccountId).isPresent();
+        boolean receiverAccountPresents = maybeReceiverAccount.isPresent() && Optional.ofNullable(receiverAccountId).isPresent();
+
+        boolean senderAccountCheck = senderAccountPresents && Objects.equals(senderAccountId, maybeSenderAccount.get().getId());
+        boolean receiverAccountCheck = receiverAccountPresents && Objects.equals(receiverAccountId, maybeReceiverAccount.get().getId());
+
+        boolean accountIdCheck;
+
+        if (senderAccountPresents && receiverAccountPresents) {
+            accountIdCheck = senderAccountCheck && receiverAccountCheck;
+        } else if (senderAccountPresents) {
+            accountIdCheck = senderAccountCheck;
+        } else if (receiverAccountPresents) {
+            accountIdCheck = receiverAccountCheck;
+        } else {
+            throw new ResourceConflictException("Both accounts cannot be null");
+        }
+
+        return accountIdCheck;
     }
 
     @Override

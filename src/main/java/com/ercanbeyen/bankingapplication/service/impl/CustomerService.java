@@ -274,8 +274,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
     private void getAccountActivities(Integer accountId, boolean isSender, AccountActivityFilteringOptions options, List<AccountActivityDto> accountActivityDtos) {
         AccountActivityFilteringOptions accountActivityFilteringOptions = isSender ?
-                new AccountActivityFilteringOptions(options.type(), accountId, null, options.minimumAmount(), options.createAt()) :
-                new AccountActivityFilteringOptions(options.type(), null, accountId, options.minimumAmount(), options.createAt());
+                new AccountActivityFilteringOptions(options.type(), accountId, null, options.minimumAmount(), options.createdAt()) :
+                new AccountActivityFilteringOptions(options.type(), null, accountId, options.minimumAmount(), options.createdAt());
         List<AccountActivityDto> currentAccountActivityDtos = accountActivityService.getAccountActivities(accountActivityFilteringOptions);
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }
