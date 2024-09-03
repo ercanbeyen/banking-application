@@ -5,7 +5,6 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
-import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
@@ -23,7 +22,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
 
@@ -61,55 +59,16 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     public List<AccountActivityDto> getAccountActivitiesOfParticularAccount(AccountActivityFilteringOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
+        List<AccountActivity> accountActivities = getActivities(options);
         List<AccountActivityDto> accountActivityDtos = new ArrayList<>();
 
-        for (AccountActivity accountActivity : accountActivityRepository.findAll()) {
+        for (AccountActivity accountActivity : accountActivities) {
             if (checkAccountActivity(options, accountActivity)) {
                 accountActivityDtos.add(accountActivityMapper.entityToDto(accountActivity));
             }
         }
 
         return accountActivityDtos;
-    }
-
-    private static boolean checkAccountActivity(AccountActivityFilteringOptions options, AccountActivity accountActivity) {
-        boolean typeCheck = Optional.ofNullable(options.type()).isEmpty() || options.type() == accountActivity.getType();
-        boolean amountCheck = Optional.ofNullable(options.minimumAmount()).isEmpty() || options.minimumAmount() <= accountActivity.getAmount();
-        boolean createdAtCheck = Optional.ofNullable(options.createdAt()).isEmpty() || options.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate());
-
-        if (!typeCheck || !amountCheck || !createdAtCheck) {
-            return false;
-        }
-
-        return checkAccountId(options, accountActivity);
-    }
-
-    private static boolean checkAccountId(AccountActivityFilteringOptions options, AccountActivity accountActivity) {
-        Integer senderAccountId = options.senderAccountId();
-        Integer receiverAccountId = options.receiverAccountId();
-
-        Optional<Account> maybeSenderAccount = Optional.ofNullable(accountActivity.getSenderAccount());
-        Optional<Account> maybeReceiverAccount = Optional.ofNullable(accountActivity.getReceiverAccount());
-
-        boolean senderAccountPresents = maybeSenderAccount.isPresent() && Optional.ofNullable(senderAccountId).isPresent();
-        boolean receiverAccountPresents = maybeReceiverAccount.isPresent() && Optional.ofNullable(receiverAccountId).isPresent();
-
-        boolean senderAccountCheck = senderAccountPresents && Objects.equals(senderAccountId, maybeSenderAccount.get().getId());
-        boolean receiverAccountCheck = receiverAccountPresents && Objects.equals(receiverAccountId, maybeReceiverAccount.get().getId());
-
-        boolean accountIdCheck;
-
-        if (senderAccountPresents && receiverAccountPresents) {
-            accountIdCheck = senderAccountCheck && receiverAccountCheck;
-        } else if (senderAccountPresents) {
-            accountIdCheck = senderAccountCheck;
-        } else if (receiverAccountPresents) {
-            accountIdCheck = receiverAccountCheck;
-        } else {
-            throw new ResourceConflictException("Both accounts cannot be null");
-        }
-
-        return accountIdCheck;
     }
 
     @Override
@@ -153,5 +112,31 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return accountActivity;
+    }
+
+    private List<AccountActivity> getActivities(AccountActivityFilteringOptions options) {
+        boolean senderAccountPresents = Optional.ofNullable(options.senderAccountId()).isPresent();
+        boolean receiverAccountPresents = Optional.ofNullable(options.receiverAccountId()).isPresent();
+        List<AccountActivity> accountActivities;
+
+        if (senderAccountPresents && receiverAccountPresents) {
+            accountActivities = accountActivityRepository.findBySenderAccountIdOrReceiverAccountId(options.senderAccountId(), options.receiverAccountId());
+        } else if (senderAccountPresents) {
+            accountActivities = accountActivityRepository.findBySenderAccountId(options.senderAccountId());
+        } else if (receiverAccountPresents) {
+            accountActivities = accountActivityRepository.findByReceiverAccountId(options.receiverAccountId());
+        } else {
+            throw new ResourceConflictException("Both accounts cannot be null");
+        }
+
+        return accountActivities;
+    }
+
+    private static boolean checkAccountActivity(AccountActivityFilteringOptions options, AccountActivity accountActivity) {
+        boolean typeCheck = Optional.ofNullable(options.type()).isEmpty() || options.type() == accountActivity.getType();
+        boolean amountCheck = Optional.ofNullable(options.minimumAmount()).isEmpty() || options.minimumAmount() <= accountActivity.getAmount();
+        boolean createdAtCheck = Optional.ofNullable(options.createdAt()).isEmpty() || options.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate());
+
+        return typeCheck && amountCheck && createdAtCheck;
     }
 }
