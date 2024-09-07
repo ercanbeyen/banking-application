@@ -28,6 +28,7 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
@@ -80,9 +81,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     public CustomerDto createEntity(CustomerDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        checkCustomerUniqueness(request.getNationalId(), request.getPhoneNumber(), request.getEmail());
-        log.info(LogMessages.RESOURCE_UNIQUE, Entity.CUSTOMER.getValue());
-
+        checkCustomerUniqueness(null, request);
         Customer customer = customerMapper.dtoToEntity(request);
 
         Customer savedCustomer = customerRepository.save(customer);
@@ -97,12 +96,9 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Customer customer = findById(id);
-
-        checkCustomerUniqueness(request.getNationalId(), request.getPhoneNumber(), request.getEmail());
-        log.info(LogMessages.RESOURCE_UNIQUE, Entity.CUSTOMER.getValue());
+        checkCustomerUniqueness(customer, request);
 
         Customer requestCustomer = customerMapper.dtoToEntity(request);
-
         customer.setName(requestCustomer.getName());
         customer.setSurname(requestCustomer.getSurname());
         customer.setPhoneNumber(requestCustomer.getPhoneNumber());
@@ -280,9 +276,30 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }
 
-    private void checkCustomerUniqueness(String nationalId, String phoneNumber, String email) {
-        Predicate<Customer> customerPredicate = customer -> customer.getNationalId().equals(nationalId)
-                || customer.getPhoneNumber().equals(phoneNumber) || customer.getEmail().equals(email);
+    private void checkCustomerUniqueness(Customer customerInDb, CustomerDto request) {
+        String nationalId = request.getNationalId();
+        String phoneNumber = request.getPhoneNumber();
+        String email = request.getEmail();
+
+        Predicate<Customer> nationalIdPredicate = customer -> customer.getNationalId().equals(nationalId);
+        Predicate<Customer> phoneNumberPredicate = customer -> customer.getPhoneNumber().equals(phoneNumber);
+        Predicate<Customer> emailPredicate = customer -> customer.getEmail().equals(email);
+
+        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateEntity case
+            Predicate<Customer> customerInDbPredicate = customer -> !customerInDb.getNationalId().equals(nationalId);
+            nationalIdPredicate = customerInDbPredicate.and(nationalIdPredicate);
+
+            customerInDbPredicate = customer -> !customerInDb.getPhoneNumber().equals(phoneNumber);
+            phoneNumberPredicate = customerInDbPredicate.and(phoneNumberPredicate);
+
+            customerInDbPredicate = customer -> !customerInDb.getEmail().equals(email);
+            emailPredicate = customerInDbPredicate.and(emailPredicate);
+        }
+
+        Predicate<Customer> customerPredicate = nationalIdPredicate
+                .or(phoneNumberPredicate)
+                .or(emailPredicate);
+
         boolean customerExists = customerRepository.findAll()
                 .stream()
                 .anyMatch(customerPredicate);
@@ -290,5 +307,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         if (customerExists) {
             throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, Entity.CUSTOMER.getValue()));
         }
+
+        log.info(LogMessages.RESOURCE_UNIQUE, Entity.CUSTOMER.getValue());
     }
 }
