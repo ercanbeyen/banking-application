@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Gender;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDate;
 import java.util.*;
@@ -40,6 +41,7 @@ public non-sealed class Customer extends BaseEntity {
     @JoinColumn(name = "profile_photo")
     private File profilePhoto;
     @Getter
+    @SQLRestriction("closed_at IS NULL")
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Account> accounts = new ArrayList<>();
     @Getter

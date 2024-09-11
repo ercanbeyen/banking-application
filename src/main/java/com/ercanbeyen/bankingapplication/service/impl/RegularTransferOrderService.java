@@ -37,7 +37,7 @@ public class RegularTransferOrderService implements BaseService<RegularTransferO
         Predicate<RegularTransferOrder> regularTransferOrderPredicate = regularTransferOrder -> (options.getSenderAccountId() == null || options.getSenderAccountId().equals(regularTransferOrder.getSenderAccount().getId()))
                 && (options.getReceiverAccountId() == null || options.getReceiverAccountId().equals(regularTransferOrder.getRegularTransfer().getReceiverAccount().getId())
                 && (options.getPeriod() == null || options.getPeriod().equals(regularTransferOrder.getPeriod()))
-                && (options.getCreateTime() == null || options.getCreateTime().toLocalDate().isEqual(options.getCreateTime().toLocalDate())));
+                && (options.getCreatedAt() == null || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate())));
 
         regularTransferOrderDtos = regularTransferOrderRepository.findAll()
                 .stream()

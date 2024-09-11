@@ -55,7 +55,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             Boolean birthDayCondition = (filteringDay == null)
                     || (filteringDay.getMonth() == customerBirthday.getMonth() && filteringDay.getDayOfMonth() == customerBirthday.getDayOfMonth());
 
-            Boolean createTimeCondition = (options.getCreateTime() == null || options.getCreateTime().isEqual(options.getCreateTime()));
+            Boolean createTimeCondition = (options.getCreatedAt() == null || options.getCreatedAt().isEqual(options.getCreatedAt()));
 
             return (birthDayCondition && createTimeCondition);
         };
@@ -150,8 +150,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         Customer customer = findById(id);
         Predicate<Account> accountPredicate = account -> (account.getCustomer().getNationalId().equals(customer.getNationalId()))
                 && (options.getType() == null || options.getType() == account.getType())
-                && (options.getCreateTime() == null || options.getCreateTime().getYear() <= account.getCreatedAt().getYear())
-                && (account.getClosedAt() == null);
+                && (options.getCreatedAt() == null || options.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
 
         Comparator<Account> accountComparator = Comparator.comparing(Account::getCreatedAt)
                 .reversed();

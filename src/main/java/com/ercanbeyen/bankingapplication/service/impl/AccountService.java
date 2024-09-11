@@ -51,7 +51,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (options.getType() == null || options.getType() == account.getType());
-            boolean timeFilter = (options.getCreateTime() == null || options.getCreateTime().toLocalDate().isEqual(options.getCreateTime().toLocalDate()));
+            boolean timeFilter = (options.getCreatedAt() == null || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate()));
             boolean closedFilter = (options.getIsClosed() == null || options.getIsClosed() == (account.getClosedAt() != null));
             return typeFilter && timeFilter && closedFilter;
         };
