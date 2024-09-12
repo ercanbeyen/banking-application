@@ -24,7 +24,7 @@ public enum AccountActivityType {
     static {
         activityToLimits = new EnumMap<>(AccountActivityType.class);
         activityToLimits.put(MONEY_DEPOSIT, 10_000D);
-        activityToLimits.put(WITHDRAWAL, 10_000D);
+        activityToLimits.put(WITHDRAWAL, 5_000D);
         activityToLimits.put(MONEY_TRANSFER, 100_000D);
         activityToLimits.put(MONEY_EXCHANGE, 5_000D);
     }

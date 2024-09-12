@@ -63,7 +63,7 @@ public class AccountUtils {
         if (activityType == AccountActivityType.WITHDRAWAL) {
             AccountUtils.checkBalance(balance, request);
         } else {
-            log.warn("Account activity is %s. So no need to check balance");
+            log.warn("Account activity is {}. So no need to check balance", activityType);
         }
     }
 

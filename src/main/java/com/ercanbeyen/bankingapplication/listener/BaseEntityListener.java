@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class BaseEntityListener {
+
     @PrePersist
     void onPrePersist(BaseEntity baseEntity) {
         logListenerInformation(LoggingUtils.getCurrentMethodName(), baseEntity);

@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -19,10 +20,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 
 @Service
@@ -56,11 +54,11 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     }
 
     @Override
-    public List<AccountActivityDto> getAccountActivitiesOfParticularAccount(AccountActivityFilteringOptions options) {
+    public Set<AccountActivityDto> getAccountActivitiesOfParticularAccounts(AccountActivityFilteringOptions options, Currency currency) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        List<AccountActivity> accountActivities = getActivities(options);
-        List<AccountActivityDto> accountActivityDtos = new ArrayList<>();
+        List<AccountActivity> accountActivities = getAccountActivitiesOfSpecificEvent(options, currency);
+        Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
         for (AccountActivity accountActivity : accountActivities) {
             if (checkAccountActivity(options, accountActivity)) {
@@ -114,22 +112,29 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         return accountActivity;
     }
 
-    private List<AccountActivity> getActivities(AccountActivityFilteringOptions options) {
+    private List<AccountActivity> getAccountActivitiesOfSpecificEvent(AccountActivityFilteringOptions options, Currency currency) {
         boolean senderAccountPresents = Optional.ofNullable(options.senderAccountId()).isPresent();
         boolean receiverAccountPresents = Optional.ofNullable(options.receiverAccountId()).isPresent();
         List<AccountActivity> accountActivities;
+        Predicate<AccountActivity> accountActivityPredicate;
 
         if (senderAccountPresents && receiverAccountPresents) {
             accountActivities = accountActivityRepository.findBySenderAccountIdOrReceiverAccountId(options.senderAccountId(), options.receiverAccountId());
+            accountActivityPredicate = accountActivity -> accountActivity.getSenderAccount().getCurrency() == currency;
         } else if (senderAccountPresents) {
             accountActivities = accountActivityRepository.findBySenderAccountId(options.senderAccountId());
+            accountActivityPredicate = accountActivity -> accountActivity.getSenderAccount().getCurrency() == currency;
         } else if (receiverAccountPresents) {
             accountActivities = accountActivityRepository.findByReceiverAccountId(options.receiverAccountId());
+            accountActivityPredicate = accountActivity -> accountActivity.getReceiverAccount().getCurrency() == currency;
         } else {
             throw new ResourceConflictException("Both accounts cannot be null");
         }
 
-        return accountActivities;
+        return accountActivities
+                .stream()
+                .filter(accountActivityPredicate)
+                .toList();
     }
 
     private static boolean checkAccountActivity(AccountActivityFilteringOptions options, AccountActivity accountActivity) {
