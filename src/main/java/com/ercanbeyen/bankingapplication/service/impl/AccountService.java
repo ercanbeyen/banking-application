@@ -1,8 +1,10 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
@@ -12,9 +14,11 @@ import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
+import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
+import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.util.AccountUtils;
@@ -24,10 +28,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.function.Predicate;
 
 @Service
@@ -39,6 +42,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final CustomerService customerService;
     private final TransactionService transactionService;
     private final NotificationService notificationService;
+    private final AccountActivityService accountActivityService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -46,7 +50,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (options.getType() == null || options.getType() == account.getType());
-            boolean timeFilter = (options.getCreateTime() == null || options.getCreateTime().toLocalDate().isEqual(options.getCreateTime().toLocalDate()));
+            boolean timeFilter = (options.getCreatedAt() == null || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate()));
             boolean closedFilter = (options.getIsClosed() == null || options.getIsClosed() == (account.getClosedAt() != null));
             return typeFilter && timeFilter && closedFilter;
         };
@@ -115,6 +119,10 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account account = findById(id);
+        checkIsAccountClosed(account);
+        AccountUtils.checkCurrentAccountBeforeUpdateBalance(account.getBalance(), amount, activityType);
+        checkDailyAccountActivityLimit(account, amount, activityType);
+
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account, null);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
@@ -132,12 +140,14 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         }
 
         Double amount = AccountUtils.calculateInterest(account.getBalance(), account.getInterestRatio());
-        transactionService.updateBalanceOfSingleAccount(AccountActivityType.FEE, amount, account, "Fee is transferred, because deposit period is completed");
+        AccountActivityType activityType = AccountActivityType.FEE;
+
+        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, "Fee is transferred, because deposit period is completed");
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit account has been renewed.", account.getCurrency()));
         notificationService.createNotification(notificationDto);
 
-        String response = AccountActivityType.FEE.getValue() + " transfer";
+        String response = activityType.getValue() + " transfer";
 
         return String.format(ResponseMessages.SUCCESS, response);
     }
@@ -156,8 +166,10 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Double amount = request.amount();
         Currency currency = senderAccount.getCurrency();
+        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
 
         checkAccountsBeforeMoneyTransfer(senderAccount, receiverAccount, amount);
+        checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
         transactionService.transferMoneyBetweenAccounts(request, senderAccountId, amount, receiverAccountId, senderAccount, receiverAccount);
 
@@ -167,7 +179,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         notificationService.createNotification(senderNotificationDto);
         notificationService.createNotification(receiverNotificationDto);
 
-        return String.format(ResponseMessages.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue());
+        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
 
     public String exchangeMoney(ExchangeRequest request) {
@@ -179,12 +191,15 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account buyerAccount = findById(request.buyerId());
         checkIsAccountClosed(buyerAccount);
 
+        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         Double requestedAmount = request.amount();
+
         AccountUtils.checkBalance(sellerAccount.getBalance(), requestedAmount);
+        checkDailyAccountActivityLimit(sellerAccount, requestedAmount, activityType);
 
         transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount);
 
-        return String.format(ResponseMessages.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue());
+        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
 
     @Transactional
@@ -194,8 +209,10 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account account = findById(id);
         checkIsAccountClosed(account);
 
-        if (account.getBalance() > 0) {
-            throw new ResourceConflictException("In order to close account, balance of the account must be zero. Withdraw or transfer the remaining money.");
+        double balance = account.getBalance();
+
+        if (balance != 0) {
+            throw new ResourceConflictException(String.format("In order to close account, balance of the account must be zero. Currently balance is %s. Please Withdraw or transfer the remaining money.", balance));
         }
 
         account.setClosedAt(LocalDateTime.now());
@@ -238,6 +255,51 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return account;
     }
 
+    private void checkDailyAccountActivityLimit(Account account, Double amount, AccountActivityType activityType) {
+        Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
+
+        for (Account currentAccount : account.getCustomer().getAccounts()) {
+            AccountActivityFilteringOptions filteringOptions = constructAccountActivityFilteringOptions(currentAccount.getId(), activityType);
+            accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOptions, account.getCurrency()));
+        }
+
+        double dailyActivityAmount = accountActivityDtos.stream()
+                .map(AccountActivityDto::amount)
+                .reduce(0D, Double::sum);
+
+        log.info("Daily activity amount: {}", dailyActivityAmount);
+        dailyActivityAmount += amount;
+        log.info("Updated daily activity amount: {}", dailyActivityAmount);
+
+        Double activityLimit = AccountActivityType.getActivityToLimits()
+                .get(activityType);
+
+        if (dailyActivityAmount > activityLimit) {
+            throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType, activityLimit));
+        }
+
+        log.info("Daily limit of {} is not exceeded", activityType);
+    }
+
+    private static AccountActivityFilteringOptions constructAccountActivityFilteringOptions(Integer accountId, AccountActivityType activityType) {
+        Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is receiver id
+
+        switch (activityType) {
+            case AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER,
+                 AccountActivityType.MONEY_EXCHANGE -> accountIds[0] = accountId;
+            case AccountActivityType.MONEY_DEPOSIT -> accountIds[1] = accountId;
+            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+        }
+
+        return new AccountActivityFilteringOptions(
+                activityType,
+                accountIds[0],
+                accountIds[1],
+                null,
+                LocalDate.now()
+        );
+    }
+
     private static void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount, Double amount) {
         AccountUtils.checkCurrencies(senderAccount.getCurrency(), receiverAccount.getCurrency());
         AccountUtils.checkBalance(senderAccount.getBalance(), amount);
@@ -246,10 +308,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private static void checkIsAccountClosed(Account account) {
         LocalDateTime closedAt = account.getClosedAt();
 
-        if (closedAt != null) {
+        if (Optional.ofNullable(closedAt).isPresent()) {
+            log.error("Account {} has already been closed", account.getId());
             throw new ResourceConflictException(String.format("Account is improper for activities. It has already been closed at %s", closedAt));
         }
 
-        log.info("Account has not been closed");
+        log.info("Account {} has not been closed", account.getId());
     }
 }

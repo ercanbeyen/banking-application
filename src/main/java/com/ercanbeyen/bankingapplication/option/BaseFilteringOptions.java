@@ -10,5 +10,5 @@ import java.time.LocalDateTime;
 @Setter
 @MappedSuperclass
 public sealed class BaseFilteringOptions permits AccountFilteringOptions, CustomerFilteringOptions, ExchangeFilteringOptions, RegularTransferOrderOptions {
-    private LocalDateTime createTime;
+    private LocalDateTime createdAt;
 }

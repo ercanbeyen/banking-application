@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.entity;
 
 
 import com.ercanbeyen.bankingapplication.constant.query.Queries;
+import com.ercanbeyen.bankingapplication.listener.BaseEntityListener;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -9,6 +10,7 @@ import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 
+@EntityListeners(BaseEntityListener.class)
 @Data
 @MappedSuperclass
 public abstract sealed class BaseEntity permits Account, Customer, NewsReport, RegularTransferOrder, News, Exchange {

@@ -65,7 +65,7 @@ public class AddressServiceImpl implements AddressService {
         address.setOwnership(request.ownership());
 
         Address savedAddress = addressRepository.save(address);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ADDRESS.getValue());
+        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ADDRESS.getValue(), savedAddress.getId());
 
         return addressMapper.entityToDto(savedAddress);
     }
