@@ -69,6 +69,12 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{nationalId}/net-worth")
+    public ResponseEntity<MessageResponse<Double>> calculateNetWorth(@PathVariable("nationalId") String nationalId) {
+        MessageResponse<Double> response = new MessageResponse<>(customerService.calculateNetWorth(nationalId));
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping("/{id}/accounts")
     public ResponseEntity<List<AccountDto>> getAccounts(@PathVariable("id") Integer id, AccountFilteringOptions options) {
         return ResponseEntity.ok(customerService.getAccounts(id, options));

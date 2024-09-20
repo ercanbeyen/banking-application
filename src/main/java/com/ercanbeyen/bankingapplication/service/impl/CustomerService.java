@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -44,6 +45,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
+    private final ExchangeService exchangeService;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOptions options) {
@@ -142,6 +144,16 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         customerRepository.save(customer);
 
         return ResponseMessages.FILE_DELETE_SUCCESS;
+    }
+
+    public Double calculateNetWorth(String nationalId) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        return findByNationalId(nationalId)
+                .getAccounts()
+                .stream()
+                .map(account -> exchangeService.convertMoney(account.getCurrency(), Currency.TL, account.getBalance()))
+                .reduce(0D, Double::sum);
     }
 
     public List<AccountDto> getAccounts(Integer id, AccountFilteringOptions options) {
