@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
+import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
@@ -72,6 +73,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return accountMapper.entityToDto(account);
     }
 
+    @Transactional
     @Override
     public AccountDto createEntity(AccountDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
@@ -82,6 +84,16 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         account.setCustomer(customer);
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
+
+        AccountActivityType activityType = AccountActivityType.ACCOUNT_OPENING;
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
+                activityType,
+                null,
+                null,
+                0D,
+                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getCity().getValue() + " branch at " + LocalDateTime.now()
+        );
+        accountActivityService.createAccountActivity(accountActivityRequest);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -218,7 +230,17 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         account.setClosedAt(LocalDateTime.now());
         accountRepository.save(account);
 
-        return String.format(ResponseMessages.SUCCESS, AccountActivityType.ACCOUNT_CLOSE.getValue());
+        AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
+                activityType,
+                null,
+                null,
+                0D,
+                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " at " + LocalDateTime.now()
+        );
+        accountActivityService.createAccountActivity(accountActivityRequest);
+
+        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
 
     public String getTotalActiveAccounts(City city, AccountType type, Currency currency) {

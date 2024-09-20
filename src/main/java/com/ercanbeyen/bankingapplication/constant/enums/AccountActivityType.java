@@ -14,7 +14,8 @@ public enum AccountActivityType {
     MONEY_EXCHANGE("Money exchange"),
     FEE("Fee"),
     CHARGE("Charge"),
-    ACCOUNT_CLOSE("Account close");
+    ACCOUNT_OPENING("Account opening"),
+    ACCOUNT_CLOSING("Account closing");
 
     @Getter
     private final String value;
