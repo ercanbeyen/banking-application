@@ -1,10 +1,13 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.*;
+import com.ercanbeyen.bankingapplication.dto.response.WorthResponse;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
@@ -146,14 +149,24 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return ResponseMessages.FILE_DELETE_SUCCESS;
     }
 
-    public Double calculateNetWorth(String nationalId) {
+    public WorthResponse calculateWorth(String nationalId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        return findByNationalId(nationalId)
-                .getAccounts()
-                .stream()
+        List<Account> accounts = findByNationalId(nationalId).getAccounts();
+        double earning = 0;
+        double spending = 0;
+
+        for (Account account : accounts) {
+            earning += calculateTotalAmount(account, BalanceActivity.INCREASE);
+            spending += calculateTotalAmount(account, BalanceActivity.DECREASE);
+            log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
+        }
+
+        Double netWorth = accounts.stream()
                 .map(account -> exchangeService.convertMoney(account.getCurrency(), Currency.TL, account.getBalance()))
                 .reduce(0D, Double::sum);
+
+        return new WorthResponse(earning, spending, netWorth);
     }
 
     public List<AccountDto> getAccounts(Integer id, AccountFilteringOptions options) {
@@ -279,10 +292,20 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return customer;
     }
 
+    private double calculateTotalAmount(Account account, BalanceActivity balanceActivity) {
+        AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE ? new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
+                : new AccountActivityFilteringOptions(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
+
+        return accountActivityService.getAccountActivitiesOfParticularAccounts(options, account.getCurrency())
+                .stream()
+                .map(accountActivityDto -> exchangeService.convertMoney(account.getCurrency(), Currency.TL, accountActivityDto.amount()))
+                .reduce(0D, Double::sum);
+    }
+
     private void getAccountActivities(Integer accountId, boolean isSender, AccountActivityFilteringOptions options, List<AccountActivityDto> accountActivityDtos) {
         AccountActivityFilteringOptions accountActivityFilteringOptions = isSender ?
-                new AccountActivityFilteringOptions(options.type(), accountId, null, options.minimumAmount(), options.createdAt()) :
-                new AccountActivityFilteringOptions(options.type(), null, accountId, options.minimumAmount(), options.createdAt());
+                new AccountActivityFilteringOptions(options.activityTypes(), accountId, null, options.minimumAmount(), options.createdAt()) :
+                new AccountActivityFilteringOptions(options.activityTypes(), null, accountId, options.minimumAmount(), options.createdAt());
         List<AccountActivityDto> currentAccountActivityDtos = accountActivityService.getAccountActivities(accountActivityFilteringOptions);
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }

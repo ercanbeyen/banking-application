@@ -314,7 +314,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         }
 
         return new AccountActivityFilteringOptions(
-                activityType,
+                List.of(activityType),
                 accountIds[0],
                 accountIds[1],
                 null,
