@@ -135,7 +135,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         AccountUtils.checkCurrentAccountBeforeUpdateBalance(account.getBalance(), amount, activityType);
         checkDailyAccountActivityLimit(account, amount, activityType);
 
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, null);
+        transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
@@ -154,7 +154,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Double amount = AccountUtils.calculateInterest(account.getBalance(), account.getInterestRatio());
         AccountActivityType activityType = AccountActivityType.FEE;
 
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, "Fee is transferred, because deposit period is completed");
+        transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit account has been renewed.", account.getCurrency()));
         notificationService.createNotification(notificationDto);

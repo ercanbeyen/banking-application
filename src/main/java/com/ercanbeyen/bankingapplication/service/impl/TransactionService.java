@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
@@ -11,6 +12,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.util.NumberFormatterUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.javatuples.Pair;
@@ -28,13 +30,34 @@ public class TransactionService {
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
 
-    public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account, String explanation) {
+    public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account) {
         Pair<BalanceActivity, Account[]> activityParameters = constructActivityParameters(activityType, account);
 
         int numberOfUpdatedEntities = accountRepository.updateBalanceById(account.getId(), activityParameters.getValue0().name(), amount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
-        createAccountActivity(activityType, amount, explanation, activityParameters.getValue1());
+        String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
+        log.info(LogMessages.PROCESSED_AMOUNT, requestedAmountInSummary);
+
+        String summaryTemplate = """
+                Account Activity: %s
+                Customer National Id: %s
+                Account Id: %s
+                Amount: %s %s
+                Time: %s
+                """;
+
+        String summary = String.format(
+                summaryTemplate,
+                activityType.getValue(),
+                account.getCustomer().getNationalId(),
+                account.getId(),
+                requestedAmountInSummary,
+                account.getCurrency(),
+                LocalDateTime.now()
+        );
+
+        createAccountActivity(activityType, amount, summary, activityParameters.getValue1());
     }
 
     public void transferMoneyBetweenAccounts(TransferRequest request, Integer senderAccountId, Double amount, Integer receiverAccountId, Account senderAccount, Account receiverAccount) {
@@ -45,46 +68,82 @@ public class TransactionService {
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         Account[] accounts = {senderAccount, receiverAccount};
+        String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
+        log.info(LogMessages.PROCESSED_AMOUNT, requestedAmountInSummary);
 
-        createAccountActivity(AccountActivityType.MONEY_TRANSFER, request.amount(), request.explanation(), accounts);
-    }
-
-    public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount) {
-        Double requestedAmount = request.amount();
-        Double exchangedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, requestedAmount);
-
-        int numberOfUpdatedEntities = accountRepository.updateBalanceById(request.sellerId(), BalanceActivity.DECREASE.name(), requestedAmount);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
-
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(request.buyerId(), BalanceActivity.INCREASE.name(), exchangedAmount);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
-
-        String explanationTemplate = """
-                Money exchange (from %s to %s) operation is completed.
+        String summaryTemplate = """
+                Account Activity: %s
                 Customer National Id: %s
                 From Account Id: %s
                 To Account Id: %s
-                Converted Amount: %s,
+                Amount: %s %s
                 Time: %s
                 """;
 
-        String explanation = String.format(
-                explanationTemplate,
-                sellerAccount.getCurrency(),
-                buyerAccount.getCurrency(),
-                buyerAccount.getCustomer().getNationalId(),
-                buyerAccount.getId(),
+        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+
+        String summary = String.format(
+                summaryTemplate,
+                activityType.getValue(),
+                senderAccount.getCustomer().getNationalId(),
+                senderAccount.getId(),
+                receiverAccount.getId(),
+                requestedAmountInSummary,
+                receiverAccount.getCurrency(),
+                LocalDateTime.now()
+        );
+
+        createAccountActivity(activityType, request.amount(), summary, accounts);
+    }
+
+    public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount) {
+        Double spentAmount = request.amount();
+        Double earnedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, spentAmount);
+
+        int numberOfUpdatedEntities = accountRepository.updateBalanceById(request.sellerId(), BalanceActivity.DECREASE.name(), spentAmount);
+        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+
+        numberOfUpdatedEntities = accountRepository.updateBalanceById(request.buyerId(), BalanceActivity.INCREASE.name(), earnedAmount);
+        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+
+        String spentAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(spentAmount);
+        log.info(LogMessages.PROCESSED_AMOUNT, spentAmountInSummary);
+
+        String earnedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(earnedAmount);
+        log.info(LogMessages.PROCESSED_AMOUNT, earnedAmountInSummary);
+
+        String summaryTemplate = """
+                Account Activity: %s
+                From Account Id: %s
+                To Account Id: %s
+                Spent amount: %s %s
+                Earned amount: %s %s
+                Time: %s
+                """;
+
+        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+        Currency sellerAccountCurrency = sellerAccount.getCurrency();
+        Currency buyerAccountCurrency = buyerAccount.getCurrency();
+
+        String summary = String.format(
+                summaryTemplate,
+                activityType.getValue(),
                 sellerAccount.getId(),
-                requestedAmount,
+                buyerAccount.getId(),
+                spentAmountInSummary,
+                sellerAccountCurrency,
+                earnedAmountInSummary,
+                buyerAccountCurrency,
                 LocalDateTime.now()
         );
 
         Account[] accounts = {sellerAccount, buyerAccount};
-        createAccountActivity(AccountActivityType.MONEY_EXCHANGE, requestedAmount, explanation, accounts);
+
+        createAccountActivity(activityType, earnedAmount, summary, accounts);
     }
 
-    private void createAccountActivity(AccountActivityType activityType, Double amount, String explanation, Account[] accounts) {
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, explanation);
+    private void createAccountActivity(AccountActivityType activityType, Double amount, String summary, Account[] accounts) {
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary);
         accountActivityService.createAccountActivity(accountActivityRequest);
     }
 
