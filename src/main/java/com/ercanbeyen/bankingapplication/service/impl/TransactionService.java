@@ -51,7 +51,7 @@ public class TransactionService {
 
     public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount) {
         Double requestedAmount = request.amount();
-        Double exchangedAmount = exchangeService.exchangeMoney(sellerAccount, buyerAccount, requestedAmount);
+        Double exchangedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, requestedAmount);
 
         int numberOfUpdatedEntities = accountRepository.updateBalanceById(request.sellerId(), BalanceActivity.DECREASE.name(), requestedAmount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);

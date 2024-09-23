@@ -2,7 +2,6 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.CurrencyOperation;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -91,46 +90,34 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     public void deleteEntity(Integer id) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        if (!exchangeRepository.existsById(id)) {
-            throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.EXCHANGE.getValue()));
-        }
+        String entity = Entity.EXCHANGE.getValue();
 
-        log.info(LogMessages.RESOURCE_FOUND, Entity.EXCHANGE.getValue());
+        exchangeRepository.findById(id)
+                .ifPresentOrElse(exchange -> exchangeRepository.deleteById(id), () -> {
+                    log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
+                });
 
-        exchangeRepository.deleteById(id);
+        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
-    public Double convertMoney(Currency fromCurrency, Currency toCurrency, Double amount) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        return convertMoneyAmongCurrencies(
-                fromCurrency,
-                toCurrency,
-                amount,
-                CurrencyOperation.CONVERSION
-        ); // returns the exchanged amount with exchange rate
-    }
-
-    public String showExchangeResult(Currency fromCurrency, Currency toCurrency, Double amount) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        Double exchangedAmount = convertMoneyAmongCurrencies(
-                fromCurrency,
-                toCurrency,
-                amount,
-                CurrencyOperation.EXCHANGE
-        );
-
-        return amount + " " + fromCurrency + " is exchanged to " + exchangedAmount + " " + toCurrency;
-    }
-
-    public Double exchangeMoney(Account sellerAccount, Account buyerAccount, Double amount) {
+    public Double exchangeMoneyBetweenAccounts(Account sellerAccount, Account buyerAccount, Double amount) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
         checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
-        return convertMoneyAmongCurrencies(
+        return convertMoneyBetweenCurrenciesWithBankRates(
                 sellerAccount.getCurrency(),
                 buyerAccount.getCurrency(),
-                amount,
-                CurrencyOperation.EXCHANGE
-        ); // returns the exchanged amount with bank's buy/sell rate
+                amount
+        );
+    }
+
+    public Double convertMoneyBetweenCurrencies(Currency fromCurrency, Currency toCurrency, Double amount) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        return convertMoneyBetweenCurrenciesWithBankRates(
+                fromCurrency,
+                toCurrency,
+                amount
+        );
     }
 
     public List<ExchangeView> getExchangeViews() {
@@ -164,21 +151,12 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         }
     }
 
-    /***
-     *
-     * @param baseCurrency is the "from" part
-     * @param targetCurrency is the "to" part
-     * @param amount is the requested exchange amount with "from" currency
-     * @param operation is the operation type
-     * @return the result of the processed amount
-     */
-    private double convertMoneyAmongCurrencies(Currency baseCurrency, Currency targetCurrency, Double amount, CurrencyOperation operation) {
-        log.info("{} is from {} to {}", operation, baseCurrency, targetCurrency);
+    private double convertMoneyBetweenCurrenciesWithBankRates(Currency baseCurrency, Currency targetCurrency, Double amount) {
+        if (baseCurrency == targetCurrency) {
+            return amount;
+        }
 
-        /* First operation gets the exchange rate (buy or sell rate), second operation gets conversion rate (base exchange rate) */
-        Pair<Double, Double> currencyFields = operation == CurrencyOperation.EXCHANGE ? getRateForExchange(baseCurrency, targetCurrency)
-                : getRateForConversion(baseCurrency, targetCurrency);
-
+        Pair<Double, Double> currencyFields = getExchangeRate(baseCurrency, targetCurrency);
         double rate = currencyFields.getValue0();
         double exponential = currencyFields.getValue1();
         log.info("Rate and Exponential: {} & {}", rate, exponential);
@@ -189,7 +167,7 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         return amount * effectOfRate;
     }
 
-    private Pair<Double, Double> getRateForExchange(Currency baseCurrency, Currency targetCurrency) {
+    private Pair<Double, Double> getExchangeRate(Currency baseCurrency, Currency targetCurrency) {
         Optional<ExchangeView> maybeExchangeView = exchangeViewRepository.findByBaseCurrencyAndTargetCurrency(baseCurrency, targetCurrency);
         ExchangeView exchangeView;
         double exponential;
@@ -210,33 +188,6 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         }
 
         log.info("Buy and sell rates: {} {}", exchangeView.getBuyRate(), exchangeView.getSellRate());
-
-        return new Pair<>(rate, exponential);
-    }
-
-    private Pair<Double, Double> getRateForConversion(Currency baseCurrency, Currency targetCurrency) {
-        if (baseCurrency == targetCurrency) {
-            return new Pair<>(1D, 1D);
-        }
-
-        Optional<Exchange> maybeExchange = exchangeRepository.findByBaseCurrencyAndTargetCurrency(baseCurrency, targetCurrency);
-        Exchange exchange;
-        double exponential;
-        double rate;
-
-        if (maybeExchange.isPresent()) { //// exchange is present
-            log.info(LogMessages.RESOURCE_FOUND, Entity.EXCHANGE.getValue());
-            exchange = maybeExchange.get();
-            exponential = -1; // straight exchange operation
-        } else { // reverse exchange is present
-            log.info(LogMessages.RESOURCE_FOUND, "Reverse " + Entity.EXCHANGE.getValue());
-            exchange = exchangeRepository.findByTargetCurrencyAndBaseCurrency(baseCurrency, targetCurrency)
-                    .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.EXCHANGE.getValue())));
-            exponential = 1; // reverse exchange operation
-        }
-
-        rate = exchange.getRate();
-        log.info("Rate: {}", rate);
 
         return new Pair<>(rate, exponential);
     }

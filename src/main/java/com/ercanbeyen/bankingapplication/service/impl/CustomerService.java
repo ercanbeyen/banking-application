@@ -163,7 +163,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         }
 
         Double netWorth = accounts.stream()
-                .map(account -> exchangeService.convertMoney(account.getCurrency(), Currency.TL, account.getBalance()))
+                .map(account -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), Currency.TL, account.getBalance()))
                 .reduce(0D, Double::sum);
 
         return new WorthResponse(earning, spending, netWorth);
@@ -205,8 +205,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         /* Get all transactions of each account */
         accountIds.forEach(accountId -> {
-            getAccountActivities(accountId, true, options, accountActivityDtos);
-            getAccountActivities(accountId, false, options, accountActivityDtos);
+            getAccountActivities(accountId, BalanceActivity.DECREASE, options, accountActivityDtos);
+            getAccountActivities(accountId, BalanceActivity.INCREASE, options, accountActivityDtos);
         });
 
         Comparator<AccountActivityDto> transactionDtoComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
@@ -293,19 +293,33 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     }
 
     private double calculateTotalAmount(Account account, BalanceActivity balanceActivity) {
-        AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE ? new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
+        AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE ?
+                new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
                 : new AccountActivityFilteringOptions(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
 
         return accountActivityService.getAccountActivitiesOfParticularAccounts(options, account.getCurrency())
                 .stream()
-                .map(accountActivityDto -> exchangeService.convertMoney(account.getCurrency(), Currency.TL, accountActivityDto.amount()))
+                .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), Currency.TL, accountActivityDto.amount()))
                 .reduce(0D, Double::sum);
     }
 
-    private void getAccountActivities(Integer accountId, boolean isSender, AccountActivityFilteringOptions options, List<AccountActivityDto> accountActivityDtos) {
-        AccountActivityFilteringOptions accountActivityFilteringOptions = isSender ?
-                new AccountActivityFilteringOptions(options.activityTypes(), accountId, null, options.minimumAmount(), options.createdAt()) :
-                new AccountActivityFilteringOptions(options.activityTypes(), null, accountId, options.minimumAmount(), options.createdAt());
+    private void getAccountActivities(Integer accountId, BalanceActivity balanceActivity, AccountActivityFilteringOptions options, List<AccountActivityDto> accountActivityDtos) {
+        Integer[] accountIds = new Integer[2]; // first value is sender account id, second value is receiver account id
+
+        if (balanceActivity == BalanceActivity.DECREASE) {
+            accountIds[0] = accountId;
+        } else {
+            accountIds[1] = accountId;
+        }
+
+        AccountActivityFilteringOptions accountActivityFilteringOptions = new AccountActivityFilteringOptions(
+                options.activityTypes(),
+                accountIds[0],
+                accountIds[1],
+                options.minimumAmount(),
+                options.createdAt()
+        );
+
         List<AccountActivityDto> currentAccountActivityDtos = accountActivityService.getAccountActivities(accountActivityFilteringOptions);
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }
