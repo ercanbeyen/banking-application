@@ -20,7 +20,7 @@ public final class LogMessages {
     public static final String CLASS_OF_RESPONSE = "Class of response: {}";
     public static final String CLASS_OF_OBJECT = "Class of {}: {}";
     public static final String NUMBER_OF_UPDATED_ENTITIES = "Number of updated entities: {}";
-    public static final String PROCESSED_AMOUNT = "Processed amount: {}";
+    public static final String PROCESSED_AMOUNT = "Amount after {}: {}";
 
     public static class Batch {
         public static final String JOB_STATUS = "!!! Job {}! Time to verify the results";

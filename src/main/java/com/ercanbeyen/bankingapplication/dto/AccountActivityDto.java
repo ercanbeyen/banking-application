@@ -10,6 +10,7 @@ public record AccountActivityDto(
         Integer receiverAccountId,
         Double amount,
         LocalDateTime createdAt,
-        String summary) {
+        String summary,
+        String explanation) {
 
 }

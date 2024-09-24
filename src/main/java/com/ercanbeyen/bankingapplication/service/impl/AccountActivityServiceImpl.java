@@ -89,7 +89,8 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 request.senderAccount(),
                 request.receiverAccount(),
                 request.amount(),
-                request.summary()
+                request.summary(),
+                request.explanation()
         );
 
         AccountActivity savedAccountActivity = accountActivityRepository.save(accountActivity);

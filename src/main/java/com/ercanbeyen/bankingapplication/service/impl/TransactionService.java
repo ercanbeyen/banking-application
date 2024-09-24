@@ -37,7 +37,6 @@ public class TransactionService {
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
-        log.info(LogMessages.PROCESSED_AMOUNT, requestedAmountInSummary);
 
         String summaryTemplate = """
                 Account Activity: %s
@@ -57,7 +56,7 @@ public class TransactionService {
                 LocalDateTime.now()
         );
 
-        createAccountActivity(activityType, amount, summary, activityParameters.getValue1());
+        createAccountActivity(activityType, amount, summary, activityParameters.getValue1(), null);
     }
 
     public void transferMoneyBetweenAccounts(TransferRequest request, Integer senderAccountId, Double amount, Integer receiverAccountId, Account senderAccount, Account receiverAccount) {
@@ -69,7 +68,6 @@ public class TransactionService {
 
         Account[] accounts = {senderAccount, receiverAccount};
         String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
-        log.info(LogMessages.PROCESSED_AMOUNT, requestedAmountInSummary);
 
         String summaryTemplate = """
                 Account Activity: %s
@@ -93,7 +91,7 @@ public class TransactionService {
                 LocalDateTime.now()
         );
 
-        createAccountActivity(activityType, request.amount(), summary, accounts);
+        createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
     }
 
     public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount) {
@@ -107,10 +105,10 @@ public class TransactionService {
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         String spentAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(spentAmount);
-        log.info(LogMessages.PROCESSED_AMOUNT, spentAmountInSummary);
+        log.info(LogMessages.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
 
         String earnedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(earnedAmount);
-        log.info(LogMessages.PROCESSED_AMOUNT, earnedAmountInSummary);
+        log.info(LogMessages.PROCESSED_AMOUNT, earnedAmountInSummary, "Earn");
 
         String summaryTemplate = """
                 Account Activity: %s
@@ -139,11 +137,11 @@ public class TransactionService {
 
         Account[] accounts = {sellerAccount, buyerAccount};
 
-        createAccountActivity(activityType, earnedAmount, summary, accounts);
+        createAccountActivity(activityType, earnedAmount, summary, accounts, null);
     }
 
-    private void createAccountActivity(AccountActivityType activityType, Double amount, String summary, Account[] accounts) {
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary);
+    private void createAccountActivity(AccountActivityType activityType, Double amount, String summary, Account[] accounts, String explanation) {
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
         accountActivityService.createAccountActivity(accountActivityRequest);
     }
 

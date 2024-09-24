@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.WorthResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
@@ -70,9 +70,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{nationalId}/worth")
-    public ResponseEntity<WorthResponse> calculateWorth(@PathVariable("nationalId") String nationalId) {
-        return ResponseEntity.ok(customerService.calculateWorth(nationalId));
+    @GetMapping("/{nationalId}/status")
+    public ResponseEntity<CustomerStatusResponse> calculateStatus(@PathVariable("nationalId") String nationalId) {
+        return ResponseEntity.ok(customerService.calculateStatus(nationalId));
     }
 
     @GetMapping("/{id}/accounts")

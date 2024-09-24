@@ -7,7 +7,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.WorthResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
@@ -149,7 +149,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return ResponseMessages.FILE_DELETE_SUCCESS;
     }
 
-    public WorthResponse calculateWorth(String nationalId) {
+    public CustomerStatusResponse calculateStatus(String nationalId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         List<Account> accounts = findByNationalId(nationalId).getAccounts();
@@ -162,11 +162,14 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
         }
 
-        Double netWorth = accounts.stream()
-                .map(account -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), Currency.TL, account.getBalance()))
+        Double netStatus = accounts.stream()
+                .map(account -> exchangeService.convertMoneyBetweenCurrencies(
+                        account.getCurrency(),
+                        Currency.TL,
+                        account.getBalance()))
                 .reduce(0D, Double::sum);
 
-        return new WorthResponse(earning, spending, netWorth);
+        return new CustomerStatusResponse(earning, spending, netStatus);
     }
 
     public List<AccountDto> getAccounts(Integer id, AccountFilteringOptions options) {
@@ -293,8 +296,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     }
 
     private double calculateTotalAmount(Account account, BalanceActivity balanceActivity) {
-        AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE ?
-                new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
+        AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE
+                ? new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
                 : new AccountActivityFilteringOptions(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
 
         return accountActivityService.getAccountActivitiesOfParticularAccounts(options, account.getCurrency())

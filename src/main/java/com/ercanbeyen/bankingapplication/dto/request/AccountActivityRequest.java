@@ -8,5 +8,6 @@ public record AccountActivityRequest(
         Account senderAccount,
         Account receiverAccount,
         Double amount,
-        String summary) {
+        String summary,
+        String explanation) {
 }

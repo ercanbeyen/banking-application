@@ -91,7 +91,8 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
                 null,
                 null,
                 0D,
-                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getCity().getValue() + " branch at " + LocalDateTime.now()
+                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getCity().getValue() + " branch at " + LocalDateTime.now(),
+                null
         );
         accountActivityService.createAccountActivity(accountActivityRequest);
 
@@ -236,7 +237,8 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
                 null,
                 null,
                 0D,
-                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " at " + LocalDateTime.now()
+                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " at " + LocalDateTime.now(),
+                null
         );
         accountActivityService.createAccountActivity(accountActivityRequest);
 
@@ -260,11 +262,9 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     public List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency, City city) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        if (Optional.ofNullable(city).isPresent()) {
-            return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrencyAndCity(type, currency, city);
-        } else {
-            return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
-        }
+        return Optional.ofNullable(city).isPresent()
+                ? accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrencyAndCity(type, currency, city)
+                : accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
     }
 
     public Account findById(Integer id) {
@@ -329,12 +329,13 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
     private static void checkIsAccountClosed(Account account) {
         LocalDateTime closedAt = account.getClosedAt();
+        Integer id = account.getId();
 
         if (Optional.ofNullable(closedAt).isPresent()) {
-            log.error("Account {} has already been closed", account.getId());
-            throw new ResourceConflictException(String.format("Account is improper for activities. It has already been closed at %s", closedAt));
+            log.error("Account {} has already been closed at {}", id, closedAt);
+            throw new ResourceConflictException(String.format("Account %d is improper for activities. It has already been closed at %s", id, closedAt));
         }
 
-        log.info("Account {} has not been closed", account.getId());
+        log.info("Account {} has not been closed", id);
     }
 }

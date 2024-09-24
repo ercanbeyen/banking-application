@@ -34,7 +34,8 @@ public class AddressUtils {
     }
 
     private static void checkOwnership(AddressType addressType, Ownership ownership) {
-        List<Ownership> validOwnerships = addressType == AddressType.WORK ? List.of(Ownership.OWNER, Ownership.EMPLOYEE)
+        List<Ownership> validOwnerships = addressType == AddressType.WORK
+                ? List.of(Ownership.OWNER, Ownership.EMPLOYEE)
                 : List.of(Ownership.FAMILY_PROPERTY, Ownership.RENT, Ownership.PUBLIC_HOUSING);
 
         if (!validOwnerships.contains(ownership)) {

@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.util;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
@@ -22,7 +23,7 @@ import java.util.function.Predicate;
 @UtilityClass
 public class AccountUtils {
     private final List<Integer> DEPOSIT_PERIODS = List.of(1, 3, 6, 12);
-    private final Double MAXIMUM_TRANSFER_LIMIT = 1_000_000D;
+    private final Double MAXIMUM_TRANSFER_LIMIT_PER_REQUEST = 100_000D;
     private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
@@ -33,7 +34,7 @@ public class AccountUtils {
         if (accountType == AccountType.DEPOSIT) {
             checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
         } else {
-            log.warn("{} account does not have deposit period", accountType);
+            log.warn("{} account does not have deposit period", accountType.getValue());
         }
 
         Double balance = accountDto.getBalance();
@@ -48,8 +49,9 @@ public class AccountUtils {
             throw new ResourceExpectationFailedException("Identity of sender and receiver accounts should not be equal");
         }
 
-        if (request.amount() >= MAXIMUM_TRANSFER_LIMIT) {
-            throw new ResourceExpectationFailedException("Maximum transfer limit (" + MAXIMUM_TRANSFER_LIMIT + ") is exceeded");
+        if (request.amount() >= MAXIMUM_TRANSFER_LIMIT_PER_REQUEST) {
+            String formattedValue = NumberFormatterUtil.convertNumberToFormalExpression(MAXIMUM_TRANSFER_LIMIT_PER_REQUEST);
+            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", AccountActivityType.MONEY_TRANSFER.getValue(), formattedValue));
         }
     }
 
@@ -63,7 +65,7 @@ public class AccountUtils {
         if (activityType == AccountActivityType.WITHDRAWAL) {
             AccountUtils.checkBalance(balance, request);
         } else {
-            log.warn("Account activity is {}. So no need to check balance", activityType);
+            log.warn("{} is {}. So no need to check balance", Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
         }
     }
 
