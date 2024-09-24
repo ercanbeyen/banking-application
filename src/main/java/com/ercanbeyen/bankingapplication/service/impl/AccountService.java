@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
+import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
@@ -72,6 +73,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return accountMapper.entityToDto(account);
     }
 
+    @Transactional
     @Override
     public AccountDto createEntity(AccountDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
@@ -82,6 +84,17 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         account.setCustomer(customer);
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
+
+        AccountActivityType activityType = AccountActivityType.ACCOUNT_OPENING;
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
+                activityType,
+                null,
+                null,
+                0D,
+                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getCity().getValue() + " branch at " + LocalDateTime.now(),
+                null
+        );
+        accountActivityService.createAccountActivity(accountActivityRequest);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -123,7 +136,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         AccountUtils.checkCurrentAccountBeforeUpdateBalance(account.getBalance(), amount, activityType);
         checkDailyAccountActivityLimit(account, amount, activityType);
 
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, null);
+        transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
@@ -142,7 +155,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Double amount = AccountUtils.calculateInterest(account.getBalance(), account.getInterestRatio());
         AccountActivityType activityType = AccountActivityType.FEE;
 
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, "Fee is transferred, because deposit period is completed");
+        transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit account has been renewed.", account.getCurrency()));
         notificationService.createNotification(notificationDto);
@@ -218,7 +231,18 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         account.setClosedAt(LocalDateTime.now());
         accountRepository.save(account);
 
-        return String.format(ResponseMessages.SUCCESS, AccountActivityType.ACCOUNT_CLOSE.getValue());
+        AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
+                activityType,
+                null,
+                null,
+                0D,
+                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " at " + LocalDateTime.now(),
+                null
+        );
+        accountActivityService.createAccountActivity(accountActivityRequest);
+
+        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
 
     public String getTotalActiveAccounts(City city, AccountType type, Currency currency) {
@@ -238,11 +262,9 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     public List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency, City city) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        if (Optional.ofNullable(city).isPresent()) {
-            return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrencyAndCity(type, currency, city);
-        } else {
-            return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
-        }
+        return Optional.ofNullable(city).isPresent()
+                ? accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrencyAndCity(type, currency, city)
+                : accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
     }
 
     public Account findById(Integer id) {
@@ -292,7 +314,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         }
 
         return new AccountActivityFilteringOptions(
-                activityType,
+                List.of(activityType),
                 accountIds[0],
                 accountIds[1],
                 null,
@@ -307,12 +329,13 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
     private static void checkIsAccountClosed(Account account) {
         LocalDateTime closedAt = account.getClosedAt();
+        Integer id = account.getId();
 
         if (Optional.ofNullable(closedAt).isPresent()) {
-            log.error("Account {} has already been closed", account.getId());
-            throw new ResourceConflictException(String.format("Account is improper for activities. It has already been closed at %s", closedAt));
+            log.error("Account {} has already been closed at {}", id, closedAt);
+            throw new ResourceConflictException(String.format("Account %d is improper for activities. It has already been closed at %s", id, closedAt));
         }
 
-        log.info("Account {} has not been closed", account.getId());
+        log.info("Account {} has not been closed", id);
     }
 }

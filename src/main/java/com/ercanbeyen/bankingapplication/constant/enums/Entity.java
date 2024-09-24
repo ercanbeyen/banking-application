@@ -10,8 +10,8 @@ public enum Entity {
     ACCOUNT("Account"),
     FILE("File"),
     NOTIFICATION("Notification"),
-    ACCOUNT_ACTIVITY("AccountActivity"),
-    REGULAR_TRANSFER_ORDER("RegularTransferOrder"),
+    ACCOUNT_ACTIVITY("Account activity"),
+    REGULAR_TRANSFER_ORDER("Regular transfer order"),
     RATING("Rating"),
     EXCHANGE("Exchange"),
     ADDRESS("Address");

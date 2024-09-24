@@ -20,6 +20,7 @@ import com.ercanbeyen.bankingapplication.util.ExchangeUtils;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.javatuples.Pair;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -89,25 +90,34 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     public void deleteEntity(Integer id) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        if (!exchangeRepository.existsById(id)) {
-            throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.EXCHANGE.getValue()));
-        }
+        String entity = Entity.EXCHANGE.getValue();
 
-        log.info(LogMessages.RESOURCE_FOUND, Entity.EXCHANGE.getValue());
+        exchangeRepository.findById(id)
+                .ifPresentOrElse(exchange -> exchangeRepository.deleteById(id), () -> {
+                    log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
+                });
 
-        exchangeRepository.deleteById(id);
+        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
-    public String calculateMoneyExchange(Currency fromCurrency, Currency toCurrency, Double amount) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        double exchangedAmount = convertMoney(fromCurrency, toCurrency, amount);
-        return amount + " " + fromCurrency.name() + " is successfully exchanged to " + exchangedAmount + " " + toCurrency.name();
-    }
-
-    public Double exchangeMoney(Account sellerAccount, Account buyerAccount, Double amount) {
+    public Double exchangeMoneyBetweenAccounts(Account sellerAccount, Account buyerAccount, Double amount) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
         checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
-        return convertMoney(sellerAccount.getCurrency(), buyerAccount.getCurrency(), amount);
+        return convertMoneyBetweenCurrenciesWithBankRates(
+                sellerAccount.getCurrency(),
+                buyerAccount.getCurrency(),
+                amount
+        );
+    }
+
+    public Double convertMoneyBetweenCurrencies(Currency fromCurrency, Currency toCurrency, Double amount) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        return convertMoneyBetweenCurrenciesWithBankRates(
+                fromCurrency,
+                toCurrency,
+                amount
+        );
     }
 
     public List<ExchangeView> getExchangeViews() {
@@ -141,17 +151,30 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         }
     }
 
-    private double convertMoney(Currency baseCurrency, Currency targetCurrency, Double amount) {
-        log.info("Exchange is from {} to {}", baseCurrency, targetCurrency);
+    private double convertMoneyBetweenCurrenciesWithBankRates(Currency baseCurrency, Currency targetCurrency, Double amount) {
+        if (baseCurrency == targetCurrency) {
+            return amount;
+        }
 
+        Pair<Double, Double> currencyFields = getExchangeRate(baseCurrency, targetCurrency);
+        double rate = currencyFields.getValue0();
+        double exponential = currencyFields.getValue1();
+        log.info("Rate and Exponential: {} & {}", rate, exponential);
+
+        double effectOfRate = Math.pow(rate, exponential);
+        log.info("Effect of rate: {}", effectOfRate);
+
+        return amount * effectOfRate;
+    }
+
+    private Pair<Double, Double> getExchangeRate(Currency baseCurrency, Currency targetCurrency) {
         Optional<ExchangeView> maybeExchangeView = exchangeViewRepository.findByBaseCurrencyAndTargetCurrency(baseCurrency, targetCurrency);
-
+        ExchangeView exchangeView;
         double exponential;
         double rate;
-        ExchangeView exchangeView;
 
         if (maybeExchangeView.isPresent()) { // Bank sells foreign currency & Customer buys foreign currency
-            log.info("Exchange is present");
+            log.info(LogMessages.RESOURCE_FOUND, Entity.EXCHANGE.getValue());
             exchangeView = maybeExchangeView.get();
             exponential = -1; // foreign currency sell
             rate = exchangeView.getSellRate();
@@ -159,17 +182,14 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         } else { // Bank buys foreign currency & Customer sells foreign currency
             exchangeView = exchangeViewRepository.findByTargetCurrencyAndBaseCurrency(baseCurrency, targetCurrency)
                     .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.EXCHANGE.getValue())));
-            log.info("Reverse exchange is present");
+            log.info(LogMessages.RESOURCE_FOUND, "Reverse " + Entity.EXCHANGE.getValue());
             exponential = 1; // foreign currency buy
             rate = exchangeView.getBuyRate();
         }
 
         log.info("Buy and sell rates: {} {}", exchangeView.getBuyRate(), exchangeView.getSellRate());
 
-        double effectOfRate = Math.pow(rate, exponential);
-        log.info("Effect of rate: {}", effectOfRate);
-
-        return amount * effectOfRate;
+        return new Pair<>(rate, exponential);
     }
 
     private void checkExistsByBaseAndTargetCurrencies(Currency base, Currency target) {

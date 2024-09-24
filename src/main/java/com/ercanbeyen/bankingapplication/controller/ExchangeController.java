@@ -30,12 +30,12 @@ public class ExchangeController extends BaseController<ExchangeDto, ExchangeFilt
     }
 
     @GetMapping("/{from}/{to}/{amount}")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(
+    public ResponseEntity<MessageResponse<Double>> convertMoneyBetweenCurrencies(
             @PathVariable("from") Currency fromCurrency,
             @PathVariable("to") Currency toCurrency,
             @PathVariable("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
         ExchangeUtils.checkCurrencies(fromCurrency, toCurrency);
-        MessageResponse<String> response = new MessageResponse<>(exchangeService.calculateMoneyExchange(fromCurrency, toCurrency, amount));
+        MessageResponse<Double> response = new MessageResponse<>(exchangeService.convertMoneyBetweenCurrencies(fromCurrency, toCurrency, amount));
         return ResponseEntity.ok(response);
     }
 }

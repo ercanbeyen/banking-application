@@ -1,9 +1,13 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.*;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
@@ -44,6 +48,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
+    private final ExchangeService exchangeService;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOptions options) {
@@ -144,6 +149,29 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return ResponseMessages.FILE_DELETE_SUCCESS;
     }
 
+    public CustomerStatusResponse calculateStatus(String nationalId) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        List<Account> accounts = findByNationalId(nationalId).getAccounts();
+        double earning = 0;
+        double spending = 0;
+
+        for (Account account : accounts) {
+            earning += calculateTotalAmount(account, BalanceActivity.INCREASE);
+            spending += calculateTotalAmount(account, BalanceActivity.DECREASE);
+            log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
+        }
+
+        Double netStatus = accounts.stream()
+                .map(account -> exchangeService.convertMoneyBetweenCurrencies(
+                        account.getCurrency(),
+                        Currency.TL,
+                        account.getBalance()))
+                .reduce(0D, Double::sum);
+
+        return new CustomerStatusResponse(earning, spending, netStatus);
+    }
+
     public List<AccountDto> getAccounts(Integer id, AccountFilteringOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
@@ -180,8 +208,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         /* Get all transactions of each account */
         accountIds.forEach(accountId -> {
-            getAccountActivities(accountId, true, options, accountActivityDtos);
-            getAccountActivities(accountId, false, options, accountActivityDtos);
+            getAccountActivities(accountId, BalanceActivity.DECREASE, options, accountActivityDtos);
+            getAccountActivities(accountId, BalanceActivity.INCREASE, options, accountActivityDtos);
         });
 
         Comparator<AccountActivityDto> transactionDtoComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
@@ -267,10 +295,34 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return customer;
     }
 
-    private void getAccountActivities(Integer accountId, boolean isSender, AccountActivityFilteringOptions options, List<AccountActivityDto> accountActivityDtos) {
-        AccountActivityFilteringOptions accountActivityFilteringOptions = isSender ?
-                new AccountActivityFilteringOptions(options.type(), accountId, null, options.minimumAmount(), options.createdAt()) :
-                new AccountActivityFilteringOptions(options.type(), null, accountId, options.minimumAmount(), options.createdAt());
+    private double calculateTotalAmount(Account account, BalanceActivity balanceActivity) {
+        AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE
+                ? new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
+                : new AccountActivityFilteringOptions(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
+
+        return accountActivityService.getAccountActivitiesOfParticularAccounts(options, account.getCurrency())
+                .stream()
+                .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), Currency.TL, accountActivityDto.amount()))
+                .reduce(0D, Double::sum);
+    }
+
+    private void getAccountActivities(Integer accountId, BalanceActivity balanceActivity, AccountActivityFilteringOptions options, List<AccountActivityDto> accountActivityDtos) {
+        Integer[] accountIds = new Integer[2]; // first value is sender account id, second value is receiver account id
+
+        if (balanceActivity == BalanceActivity.DECREASE) {
+            accountIds[0] = accountId;
+        } else {
+            accountIds[1] = accountId;
+        }
+
+        AccountActivityFilteringOptions accountActivityFilteringOptions = new AccountActivityFilteringOptions(
+                options.activityTypes(),
+                accountIds[0],
+                accountIds[1],
+                options.minimumAmount(),
+                options.createdAt()
+        );
+
         List<AccountActivityDto> currentAccountActivityDtos = accountActivityService.getAccountActivities(accountActivityFilteringOptions);
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }

@@ -35,7 +35,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     public List<AccountActivityDto> getAccountActivities(AccountActivityFilteringOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        Predicate<AccountActivity> accountActivityPredicate = accountActivity -> (options.type() == null || options.type() == accountActivity.getType())
+        Predicate<AccountActivity> accountActivityPredicate = accountActivity -> (checkAccountActivity(options, accountActivity))
                 && (options.senderAccountId() == null || options.senderAccountId().equals(accountActivity.getSenderAccount().getId()))
                 && (options.receiverAccountId() == null || options.receiverAccountId().equals(accountActivity.getReceiverAccount().getId()))
                 && (options.minimumAmount() == null || options.minimumAmount() <= accountActivity.getAmount())
@@ -81,7 +81,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         if (request == null) {
-            throw new ResourceNotFoundException("Account Activity request is not found");
+            throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.ACCOUNT_ACTIVITY.getValue() + " request"));
         }
 
         AccountActivity accountActivity = new AccountActivity(
@@ -89,6 +89,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 request.senderAccount(),
                 request.receiverAccount(),
                 request.amount(),
+                request.summary(),
                 request.explanation()
         );
 
@@ -131,14 +132,15 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             throw new ResourceConflictException("Both accounts cannot be null");
         }
 
-        return accountActivities
-                .stream()
+        return accountActivities.stream()
                 .filter(accountActivityPredicate)
                 .toList();
     }
 
     private static boolean checkAccountActivity(AccountActivityFilteringOptions options, AccountActivity accountActivity) {
-        boolean typeCheck = Optional.ofNullable(options.type()).isEmpty() || options.type() == accountActivity.getType();
+        boolean typeCheck = Optional.ofNullable(options.activityTypes()).isEmpty() || options.activityTypes()
+                .stream()
+                .anyMatch(activityType -> accountActivity.getType() == activityType);
         boolean amountCheck = Optional.ofNullable(options.minimumAmount()).isEmpty() || options.minimumAmount() <= accountActivity.getAmount();
         boolean createdAtCheck = Optional.ofNullable(options.createdAt()).isEmpty() || options.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate());
 

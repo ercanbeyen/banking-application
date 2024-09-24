@@ -30,13 +30,15 @@ public class AccountActivity {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at", columnDefinition = Queries.GET_NOW_TIMESTAMP)
     private LocalDateTime createdAt;
+    private String summary;
     private String explanation;
 
-    public AccountActivity(AccountActivityType type, Account senderAccount, Account receiverAccount, Double amount, String explanation) {
+    public AccountActivity(AccountActivityType type, Account senderAccount, Account receiverAccount, Double amount, String summary, String explanation) {
         this.type = type;
         this.senderAccount = senderAccount;
         this.receiverAccount = receiverAccount;
         this.amount = amount;
+        this.summary = summary;
         this.explanation = explanation;
     }
 }

@@ -1,9 +1,10 @@
-package com.ercanbeyen.bankingapplication.advice;
+package com.ercanbeyen.bankingapplication.exception.advice;
 
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.dto.response.ExceptionResponse;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @RestControllerAdvice
 public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -68,7 +70,9 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ExceptionResponse> handleGeneralException(Exception exception) {
-        return constructResponse(exception, HttpStatus.INTERNAL_SERVER_ERROR);
+        log.error("Exception message: {}", exception.getMessage());
+        Exception modifiedException = new Exception("While operation is processing, error was occurred in the server");
+        return constructResponse(modifiedException, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
     private ResponseEntity<ExceptionResponse> constructResponse(Exception exception, HttpStatus httpStatus) {
