@@ -14,7 +14,8 @@ public enum Entity {
     REGULAR_TRANSFER_ORDER("Regular transfer order"),
     RATING("Rating"),
     EXCHANGE("Exchange"),
-    ADDRESS("Address");
+    ADDRESS("Address"),
+    BRANCH("Branch");
 
     private final String value;
 
@@ -27,6 +28,7 @@ public enum Entity {
         return switch (this) {
             case REGULAR_TRANSFER_ORDER -> "regular-transfer-order";
             case ACCOUNT_ACTIVITY -> "account-activitie";
+            case BRANCH -> "branche";
             default -> value.toLowerCase();
         };
     }

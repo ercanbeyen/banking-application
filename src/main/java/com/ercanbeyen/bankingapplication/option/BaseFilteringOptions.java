@@ -9,6 +9,6 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @MappedSuperclass
-public sealed class BaseFilteringOptions permits AccountFilteringOptions, CustomerFilteringOptions, ExchangeFilteringOptions, RegularTransferOrderOptions {
+public sealed class BaseFilteringOptions permits AccountFilteringOptions, BranchFilteringOptions, CustomerFilteringOptions, ExchangeFilteringOptions, RegularTransferOrderOptions {
     private LocalDateTime createdAt;
 }

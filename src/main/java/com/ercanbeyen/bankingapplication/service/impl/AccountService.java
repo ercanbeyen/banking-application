@@ -11,6 +11,7 @@ import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -44,6 +45,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final TransactionService transactionService;
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
+    private final BranchService branchService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -80,8 +82,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account account = accountMapper.dtoToEntity(request);
         Customer customer = customerService.findByNationalId(request.getCustomerNationalId());
+        Branch branch = branchService.findById(request.getBranchId());
 
         account.setCustomer(customer);
+        account.setBranch(branch);
+
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
@@ -101,12 +106,15 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
     @Override
     public AccountDto updateEntity(Integer id, AccountDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
 
         Account account = findById(id);
         checkIsAccountClosed(account);
         AccountUtils.checkCurrencies(account.getCurrency(), request.getCurrency());
 
+        Branch branch = branchService.findById(request.getBranchId());
+
+        account.setBranch(branch);
         account.setCity(request.getCity());
         account.setInterestRatio(request.getInterestRatio());
         account.setDepositPeriod(request.getDepositPeriod());
