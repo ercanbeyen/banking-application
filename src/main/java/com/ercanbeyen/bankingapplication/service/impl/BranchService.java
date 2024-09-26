@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -15,8 +16,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 @Service
 @Slf4j
@@ -29,12 +32,23 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
     public List<BranchDto> getEntities(BranchFilteringOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        List<BranchDto> branchDtos = new ArrayList<>();
+        Predicate<Branch> branchPredicate = branch -> {
+            City optionsCity = options.getCity();
+            String optionsDistrict = options.getDistrict();
+            LocalDateTime optionsCreatedAt = options.getCreatedAt();
 
-        branchRepository.findAll()
-                .forEach(branch -> branchDtos.add(branchMapper.entityToDto(branch)));
+            boolean cityCheck = (Optional.ofNullable(optionsCity).isEmpty() || branch.getCity() == optionsCity);
+            boolean districtCheck = (Optional.ofNullable(optionsDistrict).isEmpty()|| branch.getDistrict().equals(optionsDistrict));
+            boolean createdAtCheck = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().isEqual(optionsCreatedAt));
 
-        return branchDtos;
+            return cityCheck && districtCheck && createdAtCheck;
+        };
+
+        return branchRepository.findAll()
+                .stream()
+                .filter(branchPredicate)
+                .map(branchMapper::entityToDto)
+                .toList();
     }
 
     @Override

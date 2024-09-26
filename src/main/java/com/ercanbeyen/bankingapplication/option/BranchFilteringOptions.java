@@ -7,5 +7,4 @@ import lombok.Data;
 public final class BranchFilteringOptions extends BaseFilteringOptions {
     private City city;
     private String district;
-    private String name;
 }

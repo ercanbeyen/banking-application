@@ -15,7 +15,7 @@ import java.util.List;
 @Repository
 public interface AccountRepository extends BaseRepository<Account> {
     @Procedure(name = "getTotalAccountsByCityAndTypeAndCurrency")
-    Integer getTotalAccountsByCityAndTypeAndCurrency(
+    int getTotalAccountsByCityAndTypeAndCurrency(
             @Param("city") String city,
             @Param("type") String type,
             @Param("currency") String currency
