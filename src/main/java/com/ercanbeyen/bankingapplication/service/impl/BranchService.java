@@ -83,7 +83,17 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
-    public Branch findById(Integer id) {
+    public Branch findByName(String name) {
+        String entity = Entity.BRANCH.getValue();
+        Branch branch = branchRepository.findByName(name)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+
+        log.info(LogMessages.RESOURCE_FOUND, entity);
+
+        return branch;
+    }
+
+    private Branch findById(Integer id) {
         String entity = Entity.BRANCH.getValue();
         Branch branch = branchRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));

@@ -1,9 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.City;
-import jakarta.persistence.Entity;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
+import jakarta.persistence.*;
 import lombok.Data;
 
 import java.util.List;
@@ -13,8 +11,10 @@ import java.util.Optional;
 @Entity
 @Table(name = "branches")
 public final class Branch extends BaseEntity {
+    @Enumerated(EnumType.STRING)
     private City city;
     private String district;
+    @Column(unique = true)
     private String name;
     @OneToMany(mappedBy = "branch")
     private List<Account> accounts;

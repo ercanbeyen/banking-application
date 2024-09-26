@@ -78,19 +78,18 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @GetMapping("/total")
     public ResponseEntity<MessageResponse<String>> getTotalAccounts(
-            @RequestParam("city") City city,
             @RequestParam("type") AccountType type,
-            @RequestParam("currency") Currency currency) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.getTotalActiveAccounts(city, type, currency));
+            @RequestParam("currency") Currency currency,
+            @RequestParam(name = "city", required = false) City city) {
+        MessageResponse<String> response = new MessageResponse<>(accountService.getTotalActiveAccounts(type, currency, city));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/statistics/maximum-balances")
     public ResponseEntity<MessageResponse<List<CustomerStatisticsResponse>>> getCustomerInformationWithMaximumBalance(
             @RequestParam("type") AccountType type,
-            @RequestParam("currency") Currency currency,
-            @RequestParam(name = "city", required = false) City city) {
-        MessageResponse<List<CustomerStatisticsResponse>> response = new MessageResponse<>(accountService.getCustomersHaveMaximumBalance(type, currency, city));
+            @RequestParam("currency") Currency currency) {
+        MessageResponse<List<CustomerStatisticsResponse>> response = new MessageResponse<>(accountService.getCustomersHaveMaximumBalance(type, currency));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
