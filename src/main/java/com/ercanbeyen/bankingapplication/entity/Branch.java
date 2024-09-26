@@ -9,7 +9,9 @@ import java.util.Optional;
 
 @Data
 @Entity
-@Table(name = "branches")
+@Table(name = "branches", indexes = {
+        @Index(name = "city_and_district_index", columnList = "city, district")
+})
 public final class Branch extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private City city;
