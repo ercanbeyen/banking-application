@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.entity.File;
@@ -71,8 +72,8 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @GetMapping("/{nationalId}/status")
-    public ResponseEntity<CustomerStatusResponse> calculateStatus(@PathVariable("nationalId") String nationalId) {
-        return ResponseEntity.ok(customerService.calculateStatus(nationalId));
+    public ResponseEntity<CustomerStatusResponse> calculateStatus(@PathVariable("nationalId") String nationalId, @RequestParam("base") Currency baseCurrency) {
+        return ResponseEntity.ok(customerService.calculateStatus(nationalId, baseCurrency));
     }
 
     @GetMapping("/{id}/accounts")

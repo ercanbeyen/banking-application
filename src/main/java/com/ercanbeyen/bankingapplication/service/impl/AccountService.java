@@ -58,14 +58,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             return typeFilter && timeFilter && closedFilter;
         };
 
-        List<AccountDto> accountDtos = new ArrayList<>();
-
-        accountRepository.findAll()
+        return accountRepository.findAll()
                 .stream()
                 .filter(accountPredicate)
-                .forEach(account -> accountDtos.add(accountMapper.entityToDto(account)));
-
-        return accountDtos;
+                .map(accountMapper::entityToDto)
+                .toList();
     }
 
     @Override

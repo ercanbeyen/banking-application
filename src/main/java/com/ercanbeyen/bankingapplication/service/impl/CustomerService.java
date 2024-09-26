@@ -59,20 +59,16 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             LocalDate customerBirthday = customer.getBirthDate();
             Boolean birthDayCondition = (filteringDay == null)
                     || (filteringDay.getMonth() == customerBirthday.getMonth() && filteringDay.getDayOfMonth() == customerBirthday.getDayOfMonth());
-
             Boolean createTimeCondition = (options.getCreatedAt() == null || options.getCreatedAt().isEqual(options.getCreatedAt()));
 
             return (birthDayCondition && createTimeCondition);
         };
 
-        List<CustomerDto> customerDtos = new ArrayList<>();
-
-        customerRepository.findAll()
+        return customerRepository.findAll()
                 .stream()
                 .filter(customerPredicate)
-                .forEach(customer -> customerDtos.add(customerMapper.entityToDto(customer)));
-
-        return customerDtos;
+                .map(customerMapper::entityToDto)
+                .toList();
     }
 
     @Override
@@ -149,7 +145,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return ResponseMessages.FILE_DELETE_SUCCESS;
     }
 
-    public CustomerStatusResponse calculateStatus(String nationalId) {
+    public CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         List<Account> accounts = findByNationalId(nationalId).getAccounts();
@@ -157,15 +153,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         double spending = 0;
 
         for (Account account : accounts) {
-            earning += calculateTotalAmount(account, BalanceActivity.INCREASE);
-            spending += calculateTotalAmount(account, BalanceActivity.DECREASE);
+            earning += calculateTotalAmount(account, BalanceActivity.INCREASE, toCurrency);
+            spending += calculateTotalAmount(account, BalanceActivity.DECREASE, toCurrency);
             log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
         }
 
         Double netStatus = accounts.stream()
                 .map(account -> exchangeService.convertMoneyBetweenCurrencies(
                         account.getCurrency(),
-                        Currency.TL,
+                        toCurrency,
                         account.getBalance()))
                 .reduce(0D, Double::sum);
 
@@ -295,14 +291,14 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return customer;
     }
 
-    private double calculateTotalAmount(Account account, BalanceActivity balanceActivity) {
+    private double calculateTotalAmount(Account account, BalanceActivity balanceActivity, Currency toCurrency) {
         AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE
                 ? new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
                 : new AccountActivityFilteringOptions(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
 
         return accountActivityService.getAccountActivitiesOfParticularAccounts(options, account.getCurrency())
                 .stream()
-                .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), Currency.TL, accountActivityDto.amount()))
+                .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), toCurrency, accountActivityDto.amount()))
                 .reduce(0D, Double::sum);
     }
 

@@ -41,16 +41,14 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 && (options.minimumAmount() == null || options.minimumAmount() <= accountActivity.getAmount())
                 && (options.createdAt() == null || (options.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
 
-        List<AccountActivityDto> accountActivityDtos = new ArrayList<>();
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
 
-        accountActivityRepository.findAll()
+        return accountActivityRepository.findAll()
                 .stream()
                 .filter(accountActivityPredicate)
                 .sorted(activityComparator)
-                .forEach(accountActivity -> accountActivityDtos.add(accountActivityMapper.entityToDto(accountActivity)));
-
-        return accountActivityDtos;
+                .map(accountActivityMapper::entityToDto)
+                .toList();
     }
 
     @Override

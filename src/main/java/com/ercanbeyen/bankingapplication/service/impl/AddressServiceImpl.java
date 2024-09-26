@@ -36,6 +36,7 @@ public class AddressServiceImpl implements AddressService {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         List<AddressDto> addressDtos = new ArrayList<>();
+
         addressRepository.findAll()
                 .forEach(address -> addressDtos.add(addressMapper.entityToDto(address)));
 
