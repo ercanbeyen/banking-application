@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 public class MockCustomerFactory {
@@ -22,6 +23,7 @@ public class MockCustomerFactory {
         customer1.setPhoneNumber("+905328465701");
         customer1.setGender(Gender.MALE);
         customer1.setBirthDate(LocalDate.of(1980, 8, 15));
+        customer1.setAddresses(new ArrayList<>());
 
         id++;
 
@@ -34,6 +36,7 @@ public class MockCustomerFactory {
         customer2.setPhoneNumber("+905328465702");
         customer2.setGender(Gender.FEMALE);
         customer2.setBirthDate(LocalDate.of(1985, 4, 6));
+        customer2.setAddresses(new ArrayList<>());
 
         id++;
 
@@ -46,6 +49,7 @@ public class MockCustomerFactory {
         customer3.setPhoneNumber("+905328465702");
         customer3.setGender(Gender.FEMALE);
         customer3.setBirthDate(LocalDate.of(1993, 2, 20));
+        customer3.setAddresses(new ArrayList<>());
 
         return List.of(customer1, customer2, customer3);
     }
@@ -62,6 +66,7 @@ public class MockCustomerFactory {
         customerDto1.setPhoneNumber("+905328465701");
         customerDto1.setGender(Gender.MALE);
         customerDto1.setBirthDate(LocalDate.of(1980, 8, 15));
+        customerDto1.setAddresses(new ArrayList<>());
 
         id++;
 
@@ -74,6 +79,7 @@ public class MockCustomerFactory {
         customerDto2.setPhoneNumber("+905328465702");
         customerDto2.setGender(Gender.FEMALE);
         customerDto2.setBirthDate(LocalDate.of(1985, 4, 6));
+        customerDto2.setAddresses(new ArrayList<>());
 
         id++;
 
@@ -86,6 +92,7 @@ public class MockCustomerFactory {
         customerDto3.setPhoneNumber("+905328465703");
         customerDto3.setGender(Gender.FEMALE);
         customerDto3.setBirthDate(LocalDate.of(1993, 2, 20));
+        customerDto3.setAddresses(new ArrayList<>());
 
         return List.of(customerDto1, customerDto2, customerDto3);
     }

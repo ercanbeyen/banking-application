@@ -91,11 +91,6 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getNotifications(id));
     }
 
-    @GetMapping("/{id}/addresses")
-    public ResponseEntity<List<AddressDto>> getAddresses(@PathVariable("id") Integer id) {
-        return ResponseEntity.ok(customerService.getAddresses(id));
-    }
-
     @GetMapping("/{customerId}/accounts/{accountId}/regular-transfer-orders")
     public ResponseEntity<List<RegularTransferOrderDto>> getRegularTransfers(
             @PathVariable("customerId") Integer customerId,

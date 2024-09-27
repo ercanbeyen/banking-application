@@ -215,9 +215,6 @@ class CustomerServiceTest {
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
-        doReturn(customers.getFirst())
-                .when(customerMapper)
-                .dtoToEntity(any());
         doReturn(customer)
                 .when(customerRepository)
                 .save(any());
@@ -231,8 +228,6 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(customerMapper, times(1))
-                .dtoToEntity(any());
         verify(customerRepository, times(1))
                 .save(any());
         verify(customerMapper, times(1))

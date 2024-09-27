@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Gender;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -35,8 +36,8 @@ public non-sealed class Customer extends BaseEntity {
     @Column(name = "birth_date")
     private LocalDate birthDate;
     @Getter
-    @ManyToMany(mappedBy = "customers")
-    private Set<Address> addresses = new HashSet<>();
+    @ElementCollection
+    private List<Address> addresses;
     @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinColumn(name = "profile_photo")
     private File profilePhoto;

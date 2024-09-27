@@ -29,10 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
@@ -44,7 +41,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
     private final RegularTransferOrderMapper regularTransferOrderMapper;
-    private final AddressMapper addressMapper;
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
@@ -83,8 +79,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         checkCustomerUniqueness(null, request);
-        Customer customer = customerMapper.dtoToEntity(request);
 
+        Customer customer = customerMapper.dtoToEntity(request);
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
@@ -99,13 +95,13 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         Customer customer = findById(id);
         checkCustomerUniqueness(customer, request);
 
-        Customer requestCustomer = customerMapper.dtoToEntity(request);
-        customer.setName(requestCustomer.getName());
-        customer.setSurname(requestCustomer.getSurname());
-        customer.setPhoneNumber(requestCustomer.getPhoneNumber());
-        customer.setEmail(requestCustomer.getEmail());
-        customer.setGender(requestCustomer.getGender());
-        customer.setBirthDate(requestCustomer.getBirthDate());
+        customer.setName(request.getName());
+        customer.setSurname(request.getSurname());
+        customer.setPhoneNumber(request.getPhoneNumber());
+        customer.setEmail(request.getEmail());
+        customer.setGender(request.getGender());
+        customer.setBirthDate(request.getBirthDate());
+        customer.setAddresses(request.getAddresses());
 
         return customerMapper.entityToDto(customerRepository.save(customer));
     }
@@ -225,18 +221,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .forEach(notification -> notificationDtos.add(notificationMapper.entityToDto(notification)));
 
         return notificationDtos;
-    }
-
-    public List<AddressDto> getAddresses(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-
-        Customer customer = findById(id);
-        List<AddressDto> addressDtos = new ArrayList<>();
-
-        customer.getAddresses()
-                .forEach(address -> addressDtos.add(addressMapper.entityToDto(address)));
-
-        return addressDtos;
     }
 
     public List<RegularTransferOrderDto> getRegularTransferOrders(Integer customerId, Integer accountId) {

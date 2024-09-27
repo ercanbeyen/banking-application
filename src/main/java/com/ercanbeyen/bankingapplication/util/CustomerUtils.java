@@ -16,5 +16,8 @@ public class CustomerUtils {
         if (ChronoUnit.YEARS.between(request.getBirthDate(), LocalDate.from(LocalDateTime.now())) < MINIMUM_AGE) {
             throw new ResourceConflictException("Candidate customer is not an adult");
         }
+
+        request.getAddresses()
+                .forEach(AddressUtils::checkAddressRequest);
     }
 }
