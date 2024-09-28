@@ -15,8 +15,11 @@ import org.hibernate.validator.constraints.Range;
 @Embeddable
 public class Address {
     @NotNull(message = "City should not be null")
+    @Enumerated(EnumType.STRING)
     City city;
+    String district;
     @NotNull(message = "Address type should not be null")
+    @Enumerated(EnumType.STRING)
     AddressType type;
     @NotNull(message = "Zip code should not be null")
     @Range(min = 10_000, max = 99_999, message = "Zip code is not between {min} and {max}")

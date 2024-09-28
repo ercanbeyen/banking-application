@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.BranchDto;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchMapper;
@@ -36,9 +37,10 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
             City optionsCity = options.getCity();
             String optionsDistrict = options.getDistrict();
             LocalDateTime optionsCreatedAt = options.getCreatedAt();
+            Address address = branch.getAddress();
 
-            boolean cityCheck = (Optional.ofNullable(optionsCity).isEmpty() || branch.getCity() == optionsCity);
-            boolean districtCheck = (Optional.ofNullable(optionsDistrict).isEmpty()|| branch.getDistrict().equals(optionsDistrict));
+            boolean cityCheck = (Optional.ofNullable(optionsCity).isEmpty() || address.getCity() == optionsCity);
+            boolean districtCheck = (Optional.ofNullable(optionsDistrict).isEmpty()|| address.getDistrict().equals(optionsDistrict));
             boolean createdAtCheck = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().isEqual(optionsCreatedAt));
 
             return cityCheck && districtCheck && createdAtCheck;
@@ -75,9 +77,8 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
 
         Branch branch = findById(id);
 
-        branch.setCity(request.getCity());
-        branch.setDistrict(request.getDistrict());
         branch.setName(request.getName());
+        branch.setAddress(request.getAddress());
 
         return branchMapper.entityToDto(branchRepository.save(branch));
     }

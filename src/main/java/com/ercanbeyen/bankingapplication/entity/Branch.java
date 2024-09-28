@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.constant.enums.City;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -13,11 +13,10 @@ import java.util.Optional;
         @Index(name = "city_and_district_index", columnList = "city, district")
 })
 public final class Branch extends BaseEntity {
-    @Enumerated(EnumType.STRING)
-    private City city;
-    private String district;
     @Column(unique = true)
     private String name;
+    @Embedded
+    private Address address;
     @OneToMany(mappedBy = "branch")
     private List<Account> accounts;
 
@@ -30,9 +29,8 @@ public final class Branch extends BaseEntity {
                 .toList();
 
         return "Branch{" +
-                "city=" + city +
-                ", district='" + district + '\'' +
-                ", name='" + name + '\'' +
+                "name='" + name + '\'' +
+                ", address=" + address.getDetails() +
                 ", accounts=" + accountIds +
                 '}';
     }

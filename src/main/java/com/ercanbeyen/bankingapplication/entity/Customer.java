@@ -37,6 +37,13 @@ public non-sealed class Customer extends BaseEntity {
     private LocalDate birthDate;
     @Getter
     @ElementCollection
+    @CollectionTable(
+            name =  "customer_addresses",
+            joinColumns = @JoinColumn(
+                    name = "customer_national_id",
+                    referencedColumnName = "national_id"
+            )
+    )
     private List<Address> addresses;
     @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinColumn(name = "profile_photo")

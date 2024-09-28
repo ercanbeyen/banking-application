@@ -6,7 +6,7 @@ CREATE PROCEDURE get_total_accounts_by_city_and_type_and_currency(
 BEGIN
     SELECT COUNT(*) INTO count_of_accounts
     FROM accounts a
-    INNER JOIN branches b ON a.branch_name = b.name
+    INNER JOIN branches b ON a.branch_id = b.id
     WHERE a.closed_at IS NULL
           AND b.city = city
           AND a.type = type

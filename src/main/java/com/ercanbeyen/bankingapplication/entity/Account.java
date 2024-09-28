@@ -30,7 +30,7 @@ public non-sealed class Account extends BaseEntity {
     @JoinColumn(name = "customer_national_id", referencedColumnName = "national_id")
     private Customer customer;
     @ManyToOne
-    @JoinColumn(name = "branch_name", referencedColumnName = "name")
+    @JoinColumn(name = "branch_id", referencedColumnName = "id")
     private Branch branch;
     @Enumerated(EnumType.STRING)
     private Currency currency;
