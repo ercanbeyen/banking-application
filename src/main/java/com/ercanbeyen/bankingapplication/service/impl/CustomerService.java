@@ -78,7 +78,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     public CustomerDto createEntity(CustomerDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        checkCustomerUniqueness(null, request);
+        checkUniqueness(null, request);
 
         Customer customer = customerMapper.dtoToEntity(request);
         Customer savedCustomer = customerRepository.save(customer);
@@ -93,7 +93,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Customer customer = findById(id);
-        checkCustomerUniqueness(customer, request);
+        checkUniqueness(customer, request);
 
         customer.setName(request.getName());
         customer.setSurname(request.getSurname());
@@ -307,7 +307,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }
 
-    private void checkCustomerUniqueness(Customer customerInDb, CustomerDto request) {
+    private void checkUniqueness(Customer customerInDb, CustomerDto request) {
         String nationalId = request.getNationalId();
         String phoneNumber = request.getPhoneNumber();
         String email = request.getEmail();
@@ -335,10 +335,13 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .stream()
                 .anyMatch(customerPredicate);
 
+        String entity = Entity.CUSTOMER.getValue();
+
         if (customerExists) {
-            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, Entity.CUSTOMER.getValue()));
+            log.error(LogMessages.RESOURCE_NOT_UNIQUE, entity);
+            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, entity));
         }
 
-        log.info(LogMessages.RESOURCE_UNIQUE, Entity.CUSTOMER.getValue());
+        log.info(LogMessages.RESOURCE_UNIQUE, entity);
     }
 }

@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
 import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
@@ -7,6 +8,7 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.BranchDto;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Branch;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchMapper;
 import com.ercanbeyen.bankingapplication.option.BranchFilteringOptions;
@@ -63,7 +65,10 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
     public BranchDto createEntity(BranchDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
+        checkUniqueness(request, null);
+
         Branch branch = branchMapper.dtoToEntity(request);
+        branch.getAddress().setType(AddressType.WORK);
         Branch savedBranch = branchRepository.save(branch);
 
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.BRANCH.getValue(), savedBranch.getId());
@@ -76,9 +81,11 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Branch branch = findById(id);
+        checkUniqueness(request, branch.getName());
 
         branch.setName(request.getName());
         branch.setAddress(request.getAddress());
+        branch.getAddress().setType(AddressType.WORK);
 
         return branchMapper.entityToDto(branchRepository.save(branch));
     }
@@ -106,6 +113,29 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return branch;
+    }
+
+    private void checkUniqueness(BranchDto request, String previousName) {
+        if (Optional.ofNullable(previousName).isPresent() && previousName.equals(request.getName())) {
+            log.info("Same name is requested for branch update");
+            return;
+        }
+
+        boolean isUnique;
+        String entity = Entity.BRANCH.getValue();
+
+        try {
+            findByName(request.getName());
+            log.error(LogMessages.RESOURCE_NOT_UNIQUE, entity);
+            isUnique = false;
+        } catch (Exception exception) {
+            log.info(LogMessages.RESOURCE_UNIQUE, entity);
+            isUnique = true;
+        }
+
+        if (!isUnique) {
+            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, entity));
+        }
     }
 
     private Branch findById(Integer id) {

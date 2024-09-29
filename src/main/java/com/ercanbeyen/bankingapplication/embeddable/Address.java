@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.embeddable;
 
 
+import com.ercanbeyen.bankingapplication.annotation.PhoneNumberRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
 import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Ownership;
@@ -27,6 +28,7 @@ public class Address {
     @NotBlank(message = "Details should not be blank")
     @Size(min = 5, max = 500, message = "Length of details is not between {min} and {max}")
     String details;
+    @PhoneNumberRequest
     String phoneNumber;
     @NotNull(message = "Ownership should not be null")
     @Enumerated(EnumType.STRING)
