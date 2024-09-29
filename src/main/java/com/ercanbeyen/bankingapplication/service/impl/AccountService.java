@@ -11,6 +11,7 @@ import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -44,6 +45,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final TransactionService transactionService;
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
+    private final BranchService branchService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -56,14 +58,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             return typeFilter && timeFilter && closedFilter;
         };
 
-        List<AccountDto> accountDtos = new ArrayList<>();
-
-        accountRepository.findAll()
+        return accountRepository.findAll()
                 .stream()
                 .filter(accountPredicate)
-                .forEach(account -> accountDtos.add(accountMapper.entityToDto(account)));
-
-        return accountDtos;
+                .map(accountMapper::entityToDto)
+                .toList();
     }
 
     @Override
@@ -80,8 +79,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account account = accountMapper.dtoToEntity(request);
         Customer customer = customerService.findByNationalId(request.getCustomerNationalId());
+        Branch branch = branchService.findByName(request.getBranchName());
 
         account.setCustomer(customer);
+        account.setBranch(branch);
+
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
@@ -91,9 +93,10 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
                 null,
                 null,
                 0D,
-                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getCity().getValue() + " branch at " + LocalDateTime.now(),
+                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getBranch().getName() + " branch at " + LocalDateTime.now(),
                 null
         );
+
         accountActivityService.createAccountActivity(accountActivityRequest);
 
         return accountMapper.entityToDto(savedAccount);
@@ -107,7 +110,9 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         checkIsAccountClosed(account);
         AccountUtils.checkCurrencies(account.getCurrency(), request.getCurrency());
 
-        account.setCity(request.getCity());
+        Branch branch = branchService.findByName(request.getBranchName());
+
+        account.setBranch(branch);
         account.setInterestRatio(request.getInterestRatio());
         account.setDepositPeriod(request.getDepositPeriod());
 
@@ -240,12 +245,13 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
                 account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " at " + LocalDateTime.now(),
                 null
         );
+
         accountActivityService.createAccountActivity(accountActivityRequest);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
 
-    public String getTotalActiveAccounts(City city, AccountType type, Currency currency) {
+    public String getTotalActiveAccounts(AccountType type, Currency currency, City city) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         int count = accountRepository.getTotalAccountsByCityAndTypeAndCurrency(
@@ -256,15 +262,12 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         log.info("Total count: {}", count);
 
-        return String.format("Total %s accounts in %s currency in %s is %d", type, currency, city, count);
+        return String.format("Total %s %s accounts is %d", type, currency, count);
     }
 
-    public List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency, City city) {
+    public List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-
-        return Optional.ofNullable(city).isPresent()
-                ? accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrencyAndCity(type, currency, city)
-                : accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
+        return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
     }
 
     public Account findById(Integer id) {

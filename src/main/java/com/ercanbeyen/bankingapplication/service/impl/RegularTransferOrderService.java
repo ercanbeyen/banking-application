@@ -32,20 +32,16 @@ public class RegularTransferOrderService implements BaseService<RegularTransferO
     public List<RegularTransferOrderDto> getEntities(RegularTransferOrderOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        List<RegularTransferOrderDto> regularTransferOrderDtos;
-
         Predicate<RegularTransferOrder> regularTransferOrderPredicate = regularTransferOrder -> (options.getSenderAccountId() == null || options.getSenderAccountId().equals(regularTransferOrder.getSenderAccount().getId()))
                 && (options.getReceiverAccountId() == null || options.getReceiverAccountId().equals(regularTransferOrder.getRegularTransfer().getReceiverAccount().getId())
                 && (options.getPeriod() == null || options.getPeriod().equals(regularTransferOrder.getPeriod()))
                 && (options.getCreatedAt() == null || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate())));
 
-        regularTransferOrderDtos = regularTransferOrderRepository.findAll()
+        return regularTransferOrderRepository.findAll()
                 .stream()
                 .filter(regularTransferOrderPredicate)
                 .map(regularTransferOrderMapper::entityToDto)
                 .toList();
-
-        return regularTransferOrderDtos;
     }
 
     @Override

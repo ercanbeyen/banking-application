@@ -29,10 +29,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 
@@ -44,7 +41,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
     private final RegularTransferOrderMapper regularTransferOrderMapper;
-    private final AddressMapper addressMapper;
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
@@ -59,20 +55,16 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             LocalDate customerBirthday = customer.getBirthDate();
             Boolean birthDayCondition = (filteringDay == null)
                     || (filteringDay.getMonth() == customerBirthday.getMonth() && filteringDay.getDayOfMonth() == customerBirthday.getDayOfMonth());
-
             Boolean createTimeCondition = (options.getCreatedAt() == null || options.getCreatedAt().isEqual(options.getCreatedAt()));
 
             return (birthDayCondition && createTimeCondition);
         };
 
-        List<CustomerDto> customerDtos = new ArrayList<>();
-
-        customerRepository.findAll()
+        return customerRepository.findAll()
                 .stream()
                 .filter(customerPredicate)
-                .forEach(customer -> customerDtos.add(customerMapper.entityToDto(customer)));
-
-        return customerDtos;
+                .map(customerMapper::entityToDto)
+                .toList();
     }
 
     @Override
@@ -86,9 +78,9 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     public CustomerDto createEntity(CustomerDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        checkCustomerUniqueness(null, request);
-        Customer customer = customerMapper.dtoToEntity(request);
+        checkUniqueness(null, request);
 
+        Customer customer = customerMapper.dtoToEntity(request);
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
@@ -101,15 +93,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Customer customer = findById(id);
-        checkCustomerUniqueness(customer, request);
+        checkUniqueness(customer, request);
 
-        Customer requestCustomer = customerMapper.dtoToEntity(request);
-        customer.setName(requestCustomer.getName());
-        customer.setSurname(requestCustomer.getSurname());
-        customer.setPhoneNumber(requestCustomer.getPhoneNumber());
-        customer.setEmail(requestCustomer.getEmail());
-        customer.setGender(requestCustomer.getGender());
-        customer.setBirthDate(requestCustomer.getBirthDate());
+        customer.setName(request.getName());
+        customer.setSurname(request.getSurname());
+        customer.setPhoneNumber(request.getPhoneNumber());
+        customer.setEmail(request.getEmail());
+        customer.setGender(request.getGender());
+        customer.setBirthDate(request.getBirthDate());
+        customer.setAddresses(request.getAddresses());
 
         return customerMapper.entityToDto(customerRepository.save(customer));
     }
@@ -149,7 +141,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return ResponseMessages.FILE_DELETE_SUCCESS;
     }
 
-    public CustomerStatusResponse calculateStatus(String nationalId) {
+    public CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         List<Account> accounts = findByNationalId(nationalId).getAccounts();
@@ -157,15 +149,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         double spending = 0;
 
         for (Account account : accounts) {
-            earning += calculateTotalAmount(account, BalanceActivity.INCREASE);
-            spending += calculateTotalAmount(account, BalanceActivity.DECREASE);
+            earning += calculateTotalAmount(account, BalanceActivity.INCREASE, toCurrency);
+            spending += calculateTotalAmount(account, BalanceActivity.DECREASE, toCurrency);
             log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
         }
 
         Double netStatus = accounts.stream()
                 .map(account -> exchangeService.convertMoneyBetweenCurrencies(
                         account.getCurrency(),
-                        Currency.TL,
+                        toCurrency,
                         account.getBalance()))
                 .reduce(0D, Double::sum);
 
@@ -231,18 +223,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return notificationDtos;
     }
 
-    public List<AddressDto> getAddresses(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-
-        Customer customer = findById(id);
-        List<AddressDto> addressDtos = new ArrayList<>();
-
-        customer.getAddresses()
-                .forEach(address -> addressDtos.add(addressMapper.entityToDto(address)));
-
-        return addressDtos;
-    }
-
     public List<RegularTransferOrderDto> getRegularTransferOrders(Integer customerId, Integer accountId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
@@ -295,14 +275,14 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return customer;
     }
 
-    private double calculateTotalAmount(Account account, BalanceActivity balanceActivity) {
+    private double calculateTotalAmount(Account account, BalanceActivity balanceActivity, Currency toCurrency) {
         AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE
                 ? new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
                 : new AccountActivityFilteringOptions(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
 
         return accountActivityService.getAccountActivitiesOfParticularAccounts(options, account.getCurrency())
                 .stream()
-                .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), Currency.TL, accountActivityDto.amount()))
+                .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), toCurrency, accountActivityDto.amount()))
                 .reduce(0D, Double::sum);
     }
 
@@ -327,7 +307,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }
 
-    private void checkCustomerUniqueness(Customer customerInDb, CustomerDto request) {
+    private void checkUniqueness(Customer customerInDb, CustomerDto request) {
         String nationalId = request.getNationalId();
         String phoneNumber = request.getPhoneNumber();
         String email = request.getEmail();
@@ -355,10 +335,13 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .stream()
                 .anyMatch(customerPredicate);
 
+        String entity = Entity.CUSTOMER.getValue();
+
         if (customerExists) {
-            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, Entity.CUSTOMER.getValue()));
+            log.error(LogMessages.RESOURCE_NOT_UNIQUE, entity);
+            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, entity));
         }
 
-        log.info(LogMessages.RESOURCE_UNIQUE, Entity.CUSTOMER.getValue());
+        log.info(LogMessages.RESOURCE_UNIQUE, entity);
     }
 }

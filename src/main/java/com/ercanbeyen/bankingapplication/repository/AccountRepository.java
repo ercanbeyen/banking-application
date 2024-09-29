@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.repository;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
-import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
@@ -16,7 +15,7 @@ import java.util.List;
 @Repository
 public interface AccountRepository extends BaseRepository<Account> {
     @Procedure(name = "getTotalAccountsByCityAndTypeAndCurrency")
-    Integer getTotalAccountsByCityAndTypeAndCurrency(
+    int getTotalAccountsByCityAndTypeAndCurrency(
             @Param("city") String city,
             @Param("type") String type,
             @Param("currency") String currency
@@ -24,7 +23,7 @@ public interface AccountRepository extends BaseRepository<Account> {
 
     @Query(value = """
                 SELECT new com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse(
-                    c.nationalId, CONCAT(c.name, ' ', c.surname), a.id, a.city, a.balance)
+                    c.nationalId, CONCAT(c.name, ' ', c.surname), a.id, a.balance)
                 FROM Customer c
                 JOIN c.accounts a
                 WHERE a.type = ?1 AND a.currency = ?2 AND a.balance = (
@@ -39,24 +38,6 @@ public interface AccountRepository extends BaseRepository<Account> {
             Currency currency
     );
 
-    @Query(value = """
-                SELECT new com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse(
-                    c.nationalId, CONCAT(c.name, ' ', c.surname), a.id, a.city, a.balance)
-                FROM Customer c
-                JOIN c.accounts a
-                WHERE a.city = :city AND a.type = :type AND a.currency = :currency AND a.balance = (
-                    SELECT MAX(a1.balance)
-                    FROM Account a1
-                    WHERE a1.city = :city AND a1.type = :type AND a1.currency = :currency
-                )
-                ORDER BY c.nationalId ASC, a.city ASC
-           """)
-    List<CustomerStatisticsResponse> getCustomersHaveMaximumBalanceByTypeAndCurrencyAndCity(
-            @Param("type") AccountType type,
-            @Param("currency") Currency currency,
-            @Param("city") City city
-    );
-
     @Modifying
     @Query(value = """
             UPDATE accounts
@@ -69,5 +50,9 @@ public interface AccountRepository extends BaseRepository<Account> {
             WHERE id = :id
             """,
             nativeQuery = true)
-    int updateBalanceById(@Param("id") Integer id, @Param("activity") String balanceActivity, @Param("amount") Double amount);
+    int updateBalanceById(
+            @Param("id") Integer id,
+            @Param("activity") String balanceActivity,
+            @Param("amount") Double amount
+    );
 }

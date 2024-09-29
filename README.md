@@ -19,7 +19,7 @@ Entities:
 - News
 - Rating
 - Exchange
-- Address
+- Branch
 
 ### Requirements
 - Customer's national id, email and phone number must be unique.

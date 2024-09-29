@@ -2,15 +2,18 @@ package com.ercanbeyen.bankingapplication.dto;
 
 import com.ercanbeyen.bankingapplication.annotation.PhoneNumberRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.Gender;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.util.List;
 
 @Data
 public non-sealed class CustomerDto extends BaseDto {
@@ -35,4 +38,5 @@ public non-sealed class CustomerDto extends BaseDto {
     @JsonSerialize(using = LocalDateSerializer.class)
     @JsonDeserialize(using = LocalDateDeserializer.class)
     private LocalDate birthDate;
+    private List<@Valid Address> addresses;
 }

@@ -1,16 +1,17 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
-import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "accounts")
 @NamedStoredProcedureQuery(
@@ -28,8 +29,9 @@ public non-sealed class Account extends BaseEntity {
     @ManyToOne
     @JoinColumn(name = "customer_national_id", referencedColumnName = "national_id")
     private Customer customer;
-    @Enumerated(EnumType.STRING)
-    private City city;
+    @ManyToOne
+    @JoinColumn(name = "branch_id", referencedColumnName = "id")
+    private Branch branch;
     @Enumerated(EnumType.STRING)
     private Currency currency;
     private double balance;

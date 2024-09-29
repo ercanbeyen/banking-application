@@ -5,6 +5,7 @@ public final class LogMessages {
     public static final String RESOURCE_FOUND = "{} is found";
     public static final String RESOURCE_NOT_FOUND = "{} is not found";
     public static final String RESOURCE_UNIQUE = "{} is unique";
+    public static final String RESOURCE_NOT_UNIQUE = "{} is not unique";
     public static final String EXCEPTION = "Exception message: {}";
     public static final String TRANSACTION_MESSAGE = "Transaction message: {}";
     public static final String SCHEDULED_TASK_STARTED = "Scheduled task is started for {}";
