@@ -91,10 +91,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getNotifications(id));
     }
 
-    @GetMapping("/{customerId}/accounts/{accountId}/regular-transfer-orders")
-    public ResponseEntity<List<RegularTransferOrderDto>> getRegularTransfers(
+    @GetMapping("/{customerId}/accounts/{accountId}/transfer-orders")
+    public ResponseEntity<List<TransferOrderDto>> getTransferOrders(
             @PathVariable("customerId") Integer customerId,
             @PathVariable("accountId") Integer accountId) {
-        return ResponseEntity.ok(customerService.getRegularTransferOrders(customerId, accountId));
+        return ResponseEntity.ok(customerService.getTransferOrders(customerId, accountId));
     }
 }

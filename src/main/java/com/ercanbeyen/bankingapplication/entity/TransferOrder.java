@@ -1,17 +1,20 @@
 package com.ercanbeyen.bankingapplication.entity;
 
+import com.ercanbeyen.bankingapplication.constant.enums.TransferOrderTime;
 import com.ercanbeyen.bankingapplication.embeddable.RegularTransfer;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDate;
+
 @Data
 @Entity
-@Table(name = "regular_transfer_orders")
-public non-sealed class RegularTransferOrder extends BaseEntity {
+@Table(name = "transfer_orders")
+public non-sealed class TransferOrder extends BaseEntity {
     private Integer id;
     @ManyToOne
     private Account senderAccount;
-    private Integer period;
+    private LocalDate date;
     @Embedded
     private RegularTransfer regularTransfer;
 }

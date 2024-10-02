@@ -1,16 +1,18 @@
 package com.ercanbeyen.bankingapplication.dto;
 
+import com.ercanbeyen.bankingapplication.constant.enums.TransferOrderTime;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
+import java.time.LocalDate;
+
 @Data
-public non-sealed class RegularTransferOrderDto extends BaseDto {
+public non-sealed class TransferOrderDto extends BaseDto {
     private Integer senderAccountId;
     @NotNull(message = "Period should not be null")
-    @Min(value = 1, message = "Period must be at least {value} week")
-    private Integer period;
+    private LocalDate date;
     @Valid
     private RegularTransferDto regularTransferDto;
 }

@@ -1,0 +1,34 @@
+package com.ercanbeyen.bankingapplication.util;
+
+import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
+import lombok.experimental.UtilityClass;
+
+import java.time.LocalDate;
+import java.util.function.Predicate;
+
+@UtilityClass
+public class TransferOrderUtils {
+
+    public Predicate<TransferOrderDto> getTransferOrderDtoPredicate() {
+        /*
+            Regular Transfer Date check flow:
+            1) Increase transfer date adding by period until reaches to today date
+            2) If next transfer date comes then it returns true, else it returns false
+         */
+        return transferOrderDto -> {
+            LocalDate nextTransferDate = transferOrderDto.getCreatedAt().toLocalDate();
+            LocalDate todayDate = LocalDate.now();
+
+            do {
+                nextTransferDate = switch (transferOrderDto.getRegularTransferDto().time()) {
+                    case ONE_TIME -> todayDate;
+                    case DAILY -> nextTransferDate.plusDays(1);
+                    case WEEKLY -> nextTransferDate.plusWeeks(1);
+                    case MONTHLY -> nextTransferDate.plusMonths(1);
+                };
+            } while (nextTransferDate.isBefore(todayDate));
+
+            return todayDate.isEqual(nextTransferDate);
+        };
+    }
+}

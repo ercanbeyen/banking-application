@@ -40,7 +40,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
-    private final RegularTransferOrderMapper regularTransferOrderMapper;
+    private final TransferOrderMapper transferOrderMapper;
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
@@ -223,7 +223,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return notificationDtos;
     }
 
-    public List<RegularTransferOrderDto> getRegularTransferOrders(Integer customerId, Integer accountId) {
+    public List<TransferOrderDto> getTransferOrders(Integer customerId, Integer accountId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Customer customer = findById(customerId);
@@ -233,9 +233,9 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
-        return account.getRegularTransferOrders()
+        return account.getTransferOrders()
                 .stream()
-                .map(regularTransferOrderMapper::entityToDto)
+                .map(transferOrderMapper::entityToDto)
                 .toList();
     }
 
