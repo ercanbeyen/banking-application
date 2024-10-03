@@ -76,7 +76,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         regularTransfer.setAmount(request.getRegularTransferDto().amount());
         regularTransfer.setExplanation(request.getRegularTransferDto().explanation());
 
-        transferOrder.setDate(transferOrder.getDate());
+        transferOrder.setTransferDate(transferOrder.getTransferDate());
 
         return transferOrderMapper.entityToDto(transferOrderRepository.save(transferOrder));
     }
@@ -96,7 +96,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
 
         transferOrder.setSenderAccount(accounts.getFirst());
         transferOrder.setRegularTransfer(regularTransfer);
-        transferOrder.setDate(request.getDate());
+        transferOrder.setTransferDate(request.getTransferDate());
 
         return transferOrder;
     }
@@ -105,7 +105,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         RegularTransferDto regularTransferDto = request.getRegularTransferDto();
         return new RegularTransfer(
                 accounts.get(1),
-                regularTransferDto.time(),
+                regularTransferDto.orderPeriod(),
                 regularTransferDto.amount(),
                 regularTransferDto.explanation()
         );

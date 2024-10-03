@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.embeddable;
 
-import com.ercanbeyen.bankingapplication.constant.enums.TransferOrderTime;
+import com.ercanbeyen.bankingapplication.constant.enums.TransferOrderPeriod;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -16,7 +16,7 @@ public class RegularTransfer {
     @JoinColumn(name = "receiver_account_id", referencedColumnName = "id")
     Account receiverAccount;
     @Enumerated(EnumType.STRING)
-    TransferOrderTime time;
+    TransferOrderPeriod orderPeriod;
     Double amount;
     String explanation;
 }

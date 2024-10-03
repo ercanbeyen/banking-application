@@ -1,6 +1,5 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.constant.enums.TransferOrderTime;
 import com.ercanbeyen.bankingapplication.embeddable.RegularTransfer;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -14,7 +13,7 @@ public non-sealed class TransferOrder extends BaseEntity {
     private Integer id;
     @ManyToOne
     private Account senderAccount;
-    private LocalDate date;
+    private LocalDate transferDate;
     @Embedded
     private RegularTransfer regularTransfer;
 }

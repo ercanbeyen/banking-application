@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import lombok.experimental.UtilityClass;
 
 import java.time.LocalDate;
@@ -9,9 +10,17 @@ import java.util.function.Predicate;
 @UtilityClass
 public class TransferOrderUtils {
 
+    public void checkTransferDate(LocalDate request) {
+        LocalDate today = LocalDate.now();
+
+        if (!request.isAfter(today)) {
+            throw new ResourceConflictException(String.format("The earliest date for the transfer order can be tomorrow (%s)", today.plusDays(1)));
+        }
+    }
+
     public Predicate<TransferOrderDto> getTransferOrderDtoPredicate() {
         /*
-            Regular Transfer Date check flow:
+            Transfer Date check flow:
             1) Increase transfer date adding by period until reaches to today date
             2) If next transfer date comes then it returns true, else it returns false
          */
@@ -20,7 +29,7 @@ public class TransferOrderUtils {
             LocalDate todayDate = LocalDate.now();
 
             do {
-                nextTransferDate = switch (transferOrderDto.getRegularTransferDto().time()) {
+                nextTransferDate = switch (transferOrderDto.getRegularTransferDto().orderPeriod()) {
                     case ONE_TIME -> todayDate;
                     case DAILY -> nextTransferDate.plusDays(1);
                     case WEEKLY -> nextTransferDate.plusWeeks(1);

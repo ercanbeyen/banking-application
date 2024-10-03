@@ -7,8 +7,8 @@ import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface TransferOrderMapper {
-    @Mapping(target = "regularTransferDto.receiverAccountId", source = "transferOrder.regularTransfer.receiverAccount.id")
-    @Mapping(target = "regularTransferDto", source = "transferOrder.regularTransfer")
+    @Mapping(target = "regularTransferDto.receiverAccountId", source = "regularTransfer.receiverAccount.id")
+    @Mapping(target = "regularTransferDto", source = "regularTransfer")
     @Mapping(target = "senderAccountId", source = "transferOrder.senderAccount.id")
     TransferOrderDto entityToDto(TransferOrder transferOrder);
 }
