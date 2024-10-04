@@ -29,7 +29,7 @@ public class TransferOrderUtils {
             LocalDate todayDate = LocalDate.now();
 
             do {
-                nextTransferDate = switch (transferOrderDto.getRegularTransferDto().orderPeriod()) {
+                nextTransferDate = switch (transferOrderDto.getRegularTransferDto().paymentPeriod()) {
                     case ONE_TIME -> todayDate;
                     case DAILY -> nextTransferDate.plusDays(1);
                     case WEEKLY -> nextTransferDate.plusWeeks(1);

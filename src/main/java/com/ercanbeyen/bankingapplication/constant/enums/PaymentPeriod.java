@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.constant.enums;
 
-public enum TransferOrderPeriod {
+public enum PaymentPeriod {
     ONE_TIME,
     DAILY,
     WEEKLY,

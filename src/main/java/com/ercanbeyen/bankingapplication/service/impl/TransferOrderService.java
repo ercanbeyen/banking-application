@@ -105,16 +105,17 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         RegularTransferDto regularTransferDto = request.getRegularTransferDto();
         return new RegularTransfer(
                 accounts.get(1),
-                regularTransferDto.orderPeriod(),
+                regularTransferDto.paymentPeriod(),
                 regularTransferDto.amount(),
+                regularTransferDto.paymentType(),
                 regularTransferDto.explanation()
         );
     }
 
     /***
      *
-     * @param request TransferOrderDto object
-     * @return list which contains sender and receiver accounts respectively
+     * @param request is TransferOrderDto object
+     * @return list contains sender and receiver accounts respectively
      */
     private List<Account> getAccountsFromRegularTransferDto(TransferOrderDto request) {
         Account senderAccount = accountService.findById(request.getSenderAccountId());

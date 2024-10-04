@@ -70,6 +70,7 @@ public class TransferOrderScheduledTasks {
                     senderAccountId,
                     receiverAccountId,
                     regularTransferDto.amount(),
+                    regularTransferDto.paymentType(),
                     regularTransferDto.explanation()
             );
             try {

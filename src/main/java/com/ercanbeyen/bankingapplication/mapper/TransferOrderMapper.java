@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 public interface TransferOrderMapper {
     @Mapping(target = "regularTransferDto.receiverAccountId", source = "regularTransfer.receiverAccount.id")
     @Mapping(target = "regularTransferDto", source = "regularTransfer")
-    @Mapping(target = "senderAccountId", source = "transferOrder.senderAccount.id")
+    @Mapping(target = "regularTransferDto.paymentPeriod", source = "regularTransfer.paymentPeriod")
+    @Mapping(target = "senderAccountId", source = "senderAccount.id")
     TransferOrderDto entityToDto(TransferOrder transferOrder);
 }
