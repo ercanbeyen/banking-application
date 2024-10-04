@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.entity.File;
@@ -11,6 +12,7 @@ import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
 import com.ercanbeyen.bankingapplication.util.CustomerUtils;
 import com.ercanbeyen.bankingapplication.util.PhotoUtils;
+import com.ercanbeyen.bankingapplication.util.TransferOrderUtils;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -19,6 +21,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -91,10 +94,14 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getNotifications(id));
     }
 
-    @GetMapping("/{customerId}/accounts/{accountId}/transfer-orders")
+    @GetMapping("/{id}/transfer-orders")
     public ResponseEntity<List<TransferOrderDto>> getTransferOrders(
-            @PathVariable("customerId") Integer customerId,
-            @PathVariable("accountId") Integer accountId) {
-        return ResponseEntity.ok(customerService.getTransferOrders(customerId, accountId));
+            @PathVariable("id") Integer id,
+            @RequestParam("from") LocalDate fromDate,
+            @RequestParam("to") LocalDate toDate,
+            @RequestParam(value = "currency", required = false) Currency currency,
+            @RequestParam(value = "payment-type", required = false) PaymentType paymentType) {
+        TransferOrderUtils.checkDatesBeforeFiltering(fromDate, toDate);
+        return ResponseEntity.ok(customerService.getTransferOrders(id, fromDate, toDate, currency, paymentType));
     }
 }

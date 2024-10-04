@@ -13,6 +13,7 @@ import com.ercanbeyen.bankingapplication.mapper.TransferOrderMapper;
 import com.ercanbeyen.bankingapplication.option.TransferOrderOptions;
 import com.ercanbeyen.bankingapplication.repository.TransferOrderRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
+import com.ercanbeyen.bankingapplication.util.AccountUtils;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,9 +34,15 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
     public List<TransferOrderDto> getEntities(TransferOrderOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        Predicate<TransferOrder> transferOrderPredicate = transferOrder -> (options.getSenderAccountId() == null || options.getSenderAccountId().equals(transferOrder.getSenderAccount().getId()))
-                && (options.getReceiverAccountId() == null || options.getReceiverAccountId().equals(transferOrder.getRegularTransfer().getReceiverAccount().getId())
-                && (options.getCreatedAt() == null || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate())));
+        Predicate<TransferOrder> transferOrderPredicate = transferOrder -> {
+            RegularTransfer regularTransfer = transferOrder.getRegularTransfer();
+            boolean checkSenderAccountId = (options.getSenderAccountId() == null || options.getSenderAccountId().equals(transferOrder.getSenderAccount().getId()));
+            boolean checkReceiverAccountId = (options.getReceiverAccountId() == null || options.getReceiverAccountId().equals(regularTransfer.getReceiverAccount().getId()));
+            boolean checkTransferDate = (options.getTransferDate() == null || options.getTransferDate().isEqual(transferOrder.getTransferDate()));
+            boolean checkPaymentType = (options.getPaymentType() == null || options.getPaymentType() == regularTransfer.getPaymentType());
+
+            return checkSenderAccountId && checkReceiverAccountId && checkTransferDate && checkPaymentType;
+        };
 
         return transferOrderRepository.findAll()
                 .stream()
@@ -55,7 +62,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
     public TransferOrderDto createEntity(TransferOrderDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        TransferOrder transferOrder = createTransferOrder(request);
+        TransferOrder transferOrder = constructTransferOrder(request);
         TransferOrder savedTransferOrder = transferOrderRepository.save(transferOrder);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.TRANSFER_ORDER.getValue(), savedTransferOrder.getId());
 
@@ -74,9 +81,11 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         RegularTransfer regularTransfer = transferOrder.getRegularTransfer();
         regularTransfer.setReceiverAccount(accounts.get(1));
         regularTransfer.setAmount(request.getRegularTransferDto().amount());
+        regularTransfer.setPaymentPeriod(request.getRegularTransferDto().paymentPeriod());
+        regularTransfer.setPaymentType(request.getRegularTransferDto().paymentType());
         regularTransfer.setExplanation(request.getRegularTransferDto().explanation());
 
-        transferOrder.setTransferDate(transferOrder.getTransferDate());
+        transferOrder.setTransferDate(request.getTransferDate());
 
         return transferOrderMapper.entityToDto(transferOrderRepository.save(transferOrder));
     }
@@ -89,9 +98,9 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, Entity.TRANSFER_ORDER.getValue(), id);
     }
 
-    private TransferOrder createTransferOrder(TransferOrderDto request) {
+    private TransferOrder constructTransferOrder(TransferOrderDto request) {
         List<Account> accounts = getAccountsFromRegularTransferDto(request);
-        RegularTransfer regularTransfer = createRegularTransfer(request, accounts);
+        RegularTransfer regularTransfer = constructRegularTransfer(request, accounts);
         TransferOrder transferOrder = new TransferOrder();
 
         transferOrder.setSenderAccount(accounts.getFirst());
@@ -101,7 +110,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         return transferOrder;
     }
 
-    private static RegularTransfer createRegularTransfer(TransferOrderDto request, List<Account> accounts) {
+    private static RegularTransfer constructRegularTransfer(TransferOrderDto request, List<Account> accounts) {
         RegularTransferDto regularTransferDto = request.getRegularTransferDto();
         return new RegularTransfer(
                 accounts.get(1),
@@ -123,6 +132,8 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
 
         Account receiverAccount = accountService.findById(request.getRegularTransferDto().receiverAccountId());
         log.info(LogMessages.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
+
+        AccountUtils.checkCurrencies(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
         return List.of(senderAccount, receiverAccount);
     }

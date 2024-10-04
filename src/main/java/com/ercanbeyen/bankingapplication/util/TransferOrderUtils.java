@@ -18,6 +18,12 @@ public class TransferOrderUtils {
         }
     }
 
+    public void checkDatesBeforeFiltering(LocalDate fromDate, LocalDate toDate) {
+        if (!toDate.isAfter(fromDate)) {
+            throw new ResourceConflictException("\"From\" date must be less than \"To\" date");
+        }
+    }
+
     public Predicate<TransferOrderDto> getTransferOrderDtoPredicate() {
         /*
             Transfer Date check flow:
