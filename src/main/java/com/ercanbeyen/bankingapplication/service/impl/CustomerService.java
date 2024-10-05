@@ -1,9 +1,7 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
+import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.*;
@@ -11,6 +9,7 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.entity.TransferOrder;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.*;
@@ -40,7 +39,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
-    private final RegularTransferOrderMapper regularTransferOrderMapper;
+    private final TransferOrderMapper transferOrderMapper;
     private final NotificationMapper notificationMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
@@ -223,20 +222,35 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return notificationDtos;
     }
 
-    public List<RegularTransferOrderDto> getRegularTransferOrders(Integer customerId, Integer accountId) {
+    public List<TransferOrderDto> getTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Customer customer = findById(customerId);
-        String entity = Entity.ACCOUNT.getValue();
-        Account account = customer.getAccount(accountId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+        List<TransferOrderDto> transferOrderDtos = new ArrayList<>();
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        Predicate<TransferOrder> transferOrderPredicate = transferOrder -> {
+            LocalDate transferDate = transferOrder.getTransferDate();
+            boolean checkTransferDate = transferDate.isAfter(fromDate.minusDays(1))
+                    && transferDate.isBefore(toDate.plusDays(1));
+            boolean checkCurrency = (Optional.ofNullable(currency).isEmpty()
+                    || currency == transferOrder.getSenderAccount().getCurrency());
+            boolean checkPaymentType = (Optional.ofNullable(paymentType).isEmpty()
+                    || paymentType == transferOrder.getRegularTransfer().getPaymentType());
 
-        return account.getRegularTransferOrders()
-                .stream()
-                .map(regularTransferOrderMapper::entityToDto)
-                .toList();
+            return checkTransferDate && checkCurrency && checkPaymentType;
+        };
+
+        for (Account account : customer.getAccounts()) {
+            List<TransferOrderDto> transferOrderDtosOfAccount = account.getTransferOrders()
+                    .stream()
+                    .filter(transferOrderPredicate)
+                    .map(transferOrderMapper::entityToDto)
+                    .toList();
+
+            transferOrderDtos.addAll(transferOrderDtosOfAccount);
+        }
+
+        return transferOrderDtos;
     }
 
     /**

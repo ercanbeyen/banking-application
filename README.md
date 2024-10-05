@@ -14,7 +14,7 @@ Entities:
 - File
 - Notification
 - Account Activity
-- Regular Transfer Order
+- Transfer Order
 - News Report
 - News
 - Rating
@@ -28,6 +28,7 @@ Entities:
 - Customers can rate the app between 1 and 5 once a year, starting in September.
 - Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
 - Customers can apply their transactions within their daily activity limits.
+- Customers can create one-time or regular transfer orders to transfer money at future dates.
 
 ### Additionals
 - Scheduled tasks run while application is running.

@@ -2,9 +2,10 @@ package com.ercanbeyen.bankingapplication.scheduler;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.dto.RegularTransferOrderDto;
+import com.ercanbeyen.bankingapplication.dto.RegularTransferDto;
+import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
-import com.ercanbeyen.bankingapplication.util.RegularTransferOrderUtils;
+import com.ercanbeyen.bankingapplication.util.TransferOrderUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -21,38 +22,38 @@ import java.util.function.Consumer;
 @Async
 @Slf4j
 @RequiredArgsConstructor
-public class RegularTransferOrderScheduledTasks {
+public class TransferOrderScheduledTasks {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
 
     @Scheduled(cron = "0 0 10 * * *") // 10:00 everyday
-    public void applyRegularTransferOrders() {
-        final String task = "apply regular transfer orders";
+    public void applyTransferOrders() {
+        final String task = "apply transfer orders";
         log.info(LogMessages.SCHEDULED_TASK_STARTED, task);
 
-        List<RegularTransferOrderDto> regularTransferOrderDtos;
+        List<TransferOrderDto> transferOrderDtos;
 
         try {
-            String url = Entity.REGULAR_TRANSFER_ORDER.getCollectionUrl();
-            log.info("Getting regular transfer url: {}", url);
+            String url = Entity.TRANSFER_ORDER.getCollectionUrl();
+            log.info("Getting transfer url: {}", url);
 
             List<?> response = restTemplate.getForObject(url, List.class);
             assert response != null;
             log.info(LogMessages.CLASS_OF_RESPONSE, response.getClass());
 
-            regularTransferOrderDtos = objectMapper.convertValue(response, new TypeReference<>() {});
-            regularTransferOrderDtos.forEach(regularTransferOrderDto -> log.info(LogMessages.CLASS_OF_OBJECT, "RegularTransferDto", regularTransferOrderDto.getClass()));
+            transferOrderDtos = objectMapper.convertValue(response, new TypeReference<>() {});
+            transferOrderDtos.forEach(transferOrderDto -> log.info(LogMessages.CLASS_OF_OBJECT, "TransferDto", transferOrderDto.getClass()));
 
-            log.info(LogMessages.REST_TEMPLATE_SUCCESS, regularTransferOrderDtos);
+            log.info(LogMessages.REST_TEMPLATE_SUCCESS, transferOrderDtos);
         } catch (Exception exception) {
              log.error(LogMessages.EXCEPTION, exception.getMessage());
              return;
          }
 
-        regularTransferOrderDtos.forEach(regularTransferOrderDto -> {
-            if (RegularTransferOrderUtils.getRegularTransferOrderDtoPredicate().test(regularTransferOrderDto)) {
-                log.info("Period check is passed");
-                getRegularTransferOrderDtoConsumer().accept(regularTransferOrderDto);
+        transferOrderDtos.forEach(transferOrderDto -> {
+            if (TransferOrderUtils.getTransferOrderDtoPredicate().test(transferOrderDto)) {
+                log.info("Time check is passed");
+                getTransferOrderDtoConsumer().accept(transferOrderDto);
                 log.info("Transfer is successfully completed");
             }
         });
@@ -60,16 +61,18 @@ public class RegularTransferOrderScheduledTasks {
         log.info(LogMessages.SCHEDULED_TASK_ENDED, task);
     }
 
-    private Consumer<RegularTransferOrderDto> getRegularTransferOrderDtoConsumer() {
-        return regularTransferOrderDto -> {
-            Integer senderAccountId = regularTransferOrderDto.getSenderAccountId();
-            Integer receiverAccountId = regularTransferOrderDto.getRegularTransferDto().receiverAccountId();
+    private Consumer<TransferOrderDto> getTransferOrderDtoConsumer() {
+        return transferOrderDto -> {
+            Integer senderAccountId = transferOrderDto.getSenderAccountId();
+            RegularTransferDto regularTransferDto = transferOrderDto.getRegularTransferDto();
+            Integer receiverAccountId = regularTransferDto.receiverAccountId();
             TransferRequest transferRequest = new TransferRequest(
                     senderAccountId,
                     receiverAccountId,
-                    regularTransferOrderDto.getRegularTransferDto().amount(),
-                    regularTransferOrderDto.getRegularTransferDto().explanation());
-
+                    regularTransferDto.amount(),
+                    regularTransferDto.paymentType(),
+                    regularTransferDto.explanation()
+            );
             try {
                 String url = Entity.ACCOUNT.getCollectionUrl() + "/transfer";
                 log.info("Transfer url: {}", url);

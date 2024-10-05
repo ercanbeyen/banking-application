@@ -75,6 +75,7 @@ public class TransactionService {
                 From Account Id: %s
                 To Account Id: %s
                 Amount: %s %s
+                Payment Type: %s
                 Time: %s
                 """;
 
@@ -88,6 +89,7 @@ public class TransactionService {
                 receiverAccount.getId(),
                 requestedAmountInSummary,
                 receiverAccount.getCurrency(),
+                request.paymentType(),
                 LocalDateTime.now()
         );
 
