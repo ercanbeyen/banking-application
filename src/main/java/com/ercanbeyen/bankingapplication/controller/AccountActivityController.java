@@ -5,9 +5,13 @@ import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 
 @RestController
@@ -34,5 +38,18 @@ public class AccountActivityController {
             @RequestParam(name = "receiverAccountId") Integer receiverAccountId) {
         List<AccountActivityView> accountActivityViews = accountActivityService.getAccountActivityViews(senderAccountId, receiverAccountId);
         return ResponseEntity.ok(accountActivityViews);
+    }
+
+    @PostMapping("/{id}/receipt")
+    public ResponseEntity<byte[]> generateReceipt(@PathVariable("id") String id) {
+        /* Export pdf from Account Activity's summary */
+        ByteArrayOutputStream pdfStream = accountActivityService.generateReceiptPdfStream(id);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=receipt.pdf");
+        headers.setContentLength(pdfStream.size());
+
+        return new ResponseEntity<>(pdfStream.toByteArray(), headers, HttpStatus.OK);
     }
 }

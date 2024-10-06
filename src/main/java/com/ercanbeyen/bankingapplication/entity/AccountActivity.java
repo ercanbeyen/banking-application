@@ -6,8 +6,11 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.LocalDateTime;
+import java.util.Map;
 
 @Data
 @Entity
@@ -30,10 +33,11 @@ public class AccountActivity {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at", columnDefinition = Queries.GET_NOW_TIMESTAMP)
     private LocalDateTime createdAt;
-    private String summary;
+    @JdbcTypeCode(SqlTypes.JSON)
+    private Map<String, Object> summary;
     private String explanation;
 
-    public AccountActivity(AccountActivityType type, Account senderAccount, Account receiverAccount, Double amount, String summary, String explanation) {
+    public AccountActivity(AccountActivityType type, Account senderAccount, Account receiverAccount, Double amount, Map<String, Object> summary, String explanation) {
         this.type = type;
         this.senderAccount = senderAccount;
         this.receiverAccount = receiverAccount;

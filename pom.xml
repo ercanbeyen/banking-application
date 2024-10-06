@@ -24,6 +24,7 @@
 		<argLine>-Duser.language=en</argLine>
 		<javatuples.version>1.2</javatuples.version>
 		<gson.version>2.10.1</gson.version>
+		<itextpdf.version>5.5.13.4</itextpdf.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -136,6 +137,12 @@
 			<artifactId>gson</artifactId>
 			<version>${gson.version}</version>
 		</dependency>
+		<dependency>
+			<groupId>com.itextpdf</groupId>
+			<artifactId>itextpdf</artifactId>
+			<version>${itextpdf.version}</version>
+		</dependency>
+
 	</dependencies>
 
 	<build>

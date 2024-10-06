@@ -88,12 +88,19 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_OPENING;
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put("Account Activity", activityType.getValue());
+        summary.put("Account Type", account.getCurrency().toString() + " " + account.getType());
+        summary.put("Branch", account.getBranch().getName());
+        summary.put("Time",  LocalDateTime.now().toString());
+
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
                 activityType,
                 null,
                 null,
                 0D,
-                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getBranch().getName() + " branch at " + LocalDateTime.now(),
+                summary,
                 null
         );
 
@@ -237,12 +244,19 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
+        summary.put("Account Type", account.getCurrency().toString() + " " + account.getType());
+        summary.put("Branch", account.getBranch());
+        summary.put("Time",  LocalDateTime.now().toString());
+
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
                 activityType,
                 null,
                 null,
                 0D,
-                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " at " + LocalDateTime.now(),
+                summary,
                 null
         );
 

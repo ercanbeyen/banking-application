@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
-import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
@@ -20,6 +20,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 
 @Component
 @RequiredArgsConstructor
@@ -38,23 +40,14 @@ public class TransactionService {
 
         String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
 
-        String summaryTemplate = """
-                Account Activity: %s
-                Customer National Id: %s
-                Account Id: %s
-                Amount: %s %s
-                Time: %s
-                """;
+        Map<String, Object> summary = new HashMap<>();
 
-        String summary = String.format(
-                summaryTemplate,
-                activityType.getValue(),
-                account.getCustomer().getNationalId(),
-                account.getId(),
-                requestedAmountInSummary,
-                account.getCurrency(),
-                LocalDateTime.now()
-        );
+
+        summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
+        summary.put("Customer national identity", account.getCustomer().getNationalId());
+        summary.put("Account identity", account.getId());
+        summary.put("Amount", requestedAmountInSummary + account.getCurrency());
+        summary.put("Time",  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, amount, summary, activityParameters.getValue1(), null);
     }
@@ -69,29 +62,16 @@ public class TransactionService {
         Account[] accounts = {senderAccount, receiverAccount};
         String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
 
-        String summaryTemplate = """
-                Account Activity: %s
-                Customer National Id: %s
-                From Account Id: %s
-                To Account Id: %s
-                Amount: %s %s
-                Payment Type: %s
-                Time: %s
-                """;
-
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
 
-        String summary = String.format(
-                summaryTemplate,
-                activityType.getValue(),
-                senderAccount.getCustomer().getNationalId(),
-                senderAccount.getId(),
-                receiverAccount.getId(),
-                requestedAmountInSummary,
-                receiverAccount.getCurrency(),
-                request.paymentType(),
-                LocalDateTime.now()
-        );
+        Map<String, Object> summary = new HashMap<>();
+        summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
+        summary.put("Customer national identity",  senderAccount.getCustomer().getNationalId());
+        summary.put("Sender account identity",  senderAccount.getId());
+        summary.put("Receiver account identity",  receiverAccount.getId());
+        summary.put("Amount",  requestedAmountInSummary + senderAccount.getCurrency());
+        summary.put("Payment type",  request.paymentType());
+        summary.put("Time",  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
     }
@@ -112,37 +92,23 @@ public class TransactionService {
         String earnedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(earnedAmount);
         log.info(LogMessages.PROCESSED_AMOUNT, earnedAmountInSummary, "Earn");
 
-        String summaryTemplate = """
-                Account Activity: %s
-                From Account Id: %s
-                To Account Id: %s
-                Spent amount: %s %s
-                Earned amount: %s %s
-                Time: %s
-                """;
-
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
-        Currency sellerAccountCurrency = sellerAccount.getCurrency();
-        Currency buyerAccountCurrency = buyerAccount.getCurrency();
-
-        String summary = String.format(
-                summaryTemplate,
-                activityType.getValue(),
-                sellerAccount.getId(),
-                buyerAccount.getId(),
-                spentAmountInSummary,
-                sellerAccountCurrency,
-                earnedAmountInSummary,
-                buyerAccountCurrency,
-                LocalDateTime.now()
-        );
 
         Account[] accounts = {sellerAccount, buyerAccount};
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
+        summary.put("Customer national identity",  sellerAccount.getCustomer().getNationalId());
+        summary.put("Seller account identity",  sellerAccount.getId());
+        summary.put("Buyer account identity",  buyerAccount.getId());
+        summary.put("Spent amount",  spentAmountInSummary + sellerAccount.getCurrency());
+        summary.put("Earned amount",  earnedAmountInSummary + buyerAccount.getCurrency());
+        summary.put("Time",  LocalDateTime.now());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
     }
 
-    private void createAccountActivity(AccountActivityType activityType, Double amount, String summary, Account[] accounts, String explanation) {
+    private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
         accountActivityService.createAccountActivity(accountActivityRequest);
     }

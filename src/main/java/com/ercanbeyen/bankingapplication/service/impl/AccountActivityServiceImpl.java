@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.util.AccountActivityUtils;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
@@ -16,10 +17,12 @@ import com.ercanbeyen.bankingapplication.repository.AccountActivityRepository;
 import com.ercanbeyen.bankingapplication.view.repository.AccountActivityViewRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.itextpdf.text.DocumentException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayOutputStream;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -99,6 +102,25 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     public List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer receiverAccountId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
         return accountActivityViewRepository.findBySenderAccountIdAndReceiverAccountId(senderAccountId, receiverAccountId);
+    }
+
+    @Override
+    public ByteArrayOutputStream generateReceiptPdfStream(String id) {
+        AccountActivity accountActivity = findById(id);
+        ByteArrayOutputStream outputStream;
+
+        try {
+            outputStream = AccountActivityUtils.generatePdfStream(accountActivity.getSummary());
+            log.info("Receipt is successfully generated");
+        } catch (DocumentException exception) {
+            log.error("Receipt cannot be created. Exception: {}", exception.getMessage());
+            throw new RuntimeException("Error occurred while creating receipt");
+        } catch (Exception exception) {
+            log.error("Unknown error occurred while creating receipt");
+            throw new RuntimeException("Error occurred while creating receipt");
+        }
+
+        return outputStream;
     }
 
     private AccountActivity findById(String id) {
