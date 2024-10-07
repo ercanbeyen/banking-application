@@ -41,8 +41,6 @@ public class TransactionService {
         String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
-
-
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
         summary.put("Customer national identity", account.getCustomer().getNationalId());
         summary.put("Account identity", account.getId());

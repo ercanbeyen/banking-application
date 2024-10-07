@@ -16,5 +16,5 @@ public interface AccountActivityService {
     AccountActivityDto getAccountActivity(String id);
     void createAccountActivity(AccountActivityRequest request);
     List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer receiverAccountId);
-    ByteArrayOutputStream generateReceiptPdfStream(String id);
+    ByteArrayOutputStream createReceiptStream(String id);
 }

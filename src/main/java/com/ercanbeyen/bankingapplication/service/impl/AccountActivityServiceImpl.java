@@ -105,7 +105,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     }
 
     @Override
-    public ByteArrayOutputStream generateReceiptPdfStream(String id) {
+    public ByteArrayOutputStream createReceiptStream(String id) {
         AccountActivity accountActivity = findById(id);
         ByteArrayOutputStream outputStream;
 

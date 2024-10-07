@@ -43,13 +43,13 @@ public class AccountActivityController {
     @PostMapping("/{id}/receipt")
     public ResponseEntity<byte[]> generateReceipt(@PathVariable("id") String id) {
         /* Export pdf from Account Activity's summary */
-        ByteArrayOutputStream pdfStream = accountActivityService.generateReceiptPdfStream(id);
+        ByteArrayOutputStream receiptStream = accountActivityService.createReceiptStream(id);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=receipt.pdf");
-        headers.setContentLength(pdfStream.size());
+        headers.setContentLength(receiptStream.size());
 
-        return new ResponseEntity<>(pdfStream.toByteArray(), headers, HttpStatus.OK);
+        return new ResponseEntity<>(receiptStream.toByteArray(), headers, HttpStatus.OK);
     }
 }
