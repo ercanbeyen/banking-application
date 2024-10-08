@@ -44,7 +44,7 @@ public class TransactionService {
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
         summary.put("Customer national identity", account.getCustomer().getNationalId());
         summary.put("Account identity", account.getId());
-        summary.put("Amount", requestedAmountInSummary + account.getCurrency());
+        summary.put("Amount", requestedAmountInSummary + " " + account.getCurrency());
         summary.put("Time",  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, amount, summary, activityParameters.getValue1(), null);
@@ -67,7 +67,7 @@ public class TransactionService {
         summary.put("Customer national identity",  senderAccount.getCustomer().getNationalId());
         summary.put("Sender account identity",  senderAccount.getId());
         summary.put("Receiver account identity",  receiverAccount.getId());
-        summary.put("Amount",  requestedAmountInSummary + senderAccount.getCurrency());
+        summary.put("Amount",  requestedAmountInSummary + " " + senderAccount.getCurrency());
         summary.put("Payment type",  request.paymentType());
         summary.put("Time",  LocalDateTime.now().toString());
 
@@ -99,8 +99,8 @@ public class TransactionService {
         summary.put("Customer national identity",  sellerAccount.getCustomer().getNationalId());
         summary.put("Seller account identity",  sellerAccount.getId());
         summary.put("Buyer account identity",  buyerAccount.getId());
-        summary.put("Spent amount",  spentAmountInSummary + sellerAccount.getCurrency());
-        summary.put("Earned amount",  earnedAmountInSummary + buyerAccount.getCurrency());
+        summary.put("Spent amount",  spentAmountInSummary + " " + sellerAccount.getCurrency());
+        summary.put("Earned amount",  earnedAmountInSummary + " " + buyerAccount.getCurrency());
         summary.put("Time",  LocalDateTime.now());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);

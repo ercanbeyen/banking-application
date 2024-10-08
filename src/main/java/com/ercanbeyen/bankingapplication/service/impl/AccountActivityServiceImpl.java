@@ -106,6 +106,8 @@ public class AccountActivityServiceImpl implements AccountActivityService {
 
     @Override
     public ByteArrayOutputStream createReceiptStream(String id) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
         AccountActivity accountActivity = findById(id);
         ByteArrayOutputStream outputStream;
 
@@ -116,8 +118,8 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             log.error("Receipt cannot be created. Exception: {}", exception.getMessage());
             throw new RuntimeException("Error occurred while creating receipt");
         } catch (Exception exception) {
-            log.error("Unknown error occurred while creating receipt");
-            throw new RuntimeException("Error occurred while creating receipt");
+            log.error("Unknown exception occurred. Exception: {}", exception.getMessage());
+            throw new RuntimeException("Unknown error occurred while creating receipt");
         }
 
         return outputStream;
