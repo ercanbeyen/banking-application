@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
@@ -41,11 +42,12 @@ public class TransactionService {
         String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
-        summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put("Customer national identity", account.getCustomer().getNationalId());
-        summary.put("Account identity", account.getId());
-        summary.put("Amount", requestedAmountInSummary + " " + account.getCurrency());
-        summary.put("Time",  LocalDateTime.now().toString());
+        summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
+        summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());
+        summary.put(SummaryFields.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
+        summary.put(SummaryFields.ACCOUNT_IDENTITY, account.getId());
+        summary.put(SummaryFields.AMOUNT, requestedAmountInSummary + " " + account.getCurrency());
+        summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, amount, summary, activityParameters.getValue1(), null);
     }
@@ -64,12 +66,13 @@ public class TransactionService {
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put("Customer national identity",  senderAccount.getCustomer().getNationalId());
-        summary.put("Sender account identity",  senderAccount.getId());
-        summary.put("Receiver account identity",  receiverAccount.getId());
-        summary.put("Amount",  requestedAmountInSummary + " " + senderAccount.getCurrency());
-        summary.put("Payment type",  request.paymentType());
-        summary.put("Time",  LocalDateTime.now().toString());
+        summary.put(SummaryFields.FULL_NAME, senderAccount.getCustomer().getFullName());
+        summary.put(SummaryFields.NATIONAL_IDENTITY,  senderAccount.getCustomer().getNationalId());
+        summary.put("Sender " + SummaryFields.ACCOUNT_IDENTITY,  senderAccount.getId());
+        summary.put("Receiver " + SummaryFields.ACCOUNT_IDENTITY,  receiverAccount.getId());
+        summary.put(SummaryFields.AMOUNT,  requestedAmountInSummary + " " + senderAccount.getCurrency());
+        summary.put(SummaryFields.PAYMENT_TYPE,  request.paymentType());
+        summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
     }
@@ -96,14 +99,36 @@ public class TransactionService {
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put("Customer national identity",  sellerAccount.getCustomer().getNationalId());
-        summary.put("Seller account identity",  sellerAccount.getId());
-        summary.put("Buyer account identity",  buyerAccount.getId());
-        summary.put("Spent amount",  spentAmountInSummary + " " + sellerAccount.getCurrency());
-        summary.put("Earned amount",  earnedAmountInSummary + " " + buyerAccount.getCurrency());
-        summary.put("Time",  LocalDateTime.now());
+        summary.put(SummaryFields.FULL_NAME, sellerAccount.getCustomer().getFullName());
+        summary.put(SummaryFields.NATIONAL_IDENTITY,  sellerAccount.getCustomer().getNationalId());
+        summary.put("Seller " + SummaryFields.ACCOUNT_IDENTITY,  sellerAccount.getId());
+        summary.put("Buyer " + SummaryFields.ACCOUNT_IDENTITY,  buyerAccount.getId());
+        summary.put("Spent " + SummaryFields.AMOUNT,  spentAmountInSummary + " " + sellerAccount.getCurrency());
+        summary.put("Earned " + SummaryFields.AMOUNT,  earnedAmountInSummary + " " + buyerAccount.getCurrency());
+        summary.put(SummaryFields.TIME,  LocalDateTime.now());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
+    }
+
+    public void createAccountActivityForAccountOpeningAndClosing(Account account, AccountActivityType activityType) {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
+        summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());
+        summary.put(SummaryFields.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
+        summary.put(SummaryFields.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
+        summary.put(SummaryFields.BRANCH, account.getBranch().getName());
+        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
+
+        AccountActivityRequest request = new AccountActivityRequest(
+                activityType,
+                null,
+                null,
+                0D,
+                summary,
+                null
+        );
+
+        accountActivityService.createAccountActivity(request);
     }
 
     private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {

@@ -7,7 +7,6 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
-import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
@@ -87,24 +86,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
-        AccountActivityType activityType = AccountActivityType.ACCOUNT_OPENING;
-
-        Map<String, Object> summary = new HashMap<>();
-        summary.put("Account Activity", activityType.getValue());
-        summary.put("Account Type", account.getCurrency().toString() + " " + account.getType());
-        summary.put("Branch", account.getBranch().getName());
-        summary.put("Time",  LocalDateTime.now().toString());
-
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
-                activityType,
-                null,
-                null,
-                0D,
-                summary,
-                null
-        );
-
-        accountActivityService.createAccountActivity(accountActivityRequest);
+        transactionService.createAccountActivityForAccountOpeningAndClosing(account, AccountActivityType.ACCOUNT_OPENING);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -244,23 +226,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
-
-        Map<String, Object> summary = new HashMap<>();
-        summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put("Account Type", account.getCurrency().toString() + " " + account.getType());
-        summary.put("Branch", account.getBranch());
-        summary.put("Time",  LocalDateTime.now().toString());
-
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
-                activityType,
-                null,
-                null,
-                0D,
-                summary,
-                null
-        );
-
-        accountActivityService.createAccountActivity(accountActivityRequest);
+        transactionService.createAccountActivityForAccountOpeningAndClosing(account, activityType);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }

@@ -70,9 +70,7 @@ public class AccountActivityUtils {
     private static void addBottom(Document document) throws DocumentException, IOException {
         Paragraph paragraph = new Paragraph("Thank you for working with us");
         paragraph.setAlignment(Element.ALIGN_CENTER);
-
         document.add(paragraph);
-        document.add(new Paragraph("\n"));
 
         addLogo(document);
 

@@ -12,7 +12,9 @@ import java.util.*;
 
 @Setter
 @Entity
-@Table(name = "customers", indexes = {@Index(name = "nationalId_index", columnList = "nationalId")})
+@Table(name = "customers", indexes = {
+        @Index(name = "nationalId_index", columnList = "nationalId")
+})
 public non-sealed class Customer extends BaseEntity {
     @Getter
     @Column(nullable = false, length = 100)
@@ -56,12 +58,12 @@ public non-sealed class Customer extends BaseEntity {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications = new ArrayList<>();
 
-    public Optional<Account> getAccount(Integer id) {
-        return accounts.stream()
-                .filter(account -> Objects.equals(account.getId(), id))
-                .findFirst();
+    @Transient
+    public String getFullName() {
+        return name + " " + surname;
     }
 
+    @Transient
     public Optional<File> getProfilePhoto() {
         return Optional.ofNullable(profilePhoto);
     }
