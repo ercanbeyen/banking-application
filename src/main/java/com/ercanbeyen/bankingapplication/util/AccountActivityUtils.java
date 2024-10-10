@@ -88,14 +88,15 @@ public class AccountActivityUtils {
             String name = value.substring(0, spaceIndex);
             String surname = value.substring(spaceIndex + 1);
 
-            valueBuilder.append(maskValuesInFullName(name))
+            valueBuilder.append(maskWordInFullName(name))
                     .append(" ")
-                    .append(maskValuesInFullName(surname));
+                    .append(maskWordInFullName(surname));
 
         } else if (key.equals(SummaryFields.NATIONAL_IDENTITY)) {
+            int length = value.length();
             valueBuilder.append(value, 0, 3)
-                    .append("*".repeat(value.length() - 5))
-                    .append(value, value.length() - 2, value.length());
+                    .append("*".repeat(length - 5))
+                    .append(value, length - 2, length);
         } else {
             throw new ResourceConflictException(String.format("Summary field %s is not in %s", key, customerCredentials));
         }
@@ -103,9 +104,14 @@ public class AccountActivityUtils {
         return valueBuilder.toString();
     }
 
-    private static StringBuilder maskValuesInFullName(String word) {
-        return new StringBuilder().append(word, 0, 2).
-                append("*".repeat(word.length() - 2));
+    private static StringBuilder maskWordInFullName(String word) {
+        int length = word.length();
+        int endIndex = length < 5 ? 1 : 2;
+        log.info("Length and end index: {} & {}", length, endIndex);
+
+        return new StringBuilder()
+                .append(word, 0, endIndex)
+                .append("*".repeat(length - endIndex));
     }
 
     private static void addBottom(Document document) throws DocumentException, IOException {
