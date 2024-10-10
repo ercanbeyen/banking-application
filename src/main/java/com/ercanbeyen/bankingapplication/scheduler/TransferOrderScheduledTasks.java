@@ -4,7 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.dto.RegularTransferDto;
 import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
-import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.util.TransferOrderUtils;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -66,7 +66,7 @@ public class TransferOrderScheduledTasks {
             Integer senderAccountId = transferOrderDto.getSenderAccountId();
             RegularTransferDto regularTransferDto = transferOrderDto.getRegularTransferDto();
             Integer receiverAccountId = regularTransferDto.receiverAccountId();
-            TransferRequest transferRequest = new TransferRequest(
+            MoneyTransferRequest moneyTransferRequest = new MoneyTransferRequest(
                     senderAccountId,
                     receiverAccountId,
                     regularTransferDto.amount(),
@@ -76,7 +76,7 @@ public class TransferOrderScheduledTasks {
             try {
                 String url = Entity.ACCOUNT.getCollectionUrl() + "/transfer";
                 log.info("Transfer url: {}", url);
-                restTemplate.put(url, transferRequest);
+                restTemplate.put(url, moneyTransferRequest);
 
                 String logMessage = "Transfer from " + senderAccountId + " to " + receiverAccountId + " is successfully completed";
                 log.info(LogMessages.TRANSACTION_MESSAGE, logMessage);

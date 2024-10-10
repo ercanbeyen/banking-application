@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.util;
 
+import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
@@ -11,12 +13,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
 @Slf4j
 @UtilityClass
 public class AccountActivityUtils {
+    private static final List<String> customerCredentials = List.of(SummaryFields.FULL_NAME, SummaryFields.NATIONAL_IDENTITY);
 
     public ByteArrayOutputStream generatePdfStream(Map<String, Object> summary) throws DocumentException, IOException {
         Document document = new Document();
@@ -60,11 +64,48 @@ public class AccountActivityUtils {
                 });
 
         for (Map.Entry<String, Object> entry : summary.entrySet()) {
-            table.addCell(entry.getKey());
-            table.addCell(entry.getValue().toString());
+            String key = entry.getKey();
+            String value = entry.getValue().toString();
+
+            if (customerCredentials.contains(key)) {
+                value = maskField(entry);
+            }
+
+            table.addCell(key);
+            table.addCell(value);
         }
 
         document.add(table);
+    }
+
+    private static String maskField(Map.Entry<String, Object> entry) {
+        String key = entry.getKey();
+        String value = entry.getValue().toString();
+        StringBuilder valueBuilder = new StringBuilder();
+
+        if (key.equals(SummaryFields.FULL_NAME)) {
+            int spaceIndex = value.indexOf(' ');
+            String name = value.substring(0, spaceIndex);
+            String surname = value.substring(spaceIndex + 1);
+
+            valueBuilder.append(maskValuesInFullName(name))
+                    .append(" ")
+                    .append(maskValuesInFullName(surname));
+
+        } else if (key.equals(SummaryFields.NATIONAL_IDENTITY)) {
+            valueBuilder.append(value, 0, 3)
+                    .append("*".repeat(value.length() - 5))
+                    .append(value, value.length() - 2, value.length());
+        } else {
+            throw new ResourceConflictException(String.format("Summary field %s is not in %s", key, customerCredentials));
+        }
+
+        return valueBuilder.toString();
+    }
+
+    private static StringBuilder maskValuesInFullName(String word) {
+        return new StringBuilder().append(word, 0, 2).
+                append("*".repeat(word.length() - 2));
     }
 
     private static void addBottom(Document document) throws DocumentException, IOException {

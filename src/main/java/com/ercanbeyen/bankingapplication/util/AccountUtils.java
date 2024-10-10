@@ -6,7 +6,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
-import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import lombok.experimental.UtilityClass;
@@ -44,7 +44,7 @@ public class AccountUtils {
         }
     }
 
-    public void checkMoneyTransferRequest(TransferRequest request) {
+    public void checkMoneyTransferRequest(MoneyTransferRequest request) {
         if (Objects.equals(request.senderAccountId(), request.receiverAccountId())) {
             throw new ResourceExpectationFailedException("Identity of sender and receiver accounts should not be equal");
         }
