@@ -18,7 +18,7 @@ import java.util.List;
 @Data
 public non-sealed class CustomerDto extends BaseDto {
     @NotBlank(message = "Name should not be blank")
-    @Size(min = 3, max = 100, message = "Length of name is not between {min} and {max}")
+    @Size(min = 2, max = 100, message = "Length of name is not between {min} and {max}")
     String name;
     @NotBlank(message = "Surname should not be blank")
     @Size(min = 2, max = 100, message = "Length of surname is not between {min} and {max}")

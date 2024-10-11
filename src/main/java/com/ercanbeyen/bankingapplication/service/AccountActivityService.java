@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
 
+import java.io.ByteArrayOutputStream;
 import java.util.List;
 import java.util.Set;
 
@@ -15,4 +16,5 @@ public interface AccountActivityService {
     AccountActivityDto getAccountActivity(String id);
     void createAccountActivity(AccountActivityRequest request);
     List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer receiverAccountId);
+    ByteArrayOutputStream createReceiptStream(String id);
 }

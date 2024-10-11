@@ -7,9 +7,8 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
-import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
-import com.ercanbeyen.bankingapplication.dto.request.TransferRequest;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -87,17 +86,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
-        AccountActivityType activityType = AccountActivityType.ACCOUNT_OPENING;
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
-                activityType,
-                null,
-                null,
-                0D,
-                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " in " + account.getBranch().getName() + " branch at " + LocalDateTime.now(),
-                null
-        );
-
-        accountActivityService.createAccountActivity(accountActivityRequest);
+        transactionService.createAccountActivityForAccountOpeningAndClosing(account, AccountActivityType.ACCOUNT_OPENING);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -170,7 +159,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format(ResponseMessages.SUCCESS, response);
     }
 
-    public String transferMoney(TransferRequest request) {
+    public String transferMoney(MoneyTransferRequest request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Integer senderAccountId = request.senderAccountId();
@@ -237,16 +226,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(
-                activityType,
-                null,
-                null,
-                0D,
-                account.getType() + " " + account.getCurrency() + " " + activityType.getValue() + " at " + LocalDateTime.now(),
-                null
-        );
-
-        accountActivityService.createAccountActivity(accountActivityRequest);
+        transactionService.createAccountActivityForAccountOpeningAndClosing(account, activityType);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }

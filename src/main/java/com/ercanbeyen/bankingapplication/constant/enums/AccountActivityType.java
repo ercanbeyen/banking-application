@@ -8,14 +8,14 @@ import java.util.Map;
 
 @RequiredArgsConstructor
 public enum AccountActivityType {
-    MONEY_DEPOSIT("Money deposit"),
+    MONEY_DEPOSIT("Money Deposit"),
     WITHDRAWAL("Withdrawal"),
-    MONEY_TRANSFER("Money transfer"),
-    MONEY_EXCHANGE("Money exchange"),
+    MONEY_TRANSFER("Money Transfer"),
+    MONEY_EXCHANGE("Money Exchange"),
     FEE("Fee"),
     CHARGE("Charge"),
-    ACCOUNT_OPENING("Account opening"),
-    ACCOUNT_CLOSING("Account closing");
+    ACCOUNT_OPENING("Account Opening"),
+    ACCOUNT_CLOSING("Account Closing");
 
     @Getter
     private final String value;

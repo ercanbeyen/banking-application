@@ -43,7 +43,7 @@ class CustomerControllerTest {
     @Container
     @ServiceConnection
     private static final CassandraContainer<?> cassandraContainer = new CassandraContainer<>(DockerImageName.parse("cassandra:latest"));
-    private static final String PHOTOS_LOCATION = "C:\\Users\\ercanbeyen\\Photos\\Test\\Banking-App\\";
+    private static final String PHOTOS_LOCATION = "C:\\Users\\ercanbeyen\\Photos\\Banking-App\\Source\\Test\\Resources\\";
     @LocalServerPort
     private Integer port;
     @Autowired

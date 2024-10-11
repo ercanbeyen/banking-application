@@ -125,6 +125,12 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         return exchangeViewRepository.findAll();
     }
 
+    public Double getBankExchangeRate(Currency fromCurrency, Currency toCurrency) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        Pair<Double, Double> exchangeRate = getExchangeRate(fromCurrency, toCurrency);
+        return exchangeRate.getValue0();
+    }
+
     private Exchange findById(Integer id) {
         String entity = Entity.EXCHANGE.getValue();
         Exchange exchange = exchangeRepository.findById(id)

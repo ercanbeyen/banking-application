@@ -5,7 +5,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
-public record TransferRequest(
+public record MoneyTransferRequest(
         @NotNull(message = "Sender account id should not be null")
         Integer senderAccountId,
         @NotNull(message = "Receiver account id should not be null")
