@@ -1,11 +1,9 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.query.Queries;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
@@ -29,9 +27,6 @@ public class AccountActivity {
     @JoinColumn(name = "receiver_account_id", referencedColumnName = "id")
     private Account receiverAccount;
     private Double amount;
-    @CreationTimestamp
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Queries.GET_NOW_TIMESTAMP)
     private LocalDateTime createdAt;
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> summary;
@@ -44,5 +39,6 @@ public class AccountActivity {
         this.amount = amount;
         this.summary = summary;
         this.explanation = explanation;
+        this.createdAt = LocalDateTime.now();
     }
 }

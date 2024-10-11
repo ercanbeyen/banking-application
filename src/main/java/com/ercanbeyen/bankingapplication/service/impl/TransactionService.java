@@ -78,6 +78,7 @@ public class TransactionService {
     }
 
     public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount) {
+        Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
         Double spentAmount = request.amount();
         Double earnedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, spentAmount);
 
@@ -105,7 +106,8 @@ public class TransactionService {
         summary.put("Buyer " + SummaryFields.ACCOUNT_IDENTITY,  buyerAccount.getId());
         summary.put("Spent " + SummaryFields.AMOUNT,  spentAmountInSummary + " " + sellerAccount.getCurrency());
         summary.put("Earned " + SummaryFields.AMOUNT,  earnedAmountInSummary + " " + buyerAccount.getCurrency());
-        summary.put(SummaryFields.TIME,  LocalDateTime.now());
+        summary.put(SummaryFields.RATE,  rate);
+        summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
     }
