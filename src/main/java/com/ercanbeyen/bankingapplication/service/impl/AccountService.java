@@ -96,7 +96,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account account = findById(id);
-        checkIsAccountClosed(account);
+        checkAccountStatus(account);
         AccountUtils.checkCurrencies(account.getCurrency(), request.getCurrency());
 
         Branch branch = branchService.findByName(request.getBranchName());
@@ -126,7 +126,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account account = findById(id);
-        checkIsAccountClosed(account);
+        checkAccountStatus(account);
         AccountUtils.checkCurrentAccountBeforeUpdateBalance(account.getBalance(), amount, activityType);
         checkDailyAccountActivityLimit(account, amount, activityType);
 
@@ -139,7 +139,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account account = findById(id);
-        checkIsAccountClosed(account);
+        checkAccountStatus(account);
 
         if (!AccountUtils.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositPeriod())) {
             log.warn("Deposit period is not completed");
@@ -166,10 +166,10 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Integer receiverAccountId = request.receiverAccountId();
 
         Account senderAccount = findById(senderAccountId);
-        checkIsAccountClosed(senderAccount);
+        checkAccountStatus(senderAccount);
 
         Account receiverAccount = findById(receiverAccountId);
-        checkIsAccountClosed(receiverAccount);
+        checkAccountStatus(receiverAccount);
 
         Double amount = request.amount();
         Currency currency = senderAccount.getCurrency();
@@ -193,10 +193,10 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account sellerAccount = findById(request.sellerId());
-        checkIsAccountClosed(sellerAccount);
+        checkAccountStatus(sellerAccount);
 
         Account buyerAccount = findById(request.buyerId());
-        checkIsAccountClosed(buyerAccount);
+        checkAccountStatus(buyerAccount);
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         Double requestedAmount = request.amount();
@@ -222,13 +222,13 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         String logMessage = status ? "Account {} is blocked"
                 : "Blockage of account {} is removed";
 
-        logMessage = logMessage + " at {}";
+        logMessage += " at {}";
         log.info(logMessage, id, LocalDateTime.now());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
         transactionService.createAccountActivityForAccountStatusUpdate(account, activityType);
 
-        String message = status ? activityType.toString()
+        String message = status ? activityType.getValue()
                 : "Account blockage removal";
 
         return String.format(ResponseMessages.SUCCESS, message);
@@ -239,7 +239,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account account = findById(id);
-        checkIsAccountClosed(account);
+        checkAccountStatus(account);
 
         double balance = account.getBalance();
 
@@ -335,15 +335,31 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         AccountUtils.checkBalance(senderAccount.getBalance(), amount);
     }
 
+    private static void checkAccountStatus(Account account) {
+        checkIsAccountBlocked(account);
+        checkIsAccountClosed(account);
+    }
+
+    private static void checkIsAccountBlocked(Account account) {
+        int id = account.getId();
+
+        if (account.getIsBlocked()) {
+            log.error("Account {} is blocked", id);
+            throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT + ". It has been blocked");
+        }
+
+        log.info(LogMessages.NOT_IMPROVER_ACCOUNT_ACTIVITY, id, "blocked");
+    }
+
     private static void checkIsAccountClosed(Account account) {
+        int id = account.getId();
         LocalDateTime closedAt = account.getClosedAt();
-        Integer id = account.getId();
 
         if (Optional.ofNullable(closedAt).isPresent()) {
             log.error("Account {} has already been closed at {}", id, closedAt);
-            throw new ResourceConflictException(String.format("Account %d is improper for activities. It has already been closed at %s", id, closedAt));
+            throw new ResourceConflictException(String.format(ResponseMessages.IMPROPER_ACCOUNT + ". It has already been closed at %s", closedAt));
         }
 
-        log.info("Account {} has not been closed", id);
+        log.info(LogMessages.NOT_IMPROVER_ACCOUNT_ACTIVITY, id, "closed");
     }
 }
