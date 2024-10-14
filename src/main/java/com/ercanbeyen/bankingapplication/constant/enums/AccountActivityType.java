@@ -15,6 +15,7 @@ public enum AccountActivityType {
     FEE("Fee"),
     CHARGE("Charge"),
     ACCOUNT_OPENING("Account Opening"),
+    ACCOUNT_BLOCKING("Account Blocking"),
     ACCOUNT_CLOSING("Account Closing");
 
     @Getter

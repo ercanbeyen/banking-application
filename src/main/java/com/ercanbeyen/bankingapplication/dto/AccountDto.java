@@ -17,6 +17,7 @@ public non-sealed class AccountDto extends BaseDto {
     private Currency currency;
     private Double balance;
     private AccountType type;
+    private Boolean isBlocked;
     private LocalDateTime closedAt;
     private String branchName;
     /* Deposit Account fields */

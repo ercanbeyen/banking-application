@@ -112,7 +112,7 @@ public class TransactionService {
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
     }
 
-    public void createAccountActivityForAccountOpeningAndClosing(Account account, AccountActivityType activityType) {
+    public void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
         Map<String, Object> summary = new HashMap<>();
         summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
         summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());

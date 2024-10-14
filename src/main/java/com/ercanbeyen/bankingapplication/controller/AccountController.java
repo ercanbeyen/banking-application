@@ -70,6 +70,12 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PatchMapping("/{id}/block")
+    public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("block") Boolean status) {
+        MessageResponse<String> response = new MessageResponse<>(accountService.updateBlockStatus(id, status));
+        return ResponseEntity.ok(response);
+    }
+
     @PatchMapping("/{id}/close")
     public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") Integer id) {
         MessageResponse<String> response = new MessageResponse<>(accountService.closeAccount(id));

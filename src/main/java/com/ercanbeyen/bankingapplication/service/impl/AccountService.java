@@ -86,7 +86,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
-        transactionService.createAccountActivityForAccountOpeningAndClosing(account, AccountActivityType.ACCOUNT_OPENING);
+        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -210,6 +210,31 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     }
 
     @Transactional
+    public String updateBlockStatus(Integer id, boolean status) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Account account = findById(id);
+        checkIsAccountClosed(account);
+
+        account.setIsBlocked(status);
+        accountRepository.save(account);
+
+        String logMessage = status ? "Account {} is blocked"
+                : "Blockage of account {} is removed";
+
+        logMessage = logMessage + " at {}";
+        log.info(logMessage, id, LocalDateTime.now());
+
+        AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
+        transactionService.createAccountActivityForAccountStatusUpdate(account, activityType);
+
+        String message = status ? activityType.toString()
+                : "Account blockage removal";
+
+        return String.format(ResponseMessages.SUCCESS, message);
+    }
+
+    @Transactional
     public String closeAccount(Integer id) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
@@ -226,7 +251,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
-        transactionService.createAccountActivityForAccountOpeningAndClosing(account, activityType);
+        transactionService.createAccountActivityForAccountStatusUpdate(account, activityType);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
