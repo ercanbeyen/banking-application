@@ -35,7 +35,7 @@ public non-sealed class Account extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private Currency currency;
     private double balance;
-    private Boolean isBlocked;
+    private boolean isBlocked;
     private LocalDateTime closedAt;
     @OneToMany(mappedBy = "senderAccount", cascade = CascadeType.ALL)
     private List<TransferOrder> transferOrders = new ArrayList<>();

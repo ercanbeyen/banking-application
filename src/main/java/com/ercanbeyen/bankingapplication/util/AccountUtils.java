@@ -27,19 +27,14 @@ public class AccountUtils {
     private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
-        checkAccountType(accountDto);
-
-        AccountType accountType = accountDto.getType();
-
-        if (accountType == AccountType.DEPOSIT) {
-            checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
-        } else {
-            log.warn("{} account does not have deposit period", accountType.getValue());
+        if (Optional.ofNullable(accountDto.getIsBlocked()).isPresent() || Optional.ofNullable(accountDto.getClosedAt()).isPresent()) {
+            throw new ResourceConflictException("Request should not contain block and closed at statuses");
         }
 
+        checkAccountType(accountDto);
         Double balance = accountDto.getBalance();
 
-        if (balance != null && balance != 0) {
+        if (Optional.ofNullable(balance).isPresent() && balance != 0) {
             throw new ResourceConflictException("Not any balance value should be assigned directly from request");
         }
     }
@@ -130,6 +125,12 @@ public class AccountUtils {
         } else if ((accountType == AccountType.CURRENT) && (!isInterestNull || !isDepositPeriodNull)) {
             String exceptionMessage = accountType + " account does not " + message;
             throw new ResourceExpectationFailedException(exceptionMessage);
+        }
+
+        if (accountType == AccountType.DEPOSIT) {
+            checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
+        } else {
+            log.warn("{} account does not have deposit period", accountType.getValue());
         }
     }
 

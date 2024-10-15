@@ -9,6 +9,7 @@ import org.mapstruct.Mapping;
 public interface AccountMapper {
     @Mapping(target = "customerNationalId", source = "customer.nationalId")
     @Mapping(target = "branchName", source = "branch.name")
+    @Mapping(target = "isBlocked", source = "blocked")
     AccountDto entityToDto(Account account);
     Account dtoToEntity(AccountDto accountDto);
 }

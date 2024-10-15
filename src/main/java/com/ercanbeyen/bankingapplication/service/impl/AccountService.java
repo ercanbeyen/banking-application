@@ -216,7 +216,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account account = findById(id);
         checkIsAccountClosed(account);
 
-        account.setIsBlocked(status);
+        account.setBlocked(status);
         accountRepository.save(account);
 
         String logMessage = status ? "Account {} is blocked"
@@ -343,7 +343,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private static void checkIsAccountBlocked(Account account) {
         int id = account.getId();
 
-        if (account.getIsBlocked()) {
+        if (account.isBlocked()) {
             log.error("Account {} is blocked", id);
             throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT + ". It has been blocked");
         }
