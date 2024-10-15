@@ -51,10 +51,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Predicate<Account> accountPredicate = account -> {
-            boolean typeFilter = (options.getType() == null || options.getType() == account.getType());
-            boolean timeFilter = (options.getCreatedAt() == null || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate()));
-            boolean closedFilter = (options.getIsClosed() == null || options.getIsClosed() == (account.getClosedAt() != null));
-            return typeFilter && timeFilter && closedFilter;
+            boolean typeFilter = (Optional.ofNullable(options.getType()).isEmpty() || options.getType() == account.getType());
+            boolean timeFilter = (Optional.ofNullable(options.getCreatedAt()).isEmpty() || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate()));
+            boolean blockedFilter = (Optional.ofNullable(options.getIsBlocked()).isEmpty() || options.getIsBlocked() == account.isBlocked());
+            boolean closedAtFilter = (Optional.ofNullable(options.getIsClosed()).isEmpty() || options.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
+            return typeFilter && timeFilter && blockedFilter && closedAtFilter;
         };
 
         return accountRepository.findAll()
