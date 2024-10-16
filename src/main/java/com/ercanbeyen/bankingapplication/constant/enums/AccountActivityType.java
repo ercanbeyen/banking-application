@@ -3,8 +3,7 @@ package com.ercanbeyen.bankingapplication.constant.enums;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
-import java.util.EnumMap;
-import java.util.Map;
+import java.util.*;
 
 @RequiredArgsConstructor
 public enum AccountActivityType {
@@ -22,6 +21,8 @@ public enum AccountActivityType {
     private final String value;
     @Getter
     private static final Map<AccountActivityType, Double> activityToLimits;
+    @Getter
+    private static final Set<AccountActivityType> accountStatusUpdatingActivities;
 
     static {
         activityToLimits = new EnumMap<>(AccountActivityType.class);
@@ -29,5 +30,7 @@ public enum AccountActivityType {
         activityToLimits.put(WITHDRAWAL, 5_000D);
         activityToLimits.put(MONEY_TRANSFER, 1_000_000D);
         activityToLimits.put(MONEY_EXCHANGE, 5_000D);
+
+        accountStatusUpdatingActivities = EnumSet.of(ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING);
     }
 }

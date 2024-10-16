@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
@@ -109,6 +110,12 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         AccountActivity accountActivity = findById(id);
+
+        if (AccountActivityType.getAccountStatusUpdatingActivities().contains(accountActivity.getType())) {
+            throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY + ". Receipt cannot be generated for " + AccountActivityType.getAccountStatusUpdatingActivities());
+        }
+
+        log.info("{} is a proper account activity for receipt generation", accountActivity);
         ByteArrayOutputStream outputStream;
 
         try {

@@ -4,9 +4,11 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
+import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
@@ -87,7 +89,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
-        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
+        createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -227,7 +229,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(logMessage, id, LocalDateTime.now());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
-        transactionService.createAccountActivityForAccountStatusUpdate(account, activityType);
+        createAccountActivityForAccountStatusUpdate(account, activityType);
 
         String message = status ? activityType.getValue()
                 : "Account blockage removal";
@@ -252,7 +254,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
-        transactionService.createAccountActivityForAccountStatusUpdate(account, activityType);
+        createAccountActivityForAccountStatusUpdate(account,activityType);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
@@ -345,11 +347,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         int id = account.getId();
 
         if (account.isBlocked()) {
-            log.error("Account {} is blocked", id);
+            log.error("Account {} has been blocked", id);
             throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT + ". It has been blocked");
         }
 
-        log.info(LogMessages.NOT_IMPROVER_ACCOUNT_ACTIVITY, id, "blocked");
+        log.info("Account {} has not been blocked", id);
     }
 
     private static void checkIsAccountClosed(Account account) {
@@ -361,6 +363,27 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             throw new ResourceConflictException(String.format(ResponseMessages.IMPROPER_ACCOUNT + ". It has already been closed at %s", closedAt));
         }
 
-        log.info(LogMessages.NOT_IMPROVER_ACCOUNT_ACTIVITY, id, "closed");
+        log.info("Account {} has not been closed", id);
+    }
+
+    private void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
+        Map<String, Object> summary = new HashMap<>();
+        summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
+        summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());
+        summary.put(SummaryFields.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
+        summary.put(SummaryFields.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
+        summary.put(SummaryFields.BRANCH, account.getBranch().getName());
+        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
+
+        AccountActivityRequest request = new AccountActivityRequest(
+                activityType,
+                null,
+                null,
+                0D,
+                summary,
+                null
+        );
+
+        accountActivityService.createAccountActivity(request);
     }
 }

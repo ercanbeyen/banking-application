@@ -45,7 +45,7 @@ public class AccountUtils {
         }
 
         if (request.amount() >= MAXIMUM_TRANSFER_LIMIT_PER_REQUEST) {
-            String formattedValue = NumberFormatterUtil.convertNumberToFormalExpression(MAXIMUM_TRANSFER_LIMIT_PER_REQUEST);
+            String formattedValue = FormatterUtil.convertNumberToFormalExpression(MAXIMUM_TRANSFER_LIMIT_PER_REQUEST);
             throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", AccountActivityType.MONEY_TRANSFER.getValue(), formattedValue));
         }
     }
