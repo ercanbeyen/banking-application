@@ -8,6 +8,7 @@ BEGIN
     FROM accounts a
     INNER JOIN branches b ON a.branch_id = b.id
     WHERE a.closed_at IS NULL
+          AND a.is_blocked IS FALSE
           AND b.city = city
           AND a.type = type
           AND a.currency = currency;

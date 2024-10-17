@@ -8,5 +8,6 @@ import lombok.Setter;
 @Setter
 public non-sealed class AccountFilteringOptions extends BaseFilteringOptions {
     private AccountType type;
+    private Boolean isBlocked;
     private Boolean isClosed;
 }

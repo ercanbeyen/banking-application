@@ -13,7 +13,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
-import com.ercanbeyen.bankingapplication.util.NumberFormatterUtil;
+import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.javatuples.Pair;
@@ -39,7 +39,7 @@ public class TransactionService {
         int numberOfUpdatedEntities = accountRepository.updateBalanceById(account.getId(), activityParameters.getValue0().name(), amount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
-        String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
+        String requestedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
@@ -60,7 +60,7 @@ public class TransactionService {
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         Account[] accounts = {senderAccount, receiverAccount};
-        String requestedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(amount);
+        String requestedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
 
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
 
@@ -88,10 +88,10 @@ public class TransactionService {
         numberOfUpdatedEntities = accountRepository.updateBalanceById(request.buyerId(), BalanceActivity.INCREASE.name(), earnedAmount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
-        String spentAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(spentAmount);
+        String spentAmountInSummary = FormatterUtil.convertNumberToFormalExpression(spentAmount);
         log.info(LogMessages.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
 
-        String earnedAmountInSummary = NumberFormatterUtil.convertNumberToFormalExpression(earnedAmount);
+        String earnedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(earnedAmount);
         log.info(LogMessages.PROCESSED_AMOUNT, earnedAmountInSummary, "Earn");
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
@@ -110,27 +110,6 @@ public class TransactionService {
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
-    }
-
-    public void createAccountActivityForAccountOpeningAndClosing(Account account, AccountActivityType activityType) {
-        Map<String, Object> summary = new HashMap<>();
-        summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
-        summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());
-        summary.put(SummaryFields.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
-        summary.put(SummaryFields.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
-        summary.put(SummaryFields.BRANCH, account.getBranch().getName());
-        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
-
-        AccountActivityRequest request = new AccountActivityRequest(
-                activityType,
-                null,
-                null,
-                0D,
-                summary,
-                null
-        );
-
-        accountActivityService.createAccountActivity(request);
     }
 
     private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
