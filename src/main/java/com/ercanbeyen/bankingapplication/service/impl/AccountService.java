@@ -15,6 +15,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
@@ -47,6 +48,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
+    private final ChargeService chargeService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -130,7 +132,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account account = findById(id);
         checkAccountStatus(account);
-        AccountUtils.checkCurrentAccountBeforeUpdateBalance(account.getBalance(), amount, activityType);
+        checkBalance(account.getBalance(), amount, activityType);
         checkDailyAccountActivityLimit(account, amount, activityType);
 
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
@@ -204,7 +206,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         Double requestedAmount = request.amount();
 
-        AccountUtils.checkBalance(sellerAccount.getBalance(), requestedAmount);
+        checkBalance(sellerAccount.getBalance(), requestedAmount, activityType);
         checkDailyAccountActivityLimit(sellerAccount, requestedAmount, activityType);
 
         transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount);
@@ -333,9 +335,9 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         );
     }
 
-    private static void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount, Double amount) {
+    private void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount, Double amount) {
         AccountUtils.checkCurrencies(senderAccount.getCurrency(), receiverAccount.getCurrency());
-        AccountUtils.checkBalance(senderAccount.getBalance(), amount);
+        checkBalance(senderAccount.getBalance(), amount, AccountActivityType.MONEY_TRANSFER);
     }
 
     private static void checkAccountStatus(Account account) {
@@ -385,5 +387,22 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         );
 
         accountActivityService.createAccountActivity(request);
+    }
+
+    private void checkBalance(Double balance, Double request, AccountActivityType activityType) {
+        Double transactionFee = chargeService.getAmountByActivityType(activityType);
+        log.info("Account activity, requested amount and Transaction fee: {} & {} & {}", activityType, request, transactionFee);
+
+        double charge = switch (activityType) {
+            case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE -> transactionFee;
+            case AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER -> request + transactionFee;
+            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+        };
+
+        if (balance < charge) {
+            throw new ResourceExpectationFailedException("Insufficient funds");
+        }
+
+        log.info("Balance is enough to pay charge");
     }
 }

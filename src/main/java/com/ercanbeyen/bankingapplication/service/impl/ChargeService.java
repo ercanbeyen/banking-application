@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -77,6 +78,16 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
                 });
 
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
+    }
+
+    public Double getAmountByActivityType(AccountActivityType activityType) {
+        String entity = Entity.CHARGE.getValue();
+        Charge charge = chargeRepository.findByActivityType(activityType)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+
+        log.info("Charge amount of {}: {}", entity, charge.getAmount());
+
+        return charge.getAmount();
     }
 
     private Charge findById(Integer id) {

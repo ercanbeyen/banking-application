@@ -3,7 +3,6 @@ package com.ercanbeyen.bankingapplication.util;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
@@ -53,24 +52,6 @@ public class AccountUtils {
     public void checkAccountActivityForCurrentAccount(AccountActivityType activityType) {
         if (activityType != AccountActivityType.MONEY_DEPOSIT && activityType != AccountActivityType.WITHDRAWAL) {
             throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
-        }
-    }
-
-    public void checkCurrentAccountBeforeUpdateBalance(Double balance, Double request, AccountActivityType activityType) {
-        if (activityType == AccountActivityType.WITHDRAWAL) {
-            AccountUtils.checkBalance(balance, request);
-        } else {
-            log.warn("{} is {}. So no need to check balance", Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        }
-    }
-
-    public void checkBalance(Double balance, Double threshold) {
-        if (Optional.ofNullable(threshold).isEmpty()) {
-            threshold = LOWEST_THRESHOLD;
-        }
-
-        if (balance < threshold) {
-            throw new ResourceExpectationFailedException("Insufficient funds");
         }
     }
 
