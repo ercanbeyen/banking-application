@@ -10,6 +10,7 @@ public record MoneyTransferRequest(
         Integer senderAccountId,
         @NotNull(message = "Receiver account id should not be null")
         Integer receiverAccountId,
+        Integer chargedAccountId,
         @Min(value = 1, message = "Minimum amount is {value}")
         Double amount,
         @NotNull(message = "Payment type should not be null")

@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -23,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -56,14 +58,22 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, activityParameters.getValue1());
     }
 
-    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Integer senderAccountId, Double amount, Integer receiverAccountId, Account senderAccount, Account receiverAccount) {
+    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
         double transactionFee = chargeService.getAmountByActivityType(activityType);
+        int numberOfUpdatedEntities;
 
-        int numberOfUpdatedEntities = accountRepository.updateBalanceById(senderAccountId, BalanceActivity.DECREASE.name(), amount + transactionFee);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        if (Optional.ofNullable(chargedAccount).isEmpty()) {
+            numberOfUpdatedEntities = accountRepository.updateBalanceById(senderAccount.getId(), BalanceActivity.DECREASE.name(), amount + transactionFee);
+            log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        } else {
+            numberOfUpdatedEntities = accountRepository.updateBalanceById(senderAccount.getId(), BalanceActivity.DECREASE.name(), amount);
+            log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+            numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccount.getId(), BalanceActivity.DECREASE.name(), transactionFee);
+            log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        }
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(receiverAccountId, BalanceActivity.INCREASE.name(), amount);
+        numberOfUpdatedEntities = accountRepository.updateBalanceById(receiverAccount.getId(), BalanceActivity.INCREASE.name(), amount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         Account[] accounts = {senderAccount, receiverAccount};
@@ -76,7 +86,7 @@ public class TransactionService {
         summary.put("Sender " + SummaryFields.ACCOUNT_IDENTITY,  senderAccount.getId());
         summary.put("Receiver " + SummaryFields.ACCOUNT_IDENTITY,  receiverAccount.getId());
         summary.put(SummaryFields.AMOUNT,  requestedAmountInSummary + " " + senderAccount.getCurrency());
-        summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
+        summary.put(SummaryFields.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
         summary.put(SummaryFields.PAYMENT_TYPE,  request.paymentType());
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
@@ -84,17 +94,31 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, accounts);
     }
 
-    public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount) {
+    public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
         Double spentAmount = request.amount();
         Double earnedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, spentAmount);
         Double transactionFee = chargeService.getAmountByActivityType(activityType);
 
-        int numberOfUpdatedEntities = accountRepository.updateBalanceById(request.sellerId(), BalanceActivity.DECREASE.name(), spentAmount + transactionFee);
+        int numberOfUpdatedEntities;
+        int chargedAccountId;
+
+        if (Optional.ofNullable(chargedAccount).isEmpty()) {
+            chargedAccountId = sellerAccount.getCurrency() == Currency.getChargeCurrency()
+                    ? sellerAccount.getId()
+                    : buyerAccount.getId();
+        } else {
+            chargedAccountId = chargedAccount.getId();
+        }
+
+        numberOfUpdatedEntities = accountRepository.updateBalanceById(sellerAccount.getId(), BalanceActivity.DECREASE.name(), spentAmount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(request.buyerId(), BalanceActivity.INCREASE.name(), earnedAmount);
+        numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccountId, BalanceActivity.DECREASE.name(), transactionFee);
+        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+
+        numberOfUpdatedEntities = accountRepository.updateBalanceById(request.buyerAccountId(), BalanceActivity.INCREASE.name(), earnedAmount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         String spentAmountInSummary = FormatterUtil.convertNumberToFormalExpression(spentAmount);
@@ -114,7 +138,7 @@ public class TransactionService {
         summary.put("Spent " + SummaryFields.AMOUNT,  spentAmountInSummary + " " + sellerAccount.getCurrency());
         summary.put("Earned " + SummaryFields.AMOUNT,  earnedAmountInSummary + " " + buyerAccount.getCurrency());
         summary.put(SummaryFields.RATE,  rate);
-        summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
+        summary.put(SummaryFields.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);

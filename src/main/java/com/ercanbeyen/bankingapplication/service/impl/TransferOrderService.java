@@ -77,6 +77,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
 
         List<Account> accounts = getAccountsFromRegularTransferDto(request);
         transferOrder.setSenderAccount(accounts.getFirst());
+        transferOrder.setChargedAccount(accounts.getLast());
 
         RegularTransfer regularTransfer = transferOrder.getRegularTransfer();
         regularTransfer.setReceiverAccount(accounts.get(1));
@@ -104,6 +105,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         TransferOrder transferOrder = new TransferOrder();
 
         transferOrder.setSenderAccount(accounts.getFirst());
+        transferOrder.setChargedAccount(accounts.getLast());
         transferOrder.setRegularTransfer(regularTransfer);
         transferOrder.setTransferDate(request.getTransferDate());
 
@@ -124,7 +126,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
     /***
      *
      * @param request is TransferOrderDto object
-     * @return list contains sender and receiver accounts respectively
+     * @return list contains sender, receiver and charged accounts respectively
      */
     private List<Account> getAccountsFromRegularTransferDto(TransferOrderDto request) {
         Account senderAccount = accountService.findById(request.getSenderAccountId());
@@ -135,7 +137,9 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
 
         AccountUtils.checkCurrencies(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
-        return List.of(senderAccount, receiverAccount);
+        Account chargedAccount = accountService.getChargedAccount(request.getChargedAccountId(), List.of(senderAccount));
+
+        return List.of(senderAccount, receiverAccount, chargedAccount);
     }
 
     private TransferOrder findById(Integer id) {

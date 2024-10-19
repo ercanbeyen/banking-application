@@ -5,5 +5,9 @@ public enum Currency {
     USD,
     EUR,
     GBP,
-    ALT
+    ALT;
+
+    public static Currency getChargeCurrency() {
+        return TL;
+    }
 }
