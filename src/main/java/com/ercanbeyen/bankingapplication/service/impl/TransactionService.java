@@ -23,8 +23,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
 @Component
 @RequiredArgsConstructor
@@ -42,7 +42,7 @@ public class TransactionService {
         int numberOfUpdatedEntities = accountRepository.updateBalanceById(account.getId(), activityParameters.getValue0().name(), amount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
-        Double transactionFee = chargeService.getAmountByActivityType(activityType);
+        Double transactionFee = getTransactionFee(activityType, List.of(account));
         String requestedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
@@ -60,18 +60,13 @@ public class TransactionService {
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
-        double transactionFee = chargeService.getAmountByActivityType(activityType);
-        int numberOfUpdatedEntities;
+        double transactionFee = getTransactionFee(activityType, List.of(senderAccount, receiverAccount));
 
-        if (Optional.ofNullable(chargedAccount).isEmpty()) {
-            numberOfUpdatedEntities = accountRepository.updateBalanceById(senderAccount.getId(), BalanceActivity.DECREASE.name(), amount + transactionFee);
-            log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
-        } else {
-            numberOfUpdatedEntities = accountRepository.updateBalanceById(senderAccount.getId(), BalanceActivity.DECREASE.name(), amount);
-            log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
-            numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccount.getId(), BalanceActivity.DECREASE.name(), transactionFee);
-            log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
-        }
+        int numberOfUpdatedEntities = accountRepository.updateBalanceById(senderAccount.getId(), BalanceActivity.DECREASE.name(), amount);
+        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+
+        numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccount.getId(), BalanceActivity.DECREASE.name(), transactionFee);
+        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         numberOfUpdatedEntities = accountRepository.updateBalanceById(receiverAccount.getId(), BalanceActivity.INCREASE.name(), amount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
@@ -99,23 +94,14 @@ public class TransactionService {
         Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
         Double spentAmount = request.amount();
         Double earnedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, spentAmount);
-        Double transactionFee = chargeService.getAmountByActivityType(activityType);
+        Double transactionFee = getTransactionFee(activityType, List.of(sellerAccount, buyerAccount));
 
         int numberOfUpdatedEntities;
-        int chargedAccountId;
-
-        if (Optional.ofNullable(chargedAccount).isEmpty()) {
-            chargedAccountId = sellerAccount.getCurrency() == Currency.getChargeCurrency()
-                    ? sellerAccount.getId()
-                    : buyerAccount.getId();
-        } else {
-            chargedAccountId = chargedAccount.getId();
-        }
 
         numberOfUpdatedEntities = accountRepository.updateBalanceById(sellerAccount.getId(), BalanceActivity.DECREASE.name(), spentAmount);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccountId, BalanceActivity.DECREASE.name(), transactionFee);
+        numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccount.getId(), BalanceActivity.DECREASE.name(), transactionFee);
         log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
 
         numberOfUpdatedEntities = accountRepository.updateBalanceById(request.buyerAccountId(), BalanceActivity.INCREASE.name(), earnedAmount);
@@ -157,6 +143,22 @@ public class TransactionService {
     private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
         accountActivityService.createAccountActivity(accountActivityRequest);
+    }
+
+    public double getTransactionFee(AccountActivityType activityType, List<Account> accounts) {
+        return switch (activityType) {
+            case AccountActivityType.MONEY_TRANSFER -> {
+                Account senderAccount = accounts.getFirst();
+                Account receiverAccount = accounts.getLast();
+                yield senderAccount.getCustomer()
+                        .getNationalId()
+                        .equals(receiverAccount.getCustomer().getNationalId()) ? 0
+                        : chargeService.getAmountByActivityType(activityType);
+            }
+            case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL -> 0;
+            case AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE -> chargeService.getAmountByActivityType(activityType);
+            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+        };
     }
 
     /***

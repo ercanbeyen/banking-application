@@ -16,6 +16,7 @@ public final class ResponseMessages {
     public static final String IMPROPER_ACCOUNT_ACTIVITY = "Account activity is improper";
     public static final String UNPAIRED_CURRENCIES = "Currencies must be %s";
     public static final String INSUFFICIENT_FUNDS = "Insufficient funds";
+    public static final String TRANSACTION_FEE_CANNOT_BE_PAYED = "Transaction fee cannot be payed";
 
     private ResponseMessages() {}
 }
