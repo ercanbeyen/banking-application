@@ -9,4 +9,5 @@ import java.util.Optional;
 @Repository
 public interface ChargeRepository extends BaseRepository<Charge> {
     Optional<Charge> findByActivityType(AccountActivityType activityType);
+    boolean existsByActivityType(AccountActivityType activityType);
 }

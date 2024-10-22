@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.ChargeDto;
 import com.ercanbeyen.bankingapplication.entity.Charge;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.ChargeMapper;
 import com.ercanbeyen.bankingapplication.option.ChargeFilteringOptions;
@@ -45,9 +46,10 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
     public ChargeDto createEntity(ChargeDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
+        checkUniqueness(request, null);
         Charge charge = chargeMapper.dtoToEntity(request);
-        Charge savedCharge = chargeRepository.save(charge);
 
+        Charge savedCharge = chargeRepository.save(charge);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.CHARGE.getValue(), savedCharge.getId());
 
         return chargeMapper.entityToDto(savedCharge);
@@ -58,6 +60,7 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Charge charge = findById(id);
+        checkUniqueness(request, charge.getActivityType());
 
         charge.setActivityType(request.getActivityType());
         charge.setAmount(request.getAmount());
@@ -98,5 +101,21 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return charge;
+    }
+
+    private void checkUniqueness(ChargeDto request, AccountActivityType previousActivityType) {
+        if (previousActivityType == request.getActivityType()) {
+            log.info("No change for account activity type of charge");
+            return;
+        }
+
+        boolean chargeExists = chargeRepository.existsByActivityType(request.getActivityType());
+        String entity = Entity.CHARGE.getValue();
+
+        if (chargeExists) {
+            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, entity));
+        }
+
+        log.info(LogMessages.RESOURCE_UNIQUE, entity);
     }
 }
