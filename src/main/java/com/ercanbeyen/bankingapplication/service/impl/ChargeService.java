@@ -17,7 +17,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -30,8 +33,17 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
     public List<ChargeDto> getEntities(ChargeFilteringOptions options) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
+        Predicate<Charge> chargePredicate = charge -> {
+            LocalDate createdAt = options.getCreatedAt();
+            LocalDate updatedAt = options.getUpdatedAt();
+            boolean createdAtFilter = (Optional.ofNullable(createdAt).isEmpty() || createdAt.isEqual(charge.getCreatedAt().toLocalDate()));
+            boolean updatedAtFilter = (Optional.ofNullable(updatedAt).isEmpty() || updatedAt.isEqual(charge.getUpdatedAt().toLocalDate()));
+            return createdAtFilter && updatedAtFilter;
+        };
+
         return chargeRepository.findAll()
                 .stream()
+                .filter(chargePredicate)
                 .map(chargeMapper::entityToDto)
                 .toList();
     }
@@ -84,11 +96,13 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
     }
 
     public Double getAmountByActivityType(AccountActivityType activityType) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
         String entity = Entity.CHARGE.getValue();
         Charge charge = chargeRepository.findByActivityType(activityType)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
-        log.info("Charge amount of {}: {}", entity, charge.getAmount());
+        log.info("Charge amount of {}: {}", activityType.getValue(), charge.getAmount());
 
         return charge.getAmount();
     }
@@ -104,15 +118,16 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
     }
 
     private void checkUniqueness(ChargeDto request, AccountActivityType previousActivityType) {
+        String entity = Entity.CHARGE.getValue();
+
         if (previousActivityType == request.getActivityType()) {
-            log.info("No change for account activity type of charge");
+            log.warn(LogMessages.NO_ACCOUNT_ACTIVITY_CHANGE, entity);
             return;
         }
 
-        boolean chargeExists = chargeRepository.existsByActivityType(request.getActivityType());
-        String entity = Entity.CHARGE.getValue();
+        boolean entityExists = chargeRepository.existsByActivityType(request.getActivityType());
 
-        if (chargeExists) {
+        if (entityExists) {
             throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, entity));
         }
 

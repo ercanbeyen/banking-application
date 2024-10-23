@@ -19,7 +19,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -38,12 +38,12 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
         Predicate<Branch> branchPredicate = branch -> {
             City optionsCity = options.getCity();
             String optionsDistrict = options.getDistrict();
-            LocalDateTime optionsCreatedAt = options.getCreatedAt();
+            LocalDate optionsCreatedAt = options.getCreatedAt();
             Address address = branch.getAddress();
 
             boolean cityCheck = (Optional.ofNullable(optionsCity).isEmpty() || address.getCity() == optionsCity);
             boolean districtCheck = (Optional.ofNullable(optionsDistrict).isEmpty()|| address.getDistrict().equals(optionsDistrict));
-            boolean createdAtCheck = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().isEqual(optionsCreatedAt));
+            boolean createdAtCheck = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().toLocalDate().isEqual(optionsCreatedAt));
 
             return cityCheck && districtCheck && createdAtCheck;
         };

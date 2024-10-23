@@ -41,6 +41,7 @@ import java.util.function.Predicate;
 @RequiredArgsConstructor
 @Slf4j
 public class AccountService implements BaseService<AccountDto, AccountFilteringOptions> {
+    private static final Currency CHARGE_CURRENCY = Currency.getChargeCurrency();
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final CustomerService customerService;
@@ -48,7 +49,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
-    private static final Currency CHARGE_CURRENCY = Currency.getChargeCurrency();
+    private final DailyActivityLimitService dailyActivityLimitService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -56,7 +57,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (Optional.ofNullable(options.getType()).isEmpty() || options.getType() == account.getType());
-            boolean timeFilter = (Optional.ofNullable(options.getCreatedAt()).isEmpty() || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate()));
+            boolean timeFilter = (Optional.ofNullable(options.getCreatedAt()).isEmpty() || options.getCreatedAt().isEqual(options.getCreatedAt()));
             boolean blockedFilter = (Optional.ofNullable(options.getIsBlocked()).isEmpty() || options.getIsBlocked() == account.isBlocked());
             boolean closedAtFilter = (Optional.ofNullable(options.getIsClosed()).isEmpty() || options.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
             return typeFilter && timeFilter && blockedFilter && closedAtFilter;
@@ -395,8 +396,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         dailyActivityAmount += amount;
         log.info("Updated daily activity amount: {}", dailyActivityAmount);
 
-        Double activityLimit = AccountActivityType.getActivityToLimits()
-                .get(activityType);
+        Double activityLimit = dailyActivityLimitService.getAmountByActivityType(activityType);
 
         if (dailyActivityAmount > activityLimit) {
             throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType, activityLimit));
