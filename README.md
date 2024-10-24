@@ -6,7 +6,7 @@
 
 ### Summary
 It is a banking application includes basic banking operations. Abstract crud approach is used throughout the development.<br/>
-There are 11 entities in this project
+There are 13 entities in this project
 
 Entities:
 - Customer
@@ -20,21 +20,23 @@ Entities:
 - Rating
 - Exchange
 - Branch
+- Daily Activity Limit
+- Charge
 
 ### Requirements
 - Customer's national id, email and phone number must be unique.
 - If account is deposit, then it must also have deposit period and interest ratio.
 - News Report is used to add news.
-- Customers can rate the app between 1 and 5 once a year, starting in September.
-- Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
-- Customers can apply their transactions within their daily activity limits.
-- Customers can create one-time or regular transfer orders to transfer money at future dates.
+- Customer can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
+- Customer can perform transactions within daily transaction limits and may pay transaction fees for some transactions.
+- Customer can create one-time or regular transfer orders to transfer money at future dates.
 
 ### Additionals
 - Scheduled tasks run while application is running.
 - News are automatically added in chunks of size 40.
 - Notifications are created to inform the customer that the relevant transaction has been completed successfully.
-- Customers can generate a PDF formatted receipt for a specific account activity at any time.
+- Customer can rate the app between 1 and 5 once a year, starting in September.
+- Customer can generate a PDF formatted receipt for a specific account activity at any time.
 - Scripts inside resources/db.stored_procedure must be written into related database containers to call procedures.
 
 ### Tech Stack
