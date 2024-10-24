@@ -69,6 +69,7 @@ public class TransferOrderScheduledTasks {
             MoneyTransferRequest moneyTransferRequest = new MoneyTransferRequest(
                     senderAccountId,
                     receiverAccountId,
+                    regularTransferDto.chargedAccountId(),
                     regularTransferDto.amount(),
                     regularTransferDto.paymentType(),
                     regularTransferDto.explanation()

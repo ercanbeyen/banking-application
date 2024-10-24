@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @EntityListeners(BaseEntityListener.class)
 @Data
 @MappedSuperclass
-public abstract sealed class BaseEntity permits Account, Customer, NewsReport, TransferOrder, News, Exchange, Branch {
+public abstract sealed class BaseEntity permits Account, Branch, Charge, Customer, DailyActivityLimit, Exchange, News, NewsReport, TransferOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;

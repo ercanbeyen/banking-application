@@ -15,7 +15,9 @@ public enum Entity {
     RATING("Rating"),
     EXCHANGE("Exchange"),
     ADDRESS("Address"),
-    BRANCH("Branch");
+    BRANCH("Branch"),
+    CHARGE("Charge"),
+    DAILY_ACTIVITY_LIMIT("Daily Activity Limit");
 
     private final String value;
 

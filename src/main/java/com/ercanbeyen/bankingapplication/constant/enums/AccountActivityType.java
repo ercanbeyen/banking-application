@@ -20,17 +20,9 @@ public enum AccountActivityType {
     @Getter
     private final String value;
     @Getter
-    private static final Map<AccountActivityType, Double> activityToLimits;
-    @Getter
     private static final Set<AccountActivityType> accountStatusUpdatingActivities;
 
     static {
-        activityToLimits = new EnumMap<>(AccountActivityType.class);
-        activityToLimits.put(MONEY_DEPOSIT, 10_000D);
-        activityToLimits.put(WITHDRAWAL, 5_000D);
-        activityToLimits.put(MONEY_TRANSFER, 1_000_000D);
-        activityToLimits.put(MONEY_EXCHANGE, 5_000D);
-
         accountStatusUpdatingActivities = EnumSet.of(ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING);
     }
 }

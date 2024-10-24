@@ -15,6 +15,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
@@ -40,6 +41,7 @@ import java.util.function.Predicate;
 @RequiredArgsConstructor
 @Slf4j
 public class AccountService implements BaseService<AccountDto, AccountFilteringOptions> {
+    private static final Currency CHARGE_CURRENCY = Currency.getChargeCurrency();
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final CustomerService customerService;
@@ -47,6 +49,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
+    private final DailyActivityLimitService dailyActivityLimitService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -54,7 +57,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (Optional.ofNullable(options.getType()).isEmpty() || options.getType() == account.getType());
-            boolean timeFilter = (Optional.ofNullable(options.getCreatedAt()).isEmpty() || options.getCreatedAt().toLocalDate().isEqual(options.getCreatedAt().toLocalDate()));
+            boolean timeFilter = (Optional.ofNullable(options.getCreatedAt()).isEmpty() || options.getCreatedAt().isEqual(options.getCreatedAt()));
             boolean blockedFilter = (Optional.ofNullable(options.getIsBlocked()).isEmpty() || options.getIsBlocked() == account.isBlocked());
             boolean closedAtFilter = (Optional.ofNullable(options.getIsClosed()).isEmpty() || options.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
             return typeFilter && timeFilter && blockedFilter && closedAtFilter;
@@ -130,7 +133,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account account = findById(id);
         checkAccountStatus(account);
-        AccountUtils.checkCurrentAccountBeforeUpdateBalance(account.getBalance(), amount, activityType);
+        checkBalanceBeforeOperation(null, List.of(account), amount, activityType);
         checkDailyAccountActivityLimit(account, amount, activityType);
 
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
@@ -174,14 +177,18 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Account receiverAccount = findById(receiverAccountId);
         checkAccountStatus(receiverAccount);
 
+        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
         Double amount = request.amount();
         Currency currency = senderAccount.getCurrency();
-        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
 
-        checkAccountsBeforeMoneyTransfer(senderAccount, receiverAccount, amount);
+        AccountUtils.checkCurrencies(senderAccount.getCurrency(), receiverAccount.getCurrency());
+
+        Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(senderAccount));
+
+        checkBalanceBeforeOperation(chargedAccount, List.of(senderAccount, receiverAccount), amount, activityType);
         checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
-        transactionService.transferMoneyBetweenAccounts(request, senderAccountId, amount, receiverAccountId, senderAccount, receiverAccount);
+        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, receiverAccount, chargedAccount);
 
         NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transaction has been made from your account.", amount, currency));
         NotificationDto receiverNotificationDto = new NotificationDto(receiverAccount.getCustomer().getNationalId(), String.format("%s %s money transaction has been made to your account.", amount, currency));
@@ -195,19 +202,21 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     public String exchangeMoney(ExchangeRequest request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        Account sellerAccount = findById(request.sellerId());
+        Account sellerAccount = findById(request.sellerAccountId());
         checkAccountStatus(sellerAccount);
 
-        Account buyerAccount = findById(request.buyerId());
+        Account buyerAccount = findById(request.buyerAccountId());
         checkAccountStatus(buyerAccount);
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         Double requestedAmount = request.amount();
 
-        AccountUtils.checkBalance(sellerAccount.getBalance(), requestedAmount);
+        Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(sellerAccount, buyerAccount));
+
+        checkBalanceBeforeOperation(chargedAccount, List.of(sellerAccount, buyerAccount), requestedAmount, activityType);
         checkDailyAccountActivityLimit(sellerAccount, requestedAmount, activityType);
 
-        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount);
+        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, chargedAccount);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
@@ -254,7 +263,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
-        createAccountActivityForAccountStatusUpdate(account,activityType);
+        createAccountActivityForAccountStatusUpdate(account, activityType);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
@@ -278,6 +287,42 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
     }
 
+    public Account getChargedAccount(Integer extraChargedAccountId, List<Account> relatedAccounts) {
+        Account chargedAccount;
+
+        if (relatedAccounts.size() == 1) { // Money transfer case
+            Account relatedAccount = relatedAccounts.getFirst();
+            chargedAccount = getChargedAccountInMoneyTransfer(extraChargedAccountId, relatedAccount);
+        } else if (relatedAccounts.size() == 2) { // Money exchange case
+            chargedAccount = getChargedAccountInMoneyExchange(extraChargedAccountId, relatedAccounts);
+        } else { // Unknown case
+            log.error("Unknown size for related accounts. Size: {}", relatedAccounts.size());
+            throw new RuntimeException("Error occurred while determining charging account");
+        }
+
+        return chargedAccount;
+    }
+
+    public Account findChargedAccountById(Integer id) {
+        Account account = findById(id);
+
+        if (account.getCurrency() != CHARGE_CURRENCY) {
+            throw new ResourceConflictException(String.format("Currency of charged account should be %s", CHARGE_CURRENCY));
+        }
+
+        AccountType accountType = AccountType.CURRENT;
+
+        if (account.getType() != accountType) {
+            throw new ResourceConflictException(String.format("Charged account type should be %s", accountType));
+        }
+
+        log.info(LogMessages.RESOURCE_FOUND, "Charged " + Entity.ACCOUNT.getValue());
+
+        checkAccountStatus(account);
+
+        return account;
+    }
+
     public Account findById(Integer id) {
         String entity = Entity.ACCOUNT.getValue();
         Account account = accountRepository.findById(id)
@@ -286,6 +331,53 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return account;
+    }
+
+    private Account getChargedAccountInMoneyExchange(Integer id, List<Account> accounts) {
+        boolean accountWithChargeCurrencyExists = accounts.stream()
+                .map(Account::getCurrency)
+                .anyMatch(currency -> currency == CHARGE_CURRENCY);
+
+        Account chargedAccount;
+
+        if (Optional.ofNullable(id).isPresent()) { // need an extra charged account
+            if (accountWithChargeCurrencyExists) {
+                throw new ResourceConflictException(String.format("Charged account should not be indicated for %s money transfers", CHARGE_CURRENCY));
+            }
+
+            chargedAccount = findChargedAccountById(id);
+        } else { // no need an extra charged account
+            if (!accountWithChargeCurrencyExists) {
+                throw new ResourceConflictException(String.format("Charged account's currency should be %s", CHARGE_CURRENCY));
+            }
+
+            chargedAccount = accounts.getFirst().getCurrency() == CHARGE_CURRENCY
+                    ? accounts.getFirst()
+                    : accounts.getLast();
+        }
+
+        return chargedAccount;
+    }
+
+    private Account getChargedAccountInMoneyTransfer(Integer id, Account account) {
+        Account chargedAccount;
+
+        if (Optional.ofNullable(id).isPresent()) { // need an extra charged account
+            if (account.getCurrency() == CHARGE_CURRENCY) {
+                throw new ResourceConflictException(String.format("Charged account should not be indicated for %s money transfers", CHARGE_CURRENCY));
+            }
+
+            chargedAccount = findChargedAccountById(id);
+        } else { // no need an extra charged account
+            if (account.getCurrency() != CHARGE_CURRENCY) {
+                throw new ResourceConflictException(String.format("Charged account's currency should be %s", CHARGE_CURRENCY));
+            }
+
+            log.info("Charged account is the related account {}. So, no need the indicate a different account", account.getId());
+            chargedAccount = account;
+        }
+
+        return chargedAccount;
     }
 
     private void checkDailyAccountActivityLimit(Account account, Double amount, AccountActivityType activityType) {
@@ -304,8 +396,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         dailyActivityAmount += amount;
         log.info("Updated daily activity amount: {}", dailyActivityAmount);
 
-        Double activityLimit = AccountActivityType.getActivityToLimits()
-                .get(activityType);
+        Double activityLimit = dailyActivityLimitService.getAmountByActivityType(activityType);
 
         if (dailyActivityAmount > activityLimit) {
             throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType, activityLimit));
@@ -331,11 +422,6 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
                 null,
                 LocalDate.now()
         );
-    }
-
-    private static void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount, Double amount) {
-        AccountUtils.checkCurrencies(senderAccount.getCurrency(), receiverAccount.getCurrency());
-        AccountUtils.checkBalance(senderAccount.getBalance(), amount);
     }
 
     private static void checkAccountStatus(Account account) {
@@ -385,5 +471,41 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         );
 
         accountActivityService.createAccountActivity(request);
+    }
+
+    private void checkBalanceBeforeOperation(Account chargedAccount, List<Account> relatedAccounts, Double requestedAmount, AccountActivityType activityType) {
+        Double transactionFee = transactionService.getTransactionFee(activityType, relatedAccounts);
+        log.info("Account activity, requested amount and Transaction fee: {} & {} & {}", activityType, requestedAmount, transactionFee);
+
+        if ((activityType == AccountActivityType.MONEY_DEPOSIT || activityType == AccountActivityType.FEE) && relatedAccounts.getFirst().getBalance() < transactionFee) {
+            throw new ResourceExpectationFailedException(ResponseMessages.TRANSACTION_FEE_CANNOT_BE_PAYED);
+        }
+
+        if (activityType == AccountActivityType.WITHDRAWAL && relatedAccounts.getFirst().getBalance() < requestedAmount + transactionFee) {
+            throw new ResourceExpectationFailedException(ResponseMessages.INSUFFICIENT_FUNDS);
+        }
+
+        if (activityType == AccountActivityType.MONEY_TRANSFER || activityType == AccountActivityType.MONEY_EXCHANGE) {
+            if (Objects.equals(chargedAccount.getId(), relatedAccounts.getFirst().getId())) {
+                log.info("Extra charged account does not exist");
+
+                if (chargedAccount.getBalance() < (requestedAmount + transactionFee)) {
+                    throw new ResourceExpectationFailedException(ResponseMessages.INSUFFICIENT_FUNDS);
+                }
+
+            } else {
+                log.info("Extra charged account exists");
+
+                if (chargedAccount.getBalance() < transactionFee) {
+                    throw new ResourceExpectationFailedException(ResponseMessages.TRANSACTION_FEE_CANNOT_BE_PAYED);
+                }
+
+                if (relatedAccounts.getFirst().getBalance() < requestedAmount) {
+                    throw new ResourceExpectationFailedException(ResponseMessages.INSUFFICIENT_FUNDS);
+                }
+            }
+        }
+
+        log.info("Balance is enough to pay charge");
     }
 }

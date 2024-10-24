@@ -13,6 +13,8 @@ public non-sealed class TransferOrder extends BaseEntity {
     private Integer id;
     @ManyToOne
     private Account senderAccount;
+    @ManyToOne
+    private Account chargedAccount;
     private LocalDate transferDate;
     @Embedded
     private RegularTransfer regularTransfer;

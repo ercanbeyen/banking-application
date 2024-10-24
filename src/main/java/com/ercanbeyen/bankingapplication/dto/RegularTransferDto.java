@@ -10,6 +10,7 @@ public record RegularTransferDto(
         PaymentPeriod paymentPeriod,
         @NotNull(message = "receiver account id should not be null")
         Integer receiverAccountId,
+        Integer chargedAccountId,
         @NotNull(message = "Amount should not be null")
         @Min(value = 1, message = "Minimum amount should be {value}")
         Double amount,
