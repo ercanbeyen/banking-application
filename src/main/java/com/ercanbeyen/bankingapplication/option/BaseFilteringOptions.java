@@ -10,7 +10,7 @@ import java.time.LocalDate;
 @Getter
 @Setter
 @MappedSuperclass
-public sealed class BaseFilteringOptions permits AccountFilteringOptions, BranchFilteringOptions, ChargeFilteringOptions, CustomerFilteringOptions, DailyActivityLimitFilteringOptions, ExchangeFilteringOptions, TransferOrderOptions {
+public sealed class BaseFilteringOptions permits AccountFilteringOptions, BranchFilteringOptions, ChargeFilteringOptions, CustomerFilteringOptions, DailyActivityLimitFilteringOptions, ExchangeFilteringOptions, FeeFilteringOptions, TransferOrderOptions {
     @JsonFormat(pattern="yyyy-MM-dd")
     private LocalDate createdAt;
     @JsonFormat(pattern="yyyy-MM-dd")
