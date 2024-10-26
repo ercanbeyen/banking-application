@@ -13,7 +13,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -21,7 +20,6 @@ import java.util.function.Predicate;
 @Slf4j
 @UtilityClass
 public class AccountUtils {
-    private final List<Integer> DEPOSIT_PERIODS = List.of(1, 3, 6, 12);
     private final Double MAXIMUM_TRANSFER_LIMIT_PER_REQUEST = 100_000D;
     private final double LOWEST_THRESHOLD = 0;
 
@@ -81,7 +79,7 @@ public class AccountUtils {
             throw new ResourceConflictException("Fees are for deposit accounts");
         }
 
-        checkValidityOfDepositPeriod(depositPeriod);
+        FeeUtils.checkValidityOfDepositPeriod(depositPeriod);
     }
 
     private void checkValidityOfBalanceAndInterestRatio(Double balance, Double interestRatio) {
@@ -109,15 +107,9 @@ public class AccountUtils {
         }
 
         if (accountType == AccountType.DEPOSIT) {
-            checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
+            FeeUtils.checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
         } else {
             log.warn("{} account does not have deposit period", accountType.getValue());
-        }
-    }
-
-    private static void checkValidityOfDepositPeriod(Integer depositPeriod) {
-        if (!DEPOSIT_PERIODS.contains(depositPeriod)) {
-            throw new ResourceExpectationFailedException("Deposit period is invalid. Valid values are " + DEPOSIT_PERIODS);
         }
     }
 

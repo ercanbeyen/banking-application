@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.FeeDto;
 import com.ercanbeyen.bankingapplication.entity.Fee;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.FeeMapper;
 import com.ercanbeyen.bankingapplication.option.FeeFilteringOptions;
@@ -16,6 +17,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Predicate;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -42,6 +46,7 @@ public class FeeService implements BaseService<FeeDto, FeeFilteringOptions> {
     public FeeDto createEntity(FeeDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
+        checkUniqueness(request, null);
         Fee fee = feeMapper.dtoToEntity(request);
 
         Fee savedFee = feeRepository.save(fee);
@@ -55,10 +60,11 @@ public class FeeService implements BaseService<FeeDto, FeeFilteringOptions> {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Fee fee = findById(id);
+        checkUniqueness(request, fee);
 
         fee.setCurrency(request.getCurrency());
         fee.setMinimumAmount(request.getMinimumAmount());
-        fee.setMaximumAmount(request.getMinimumAmount());
+        fee.setMaximumAmount(request.getMaximumAmount());
         fee.setDepositPeriod(request.getDepositPeriod());
         fee.setInterestRatio(request.getInterestRatio());
 
@@ -88,5 +94,45 @@ public class FeeService implements BaseService<FeeDto, FeeFilteringOptions> {
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return fee;
+    }
+
+    private void checkUniqueness(FeeDto request, Fee previousFee) {
+        /* Fee's minimum & maximum interval should not intersect with other fees' intervals */
+        Predicate<Fee> feePredicate = fee -> {
+            boolean minimumAmountCase = (request.getMinimumAmount() >= fee.getMinimumAmount() && request.getMinimumAmount() <= fee.getMaximumAmount());
+            boolean maximumAmountCase = (request.getMaximumAmount() >= fee.getMinimumAmount() && request.getMaximumAmount() <= fee.getMaximumAmount());
+            boolean lessMinimumAndGreaterMaximumCase = (request.getMinimumAmount() <= fee.getMinimumAmount() && request.getMaximumAmount() >= fee.getMaximumAmount());
+            return minimumAmountCase || maximumAmountCase || lessMinimumAndGreaterMaximumCase;
+        };
+
+        if (Optional.ofNullable(previousFee).isPresent()) {
+            log.info("There is a previous fee");
+
+            boolean entityHasSameValues = request.getCurrency() == previousFee.getCurrency()
+                    && Objects.equals(request.getMinimumAmount(), previousFee.getMinimumAmount())
+                    && Objects.equals(request.getMaximumAmount(), previousFee.getMaximumAmount())
+                    && Objects.equals(request.getDepositPeriod(), previousFee.getDepositPeriod());
+
+            if (entityHasSameValues) {
+                log.warn("Previous and updated fields (currency, minimum amount, maximum amount, deposit period) are same");
+                return;
+            }
+
+            /* Same fees should not be compared */
+            Predicate<Fee> isPresentPredicate = fee -> !Objects.equals(fee.getId(), previousFee.getId());
+            feePredicate = feePredicate.and(isPresentPredicate);
+        } else {
+            log.info("There is no previous fee for fields (currency, minimum amount, maximum amount, deposit period)");
+        }
+
+        boolean inappropriateFeeExists = feeRepository.findAllByCurrencyAndDepositPeriod(request.getCurrency(), request.getDepositPeriod())
+                .stream()
+                .anyMatch(feePredicate);
+
+        if (inappropriateFeeExists) {
+            throw new ResourceConflictException("Fee's minimum & maximum interval intersects with other fees' intervals");
+        }
+
+        log.info(LogMessages.RESOURCE_UNIQUE, Entity.FEE.getValue());
     }
 }
