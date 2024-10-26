@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
@@ -84,6 +85,21 @@ public class FeeService implements BaseService<FeeDto, FeeFilteringOptions> {
                 });
 
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
+    }
+
+    public double getInterestRatio(Currency currency, int depositPeriod, double balance) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Optional<Fee> optionalFee = feeRepository.findByCurrencyAndDepositPeriodAndBalance(currency, depositPeriod, balance);
+
+        return optionalFee.map(fee -> {
+            log.info("Fee exists for balance {}. Interval is between {} and {}", balance, fee.getMinimumAmount(), fee.getMaximumAmount());
+            return fee.getInterestRatio();
+        }).orElseThrow(() -> {
+            log.error("Fee does not exist for balance {}", balance);
+            return new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.FEE.getValue()));
+        });
+
     }
 
     private Fee findById(Integer id) {

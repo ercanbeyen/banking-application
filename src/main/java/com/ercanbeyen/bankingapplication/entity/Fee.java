@@ -3,12 +3,14 @@ package com.ercanbeyen.bankingapplication.entity;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
 @Getter
 @Setter
 @Entity
+@Table(name = "fees")
 public non-sealed class Fee extends BaseEntity {
     @Column(nullable = false)
     private Currency currency;

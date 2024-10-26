@@ -41,19 +41,19 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(accountService.updateEntity(id, request), HttpStatus.OK);
     }
 
-    @PutMapping("/{id}/current")
-    public ResponseEntity<MessageResponse<String>> updateBalanceOfCurrentAccount(
+    @PutMapping("/{id}/balance")
+    public ResponseEntity<MessageResponse<String>> updateBalanceAccount(
             @PathVariable("id") Integer id,
             @RequestParam("activityType") AccountActivityType activityType,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
         AccountUtils.checkAccountActivityForCurrentAccount(activityType);
-        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfCurrentAccount(id, activityType, amount));
+        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfAccount(id, activityType, amount));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PutMapping("/{id}/deposit")
-    public ResponseEntity<MessageResponse<String>> updateBalanceOfDepositAccount(@PathVariable("id") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfDepositAccount(id));
+    @PutMapping("/{id}/deposit/monthly")
+    public ResponseEntity<MessageResponse<String>> updateBalanceOfDepositAccountMonthly(@PathVariable("id") Integer id) {
+        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfDepositAccountMonthly(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

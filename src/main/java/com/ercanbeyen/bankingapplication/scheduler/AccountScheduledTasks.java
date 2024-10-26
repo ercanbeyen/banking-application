@@ -69,7 +69,7 @@ public class AccountScheduledTasks {
             log.info(LogMessages.BEFORE_REQUEST);
 
             Map<String, Integer> parameters = Map.of(ID, accountId);
-            String url = Entity.ACCOUNT.getCollectionUrl() + "/{" + ID + "}/deposit";
+            String url = Entity.ACCOUNT.getCollectionUrl() + "/{" + ID + "}/deposit/monthly";
 
             try {
                 restTemplate.put(url, null, parameters);

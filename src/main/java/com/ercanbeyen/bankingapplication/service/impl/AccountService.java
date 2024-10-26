@@ -50,6 +50,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
     private final DailyActivityLimitService dailyActivityLimitService;
+    private final FeeService feeService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -128,7 +129,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, Entity.ACCOUNT.getValue(), id);
     }
 
-    public String updateBalanceOfCurrentAccount(Integer id, AccountActivityType activityType, Double amount) {
+    public String updateBalanceOfAccount(Integer id, AccountActivityType activityType, Double amount) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account account = findById(id);
@@ -141,7 +142,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
 
-    public String updateBalanceOfDepositAccount(Integer id) {
+    public String updateBalanceOfDepositAccountMonthly(Integer id) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Account account = findById(id);
