@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
@@ -13,6 +14,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -20,7 +22,6 @@ import java.util.function.Predicate;
 @Slf4j
 @UtilityClass
 public class AccountUtils {
-    private final Double MAXIMUM_TRANSFER_LIMIT_PER_REQUEST = 100_000D;
     private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
@@ -41,21 +42,41 @@ public class AccountUtils {
             throw new ResourceExpectationFailedException("Identity of sender and receiver accounts should not be equal");
         }
 
-        if (request.amount() >= MAXIMUM_TRANSFER_LIMIT_PER_REQUEST) {
-            String formattedValue = FormatterUtil.convertNumberToFormalExpression(MAXIMUM_TRANSFER_LIMIT_PER_REQUEST);
-            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", AccountActivityType.MONEY_TRANSFER.getValue(), formattedValue));
+        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+        Double maximumMoneyTransferAmountPerRequest = AccountActivityType.getMaximumAmountPerRequestOfActivity(activityType);
+
+        if (request.amount() >= maximumMoneyTransferAmountPerRequest) {
+            String formattedValue = FormatterUtil.convertNumberToFormalExpression(maximumMoneyTransferAmountPerRequest);
+            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", activityType.getValue(), formattedValue));
+        }
+    }
+
+    public void checkMoneyExchangeRequest(MoneyExchangeRequest request) {
+        if (Objects.equals(request.sellerAccountId(), request.buyerAccountId())) {
+            throw new ResourceExpectationFailedException("Identity of seller and buyer accounts should not be equal");
+        }
+
+        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+        Double maximumMoneyExchangeAmountPerRequest = AccountActivityType.getMaximumAmountPerRequestOfActivity(activityType);
+
+        if (request.amount() >= maximumMoneyExchangeAmountPerRequest) {
+            String formattedValue = FormatterUtil.convertNumberToFormalExpression(maximumMoneyExchangeAmountPerRequest);
+            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", activityType.getValue(), formattedValue));
         }
     }
 
     public void checkAccountActivityForCurrentAccount(AccountActivityType activityType) {
-        if (activityType != AccountActivityType.MONEY_DEPOSIT && activityType != AccountActivityType.WITHDRAWAL) {
+        List<AccountActivityType> accountActivityTypes = List.of(
+                AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL, AccountActivityType.FEE, AccountActivityType.CHARGE);
+
+        if (!accountActivityTypes.contains(activityType)) {
             throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
         }
     }
 
     public double calculateInterest(Double balance, Double interestRatio) {
         checkValidityOfBalanceAndInterestRatio(balance, interestRatio);
-        return (balance == LOWEST_THRESHOLD || interestRatio == LOWEST_THRESHOLD) ? LOWEST_THRESHOLD : ((interestRatio * balance) / 100);
+        return (balance == LOWEST_THRESHOLD || interestRatio == LOWEST_THRESHOLD) ? LOWEST_THRESHOLD : ((interestRatio * balance) / 1200);
     }
 
     public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositPeriod) {
@@ -68,10 +89,20 @@ public class AccountUtils {
         return isGoingToBeUpdatedAt.isEqual(LocalDate.now());
     }
 
-    public void checkCurrencies(Currency from, Currency to) {
+    public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {
         if (from != to) {
             throw new ResourceConflictException(String.format(ResponseMessages.UNPAIRED_CURRENCIES, "same"));
         }
+    }
+
+    public void checkAccountsTypesBeforeMoneyTransferAndExchange(AccountType from, AccountType to) {
+        AccountType accountType = AccountType.CURRENT;
+
+        if (from != accountType || to != accountType) {
+            throw new ResourceConflictException(String.format("Both accounts must be %s", accountType.getValue()));
+        }
+
+        log.info("Both accounts are {}", accountType.getValue());
     }
 
     private void checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(AccountType accountType, Integer depositPeriod) {

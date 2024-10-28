@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
-import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
@@ -111,11 +111,11 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, accounts);
     }
 
-    public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
+    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
         Double spentAmount = request.amount();
-        Double earnedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, spentAmount);
+        Double earnedAmount = exchangeService.convertMoneyBetweenCurrencies(sellerAccount.getCurrency(), buyerAccount.getCurrency(), spentAmount);
         Double transactionFee = getTransactionFee(activityType, List.of(sellerAccount, buyerAccount));
 
         /* Balance update of seller account */

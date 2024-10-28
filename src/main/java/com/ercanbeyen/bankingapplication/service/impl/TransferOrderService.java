@@ -135,7 +135,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         Account receiverAccount = accountService.findById(request.getRegularTransferDto().receiverAccountId());
         log.info(LogMessages.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
 
-        AccountUtils.checkCurrencies(senderAccount.getCurrency(), receiverAccount.getCurrency());
+        AccountUtils.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
         Account chargedAccount = accountService.getChargedAccount(request.getChargedAccountId(), List.of(senderAccount));
 

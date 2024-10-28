@@ -7,7 +7,7 @@ import lombok.experimental.UtilityClass;
 
 @UtilityClass
 public class ExchangeUtils {
-    public void checkCurrencies(Currency from, Currency to) {
+    public void checkCurrenciesBeforeMoneyExchange(Currency from, Currency to) {
         if (from == to) {
             throw new ResourceConflictException(String.format(ResponseMessages.UNPAIRED_CURRENCIES, "different"));
         }

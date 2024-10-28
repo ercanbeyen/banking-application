@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
-import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
@@ -65,7 +65,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     }
 
     @PutMapping("/exchange")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid ExchangeRequest request) {
+    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid MoneyExchangeRequest request) {
+        AccountUtils.checkMoneyExchangeRequest(request);
         MessageResponse<String> response = new MessageResponse<>(accountService.exchangeMoney(request));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
