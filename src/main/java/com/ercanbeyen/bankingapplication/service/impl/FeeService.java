@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -31,8 +32,21 @@ public class FeeService implements BaseService<FeeDto, FeeFilteringOptions> {
 
     @Override
     public List<FeeDto> getEntities(FeeFilteringOptions options) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Predicate<Fee> feePredicate = fee -> {
+            boolean currencyFilter = (Optional.ofNullable(options.getCurrency()).isEmpty() || fee.getCurrency() == options.getCurrency());
+            boolean depositPeriodFilter = (Optional.ofNullable(options.getDepositPeriod()).isEmpty() || fee.getDepositPeriod() == options.getDepositPeriod().intValue());
+            boolean updatedAtFilter = (Optional.ofNullable(options.getUpdatedAt()).isEmpty() || fee.getUpdatedAt().toLocalDate().isEqual(options.getUpdatedAt()));
+            return currencyFilter && depositPeriodFilter && updatedAtFilter;
+        };
+
+        Comparator<Fee> feeComparator = Comparator.comparing(Fee::getUpdatedAt).reversed();
+
         return feeRepository.findAll()
                 .stream()
+                .filter(feePredicate)
+                .sorted(feeComparator)
                 .map(feeMapper::entityToDto)
                 .toList();
     }
@@ -90,16 +104,14 @@ public class FeeService implements BaseService<FeeDto, FeeFilteringOptions> {
     public double getInterestRatio(Currency currency, int depositPeriod, double balance) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        Optional<Fee> optionalFee = feeRepository.findByCurrencyAndDepositPeriodAndBalance(currency, depositPeriod, balance);
-
-        return optionalFee.map(fee -> {
-            log.info("Fee exists for balance {}. Interval is between {} and {}", balance, fee.getMinimumAmount(), fee.getMaximumAmount());
-            return fee.getInterestRatio();
-        }).orElseThrow(() -> {
-            log.error("Fee does not exist for balance {}", balance);
-            return new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.FEE.getValue()));
-        });
-
+        return feeRepository.findByCurrencyAndDepositPeriodAndBalance(currency, depositPeriod, balance)
+                .map(fee -> {
+                    log.info("Fee exists for balance {}. Interval is between {} and {}", balance, fee.getMinimumAmount(), fee.getMaximumAmount());
+                    return fee.getInterestRatio();
+                }).orElseThrow(() -> {
+                    log.error("Fee does not exist for balance {}", balance);
+                    return new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.FEE.getValue()));
+                });
     }
 
     private Fee findById(Integer id) {

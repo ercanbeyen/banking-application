@@ -8,6 +8,5 @@ import lombok.Setter;
 @Setter
 public non-sealed class FeeFilteringOptions extends BaseFilteringOptions {
     private Currency currency;
-    private Double minimumAmount;
-    private Double maximumAmount;
+    private Integer depositPeriod;
 }
