@@ -51,6 +51,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
     private final DailyActivityLimitService dailyActivityLimitService;
+    private final FeeService feeService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOptions options) {
@@ -87,6 +88,12 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Customer customer = customerService.findByNationalId(request.getCustomerNationalId());
         Branch branch = branchService.findByName(request.getBranchName());
 
+        if (account.getType() == AccountType.DEPOSIT) {
+            log.info("{} is {}, so update interest ratio and balance after next {}", Entity.ACCOUNT.getValue(), AccountType.DEPOSIT.getValue(), Entity.FEE.getValue());
+            account.setInterestRatio(0D);
+            account.setBalanceAfterNextFee(0D);
+        }
+
         account.setCustomer(customer);
         account.setBranch(branch);
 
@@ -106,10 +113,16 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         checkAccountStatus(account);
 
         Branch branch = branchService.findByName(request.getBranchName());
-
         account.setBranch(branch);
-        account.setInterestRatio(request.getInterestRatio());
-        account.setDepositPeriod(request.getDepositPeriod());
+
+        if (account.getType() == AccountType.DEPOSIT && !Objects.equals(account.getDepositPeriod(), request.getDepositPeriod())) {
+            double interestRatio = feeService.getInterestRatio(account.getCurrency(), request.getDepositPeriod(), account.getBalance());
+            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(account.getBalance(), request.getDepositPeriod(),interestRatio);
+
+            account.setDepositPeriod(request.getDepositPeriod());
+            account.setInterestRatio(interestRatio);
+            account.setBalanceAfterNextFee(balanceAfterNextFee);
+        }
 
         return accountMapper.entityToDto(accountRepository.save(account));
     }
@@ -152,7 +165,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             return "Today is not the completion of deposit period";
         }
 
-        Double amount = AccountUtils.calculateInterest(account.getBalance(), account.getInterestRatio());
+        Double amount = AccountUtils.calculateInterest(account.getBalance(), account.getDepositPeriod(), account.getInterestRatio());
         AccountActivityType activityType = AccountActivityType.FEE;
 
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
@@ -347,7 +360,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         ExchangeUtils.checkCurrenciesBeforeMoneyExchange(sellerAccount.getCurrency(), buyerAccount.getCurrency());
 
         if (!buyerAccount.getCustomer().getNationalId().equals(sellerAccount.getCustomer().getNationalId())) {
-            throw new ResourceConflictException("Money exchange between different customers is disallowed");
+            throw new ResourceConflictException(String.format("Money %s between different customers is disallowed", Entity.EXCHANGE.getValue()));
         }
 
         AccountUtils.checkAccountsTypesBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType());
@@ -512,14 +525,12 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Double transactionFee = transactionService.getTransactionFee(activityType, relatedAccounts);
         log.info(LogMessages.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
 
-
         if (Objects.equals(chargedAccount.getId(), relatedAccounts.getFirst().getId())) {
             log.info("Extra charged account does not exist");
 
             if (chargedAccount.getBalance() < (requestedAmount + transactionFee)) {
                 throw new ResourceExpectationFailedException(ResponseMessages.INSUFFICIENT_FUNDS);
             }
-
         } else {
             log.info("Extra charged account exists");
 

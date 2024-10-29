@@ -42,4 +42,5 @@ public non-sealed class Account extends BaseEntity {
     /* Deposit Account fields */
     private Double interestRatio;
     private Integer depositPeriod;
+    private Double balanceAfterNextFee;
 }

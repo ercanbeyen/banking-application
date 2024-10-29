@@ -11,6 +11,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.util.AccountUtils;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -53,8 +54,11 @@ public class TransactionService {
 
         if (account.getType() == AccountType.DEPOSIT) {
             log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
-            double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), account.getBalance());
+            double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
+            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
+
             account.setInterestRatio(interestRatio);
+            account.setBalanceAfterNextFee(balanceAfterNextFee);
         }
 
         accountRepository.saveAndFlush(account);

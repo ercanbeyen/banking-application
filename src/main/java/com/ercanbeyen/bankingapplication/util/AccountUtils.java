@@ -74,9 +74,28 @@ public class AccountUtils {
         }
     }
 
-    public double calculateInterest(Double balance, Double interestRatio) {
+    public double calculateInterest(Double balance, Integer depositPeriod, Double interestRatio) {
         checkValidityOfBalanceAndInterestRatio(balance, interestRatio);
-        return (balance == LOWEST_THRESHOLD || interestRatio == LOWEST_THRESHOLD) ? LOWEST_THRESHOLD : ((interestRatio * balance) / 1200);
+
+        if (balance == LOWEST_THRESHOLD) {
+            return LOWEST_THRESHOLD;
+        } else if (interestRatio == LOWEST_THRESHOLD) {
+            return balance;
+        }
+
+        double interest = (balance / 100) * (interestRatio / 12) * depositPeriod;
+
+        log.info("Interest after calculation with balance ({}), interest ratio ({}) and deposit period ({}): {}", balance, interestRatio, depositPeriod, interest);
+
+        return interest;
+    }
+
+    public double calculateBalanceAfterNextFee(Double balance, Integer depositPeriod, Double interestRatio) {
+        double interest = AccountUtils.calculateInterest(balance, depositPeriod, interestRatio);
+        double balanceAfterNextFee = balance + interest;
+        log.info("Balance after fee: {}", balanceAfterNextFee);
+
+        return balanceAfterNextFee;
     }
 
     public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositPeriod) {
@@ -123,6 +142,17 @@ public class AccountUtils {
     }
 
     private void checkAccountType(AccountDto accountDto) {
+        checkOptionalFieldsOfAccount(accountDto);
+
+        if (accountDto.getType() == AccountType.DEPOSIT) {
+            FeeUtils.checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
+            accountDto.setBalanceAfterNextFee(0D);
+        } else {
+            log.warn("{} account does not have deposit period", accountDto.getType().getValue());
+        }
+    }
+
+    private static void checkOptionalFieldsOfAccount(AccountDto accountDto) {
         boolean isInterestNull = isNull.test(accountDto.getInterestRatio());
         boolean isDepositPeriodNull = isNull.test(accountDto.getDepositPeriod());
 
@@ -135,12 +165,6 @@ public class AccountUtils {
         } else if ((accountType == AccountType.CURRENT) && (!isInterestNull || !isDepositPeriodNull)) {
             String exceptionMessage = accountType + " account does not " + message;
             throw new ResourceExpectationFailedException(exceptionMessage);
-        }
-
-        if (accountType == AccountType.DEPOSIT) {
-            FeeUtils.checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
-        } else {
-            log.warn("{} account does not have deposit period", accountType.getValue());
         }
     }
 
