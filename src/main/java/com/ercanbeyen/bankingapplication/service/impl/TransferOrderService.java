@@ -129,11 +129,8 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
      * @return list contains sender, receiver and charged accounts respectively
      */
     private List<Account> getAccountsFromRegularTransferDto(TransferOrderDto request) {
-        Account senderAccount = accountService.findById(request.getSenderAccountId());
-        log.info(LogMessages.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
-
-        Account receiverAccount = accountService.findById(request.getRegularTransferDto().receiverAccountId());
-        log.info(LogMessages.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
+        Account senderAccount = accountService.findActiveAccountById(request.getSenderAccountId());
+        Account receiverAccount = accountService.findActiveAccountById(request.getRegularTransferDto().receiverAccountId());
 
         AccountUtils.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
