@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
@@ -21,8 +22,6 @@ import java.util.function.Predicate;
 @Slf4j
 @UtilityClass
 public class AccountUtils {
-    private final List<Integer> DEPOSIT_PERIODS = List.of(1, 3, 6, 12);
-    private final Double MAXIMUM_TRANSFER_LIMIT_PER_REQUEST = 100_000D;
     private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
@@ -43,21 +42,60 @@ public class AccountUtils {
             throw new ResourceExpectationFailedException("Identity of sender and receiver accounts should not be equal");
         }
 
-        if (request.amount() >= MAXIMUM_TRANSFER_LIMIT_PER_REQUEST) {
-            String formattedValue = FormatterUtil.convertNumberToFormalExpression(MAXIMUM_TRANSFER_LIMIT_PER_REQUEST);
-            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", AccountActivityType.MONEY_TRANSFER.getValue(), formattedValue));
+        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+        Double maximumMoneyTransferAmountPerRequest = AccountActivityType.getMaximumAmountPerRequestOfActivity(activityType);
+
+        if (request.amount() >= maximumMoneyTransferAmountPerRequest) {
+            String formattedValue = FormatterUtil.convertNumberToFormalExpression(maximumMoneyTransferAmountPerRequest);
+            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", activityType.getValue(), formattedValue));
+        }
+    }
+
+    public void checkMoneyExchangeRequest(MoneyExchangeRequest request) {
+        if (Objects.equals(request.sellerAccountId(), request.buyerAccountId())) {
+            throw new ResourceExpectationFailedException("Identity of seller and buyer accounts should not be equal");
+        }
+
+        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+        Double maximumMoneyExchangeAmountPerRequest = AccountActivityType.getMaximumAmountPerRequestOfActivity(activityType);
+
+        if (request.amount() >= maximumMoneyExchangeAmountPerRequest) {
+            String formattedValue = FormatterUtil.convertNumberToFormalExpression(maximumMoneyExchangeAmountPerRequest);
+            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", activityType.getValue(), formattedValue));
         }
     }
 
     public void checkAccountActivityForCurrentAccount(AccountActivityType activityType) {
-        if (activityType != AccountActivityType.MONEY_DEPOSIT && activityType != AccountActivityType.WITHDRAWAL) {
+        List<AccountActivityType> accountActivityTypes = List.of(
+                AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL, AccountActivityType.FEE, AccountActivityType.CHARGE);
+
+        if (!accountActivityTypes.contains(activityType)) {
             throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
         }
     }
 
-    public double calculateInterest(Double balance, Double interestRatio) {
+    public double calculateInterest(Double balance, Integer depositPeriod, Double interestRatio) {
         checkValidityOfBalanceAndInterestRatio(balance, interestRatio);
-        return (balance == LOWEST_THRESHOLD || interestRatio == LOWEST_THRESHOLD) ? LOWEST_THRESHOLD : ((interestRatio * balance) / 100);
+
+        if (balance == LOWEST_THRESHOLD) {
+            return LOWEST_THRESHOLD;
+        } else if (interestRatio == LOWEST_THRESHOLD) {
+            return balance;
+        }
+
+        double interest = (balance / 100) * (interestRatio / 12) * depositPeriod;
+
+        log.info("Interest after calculation with balance ({}), interest ratio ({}) and deposit period ({}): {}", balance, interestRatio, depositPeriod, interest);
+
+        return interest;
+    }
+
+    public double calculateBalanceAfterNextFee(Double balance, Integer depositPeriod, Double interestRatio) {
+        double interest = AccountUtils.calculateInterest(balance, depositPeriod, interestRatio);
+        double balanceAfterNextFee = balance + interest;
+        log.info("Balance after fee: {}", balanceAfterNextFee);
+
+        return balanceAfterNextFee;
     }
 
     public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositPeriod) {
@@ -70,10 +108,20 @@ public class AccountUtils {
         return isGoingToBeUpdatedAt.isEqual(LocalDate.now());
     }
 
-    public void checkCurrencies(Currency from, Currency to) {
+    public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {
         if (from != to) {
             throw new ResourceConflictException(String.format(ResponseMessages.UNPAIRED_CURRENCIES, "same"));
         }
+    }
+
+    public void checkAccountsTypesBeforeMoneyTransferAndExchange(AccountType from, AccountType to) {
+        AccountType accountType = AccountType.CURRENT;
+
+        if (from != accountType || to != accountType) {
+            throw new ResourceConflictException(String.format("Both accounts must be %s", accountType.getValue()));
+        }
+
+        log.info("Both accounts are {}", accountType.getValue());
     }
 
     private void checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(AccountType accountType, Integer depositPeriod) {
@@ -81,7 +129,7 @@ public class AccountUtils {
             throw new ResourceConflictException("Fees are for deposit accounts");
         }
 
-        checkValidityOfDepositPeriod(depositPeriod);
+        FeeUtils.checkValidityOfDepositPeriod(depositPeriod);
     }
 
     private void checkValidityOfBalanceAndInterestRatio(Double balance, Double interestRatio) {
@@ -94,6 +142,17 @@ public class AccountUtils {
     }
 
     private void checkAccountType(AccountDto accountDto) {
+        checkOptionalFieldsOfAccount(accountDto);
+
+        if (accountDto.getType() == AccountType.DEPOSIT) {
+            FeeUtils.checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
+            accountDto.setBalanceAfterNextFee(0D);
+        } else {
+            log.warn("{} account does not have deposit period", accountDto.getType().getValue());
+        }
+    }
+
+    private static void checkOptionalFieldsOfAccount(AccountDto accountDto) {
         boolean isInterestNull = isNull.test(accountDto.getInterestRatio());
         boolean isDepositPeriodNull = isNull.test(accountDto.getDepositPeriod());
 
@@ -106,18 +165,6 @@ public class AccountUtils {
         } else if ((accountType == AccountType.CURRENT) && (!isInterestNull || !isDepositPeriodNull)) {
             String exceptionMessage = accountType + " account does not " + message;
             throw new ResourceExpectationFailedException(exceptionMessage);
-        }
-
-        if (accountType == AccountType.DEPOSIT) {
-            checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
-        } else {
-            log.warn("{} account does not have deposit period", accountType.getValue());
-        }
-    }
-
-    private static void checkValidityOfDepositPeriod(Integer depositPeriod) {
-        if (!DEPOSIT_PERIODS.contains(depositPeriod)) {
-            throw new ResourceExpectationFailedException("Deposit period is invalid. Valid values are " + DEPOSIT_PERIODS);
         }
     }
 

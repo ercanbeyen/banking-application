@@ -1,12 +1,10 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.ExchangeDto;
-import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Exchange;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
@@ -26,7 +24,6 @@ import org.springframework.stereotype.Service;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.function.BiPredicate;
 
 @Service
 @RequiredArgsConstructor
@@ -101,16 +98,6 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
-    public Double exchangeMoneyBetweenAccounts(Account sellerAccount, Account buyerAccount, Double amount) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
-        return convertMoneyBetweenCurrenciesWithBankRates(
-                sellerAccount.getCurrency(),
-                buyerAccount.getCurrency(),
-                amount
-        );
-    }
-
     public Double convertMoneyBetweenCurrencies(Currency fromCurrency, Currency toCurrency, Double amount) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
         return convertMoneyBetweenCurrenciesWithBankRates(
@@ -139,22 +126,6 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return exchange;
-    }
-
-    private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
-        if (buyerAccount.getCurrency() == sellerAccount.getCurrency()) {
-            throw new ResourceConflictException(String.format(ResponseMessages.UNPAIRED_CURRENCIES, "different"));
-        }
-
-        if (!buyerAccount.getCustomer().getNationalId().equals(sellerAccount.getCustomer().getNationalId())) {
-            throw new ResourceConflictException("Money exchange between different customers is allowed");
-        }
-
-        BiPredicate<Account, Account> checkAccountTypeForExchange = (seller, buyer) -> seller.getType() == AccountType.CURRENT && buyer.getType() == AccountType.CURRENT;
-
-        if (!checkAccountTypeForExchange.test(buyerAccount, sellerAccount)) {
-            throw new ResourceConflictException("Both buyer and seller accounts must be current accounts");
-        }
     }
 
     private double convertMoneyBetweenCurrenciesWithBankRates(Currency baseCurrency, Currency targetCurrency, Double amount) {
@@ -199,7 +170,7 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     }
 
     private void checkExistsByBaseAndTargetCurrencies(Currency base, Currency target) {
-        ExchangeUtils.checkCurrencies(base, target);
+        ExchangeUtils.checkCurrenciesBeforeMoneyExchange(base, target);
 
         final String logMessage = "Existence of Exchange (Base: {} & Target: {}): {}";
         boolean existsByBaseAndTarget = exchangeRepository.existsByBaseCurrencyAndTargetCurrency(base, target);

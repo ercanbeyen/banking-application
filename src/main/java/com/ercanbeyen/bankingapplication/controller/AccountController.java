@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
-import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
@@ -41,19 +41,19 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(accountService.updateEntity(id, request), HttpStatus.OK);
     }
 
-    @PutMapping("/{id}/current")
-    public ResponseEntity<MessageResponse<String>> updateBalanceOfCurrentAccount(
+    @PutMapping("/{id}/balance")
+    public ResponseEntity<MessageResponse<String>> updateBalanceAccount(
             @PathVariable("id") Integer id,
             @RequestParam("activityType") AccountActivityType activityType,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
         AccountUtils.checkAccountActivityForCurrentAccount(activityType);
-        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfCurrentAccount(id, activityType, amount));
+        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfAccount(id, activityType, amount));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PutMapping("/{id}/deposit")
-    public ResponseEntity<MessageResponse<String>> updateBalanceOfDepositAccount(@PathVariable("id") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfDepositAccount(id));
+    @PutMapping("/{id}/deposit/monthly")
+    public ResponseEntity<MessageResponse<String>> updateBalanceOfDepositAccountMonthly(@PathVariable("id") Integer id) {
+        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfDepositAccountMonthly(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -65,7 +65,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     }
 
     @PutMapping("/exchange")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid ExchangeRequest request) {
+    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid MoneyExchangeRequest request) {
+        AccountUtils.checkMoneyExchangeRequest(request);
         MessageResponse<String> response = new MessageResponse<>(accountService.exchangeMoney(request));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

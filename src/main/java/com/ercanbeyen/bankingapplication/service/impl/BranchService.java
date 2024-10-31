@@ -106,6 +106,8 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
     }
 
     public Branch findByName(String name) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
         String entity = Entity.BRANCH.getValue();
         Branch branch = branchRepository.findByName(name)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));

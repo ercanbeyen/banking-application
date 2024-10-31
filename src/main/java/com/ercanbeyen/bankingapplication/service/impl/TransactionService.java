@@ -1,23 +1,20 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
-import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
-import com.ercanbeyen.bankingapplication.dto.request.ExchangeRequest;
+import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.util.AccountUtils;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.javatuples.Pair;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -35,12 +32,36 @@ public class TransactionService {
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
     private final ChargeService chargeService;
+    private final FeeService feeService;
 
     public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account) {
-        Pair<BalanceActivity, Account[]> activityParameters = constructActivityParameters(activityType, account);
+        Account[] accounts = new Account[2]; // first account is sender, second account is receiver
+        double newBalance;
 
-        int numberOfUpdatedEntities = accountRepository.updateBalanceById(account.getId(), activityParameters.getValue0().name(), amount);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        switch (activityType) {
+            case MONEY_DEPOSIT, FEE ->  {
+                newBalance = account.getBalance() + amount;
+                accounts[1] = account; // receiver
+            }
+            case WITHDRAWAL, CHARGE -> {
+                newBalance = account.getBalance() - amount;
+                accounts[0] = account; // sender
+            }
+            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+        }
+
+        account.setBalance(newBalance);
+
+        if (account.getType() == AccountType.DEPOSIT) {
+            log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
+            double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
+            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
+
+            account.setInterestRatio(interestRatio);
+            account.setBalanceAfterNextFee(balanceAfterNextFee);
+        }
+
+        accountRepository.saveAndFlush(account);
 
         Double transactionFee = getTransactionFee(activityType, List.of(account));
         String requestedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
@@ -54,22 +75,27 @@ public class TransactionService {
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
-        createAccountActivity(activityType, amount, summary, activityParameters.getValue1(), null);
-        createAccountActivityForCharge(transactionFee, summary, activityParameters.getValue1());
+        createAccountActivity(activityType, amount, summary, accounts, null);
+        createAccountActivityForCharge(transactionFee, summary, accounts);
     }
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
         double transactionFee = getTransactionFee(activityType, List.of(senderAccount, receiverAccount));
 
-        int numberOfUpdatedEntities = accountRepository.updateBalanceById(senderAccount.getId(), BalanceActivity.DECREASE.name(), amount);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        /* Balance update of sender account */
+        double newBalance = senderAccount.getBalance() - amount;
+        senderAccount.setBalance(newBalance);
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccount.getId(), BalanceActivity.DECREASE.name(), transactionFee);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        /* Balance update of charged account */
+        newBalance = chargedAccount.getBalance() - transactionFee;
+        chargedAccount.setBalance(newBalance);
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(receiverAccount.getId(), BalanceActivity.INCREASE.name(), amount);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        /* Balance update of receiver account */
+        newBalance = receiverAccount.getBalance() + amount;
+        receiverAccount.setBalance(newBalance);
+
+        accountRepository.saveAllAndFlush(List.of(senderAccount, chargedAccount, receiverAccount));
 
         Account[] accounts = {senderAccount, receiverAccount};
         String requestedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
@@ -89,23 +115,26 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, accounts);
     }
 
-    public void exchangeMoneyBetweenAccounts(ExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
+    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
         Double spentAmount = request.amount();
-        Double earnedAmount = exchangeService.exchangeMoneyBetweenAccounts(sellerAccount, buyerAccount, spentAmount);
+        Double earnedAmount = exchangeService.convertMoneyBetweenCurrencies(sellerAccount.getCurrency(), buyerAccount.getCurrency(), spentAmount);
         Double transactionFee = getTransactionFee(activityType, List.of(sellerAccount, buyerAccount));
 
-        int numberOfUpdatedEntities;
+        /* Balance update of seller account */
+        double newBalance = sellerAccount.getBalance() - spentAmount;
+        sellerAccount.setBalance(newBalance);
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(sellerAccount.getId(), BalanceActivity.DECREASE.name(), spentAmount);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        /* Balance update of charged account */
+        newBalance = chargedAccount.getBalance() - transactionFee;
+        chargedAccount.setBalance(newBalance);
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(chargedAccount.getId(), BalanceActivity.DECREASE.name(), transactionFee);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        /* Balance update of receiver account */
+        newBalance = buyerAccount.getBalance() + earnedAmount;
+        buyerAccount.setBalance(newBalance);
 
-        numberOfUpdatedEntities = accountRepository.updateBalanceById(request.buyerAccountId(), BalanceActivity.INCREASE.name(), earnedAmount);
-        log.info(LogMessages.NUMBER_OF_UPDATED_ENTITIES, numberOfUpdatedEntities);
+        accountRepository.saveAllAndFlush(List.of(sellerAccount, chargedAccount, buyerAccount));
 
         String spentAmountInSummary = FormatterUtil.convertNumberToFormalExpression(spentAmount);
         log.info(LogMessages.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
@@ -131,20 +160,6 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, accounts);
     }
 
-    private void createAccountActivityForCharge(Double transactionFee, Map<String, Object> summary, Account[] accounts) {
-        if (transactionFee == 0) {
-            log.warn("There is no transaction fee");
-            return;
-        }
-
-        createAccountActivity(AccountActivityType.CHARGE, transactionFee, summary, accounts, null);
-    }
-
-    private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
-        accountActivityService.createAccountActivity(accountActivityRequest);
-    }
-
     public double getTransactionFee(AccountActivityType activityType, List<Account> accounts) {
         return switch (activityType) {
             case AccountActivityType.MONEY_TRANSFER -> {
@@ -161,28 +176,17 @@ public class TransactionService {
         };
     }
 
-    /***
-     *
-     * @param activityType is for determining account activity type
-     * @param account represents the responsible account
-     * @return balance activity and position of the account (is account sender or receiver?)
-     */
-    private static Pair<BalanceActivity, Account[]> constructActivityParameters(AccountActivityType activityType, Account account) {
-        Account[] accounts = new Account[2]; // first account is sender, second account is receiver
-        BalanceActivity balanceActivity;
-
-        switch (activityType) {
-            case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.FEE -> {
-                accounts[1] = account; // receiver
-                balanceActivity = BalanceActivity.INCREASE;
-            }
-            case AccountActivityType.WITHDRAWAL, AccountActivityType.CHARGE -> {
-                accounts[0] = account; // sender
-                balanceActivity = BalanceActivity.DECREASE;
-            }
-            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+    private void createAccountActivityForCharge(Double transactionFee, Map<String, Object> summary, Account[] accounts) {
+        if (transactionFee == 0) {
+            log.warn("There is no transaction fee");
+            return;
         }
 
-        return new Pair<>(balanceActivity, accounts);
+        createAccountActivity(AccountActivityType.CHARGE, transactionFee, summary, accounts, null);
+    }
+
+    private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
+        accountActivityService.createAccountActivity(accountActivityRequest);
     }
 }

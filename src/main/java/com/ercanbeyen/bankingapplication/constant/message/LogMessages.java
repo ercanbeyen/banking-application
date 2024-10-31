@@ -20,9 +20,10 @@ public final class LogMessages {
     public static final String RESOURCE_DELETE_SUCCESS = "{} {} is successfully deleted";
     public static final String CLASS_OF_RESPONSE = "Class of response: {}";
     public static final String CLASS_OF_OBJECT = "Class of {}: {}";
-    public static final String NUMBER_OF_UPDATED_ENTITIES = "Number of updated entities: {}";
+    public static final String ACCOUNT_ACTIVITY_STATUS_ECHO = "Account activity, requested amount and Transaction fee: {} & {} & {}";
     public static final String PROCESSED_AMOUNT = "Amount after {}: {}";
     public static final String NO_ACCOUNT_ACTIVITY_CHANGE = "No change for account activity type of {}";
+    public static final String ENOUGH_BALANCE = "Balance is enough for {}";
 
     public static class Batch {
         public static final String JOB_STATUS = "!!! Job {}! Time to verify the results";

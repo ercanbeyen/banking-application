@@ -16,6 +16,7 @@ public enum Entity {
     EXCHANGE("Exchange"),
     ADDRESS("Address"),
     BRANCH("Branch"),
+    FEE("Fee"),
     CHARGE("Charge"),
     DAILY_ACTIVITY_LIMIT("Daily Activity Limit");
 
