@@ -12,7 +12,7 @@ public enum Entity {
     NOTIFICATION("Notification"),
     ACCOUNT_ACTIVITY("Account activity"),
     TRANSFER_ORDER("Transfer order"),
-    RATING("Rating"),
+    SURVEY("Survey"),
     EXCHANGE("Exchange"),
     ADDRESS("Address"),
     BRANCH("Branch"),

@@ -1,24 +1,23 @@
 package com.ercanbeyen.bankingapplication.dto;
 
-import com.ercanbeyen.bankingapplication.constant.enums.RatingReason;
+import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
-import org.hibernate.validator.constraints.Range;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
-public record RatingDto(
+public record SurveyDto(
         UUID id,
         @NotBlank(message = "National identity should not be blank")
         @Pattern(regexp = "\\d{11}", message = "Length of national identity must be 11 characters")
-        String userNationalId,
+        String customerNationalId,
+        String title,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
         Integer year,
-        @Range(min = 1, max = 5, message = "Rate should be between {min} and {max}")
-        Integer rate,
-        RatingReason reason,
-        String explanation) {
+        List<Rating> ratings,
+        String customerSuggestion) {
 
 }
