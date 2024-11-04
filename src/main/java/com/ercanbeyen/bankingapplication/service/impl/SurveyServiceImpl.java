@@ -1,11 +1,12 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.entity.Survey;
-import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
+import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.SurveyMapper;
 import com.ercanbeyen.bankingapplication.repository.SurveyRepository;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -24,7 +26,6 @@ import java.util.*;
 public class SurveyServiceImpl implements SurveyService {
     private final SurveyRepository surveyRepository;
     private final SurveyMapper surveyMapper;
-    private final CustomerService customerService;
 
     @Override
     public List<SurveyDto> getSurveys() {
@@ -37,72 +38,47 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public SurveyDto getSurvey(UUID id) {
+    public SurveyDto getSurvey(String customerNationalId, SurveyType surveyType, LocalDate date) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        return surveyMapper.entityToDto(findById(id));
+        SurveyCompositeKey surveyCompositeKey = new SurveyCompositeKey(customerNationalId, surveyType, date);
+        return surveyMapper.entityToDto(findByKey(surveyCompositeKey));
     }
 
     @Override
-    public SurveyDto createSurvey(SurveyDto surveyDto) {
+    public SurveyDto createSurvey(SurveyDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        checkSurveyBeforeCreate(surveyDto);
-
-        Survey survey = surveyMapper.dtoToEntity(surveyDto);
-        survey.setId(UUID.randomUUID());
-        survey.setCustomerSuggestion(surveyDto.customerSuggestion());
-
-        LocalDateTime now = LocalDateTime.now();
-        survey.setCreatedAt(now);
-        survey.setUpdatedAt(now);
-        survey.setYear(now.getYear());
-
-
-        log.info(LogMessages.RESOURCE_FOUND, Entity.CUSTOMER.getValue());
-
+        Survey survey = Survey.valueOf(request);
         Survey savedSurvey = surveyRepository.save(survey);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getId());
+        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getKey());
 
         return surveyMapper.entityToDto(savedSurvey);
     }
 
     @Override
-    public SurveyDto updateSurvey(UUID id, SurveyDto surveyDto) {
+    public SurveyDto updateSurvey(String customerNationalId, SurveyType surveyType, LocalDate date, SurveyDto surveyDto) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
-        Survey survey = findById(id);
+        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, surveyType, date);
+        Survey survey = findByKey(key);
 
         survey.setRatings(surveyDto.ratings());
         survey.setCustomerSuggestion(surveyDto.customerSuggestion());
         survey.setUpdatedAt(LocalDateTime.now());
 
         Survey savedSurvey = surveyRepository.save(survey);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getId());
+        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getKey());
 
         return surveyMapper.entityToDto(savedSurvey);
     }
 
-    private Survey findById(UUID id) {
+    private Survey findByKey(SurveyCompositeKey key) {
         String entity = Entity.SURVEY.getValue();
-        Survey survey = surveyRepository.findById(id)
+        Survey survey = surveyRepository.findById(key)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
         log.info(LogMessages.RESOURCE_FOUND, entity);
 
         return survey;
-    }
-
-    private void checkSurveyBeforeCreate(SurveyDto surveyDto) {
-        if (!customerService.existsByNationalId(surveyDto.customerNationalId())) {
-            log.error(LogMessages.RESOURCE_NOT_FOUND, Entity.CUSTOMER.getValue());
-            throw new ResourceExpectationFailedException("Customer national id is not in database");
-        }
-
-        int currentYear = LocalDateTime.now().getYear();
-
-        if (surveyRepository.findByYearAndCustomerNationalId(currentYear, surveyDto.customerNationalId()).isPresent()) {
-            log.error(LogMessages.RESOURCE_FOUND, Entity.SURVEY.getValue());
-            throw new ResourceExpectationFailedException(String.format("Customer is already rated in %d", currentYear));
-        }
     }
 }

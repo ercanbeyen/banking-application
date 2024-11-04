@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.SurveyUtils;
@@ -9,8 +10,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/surveys")
@@ -23,9 +24,12 @@ public class SurveyController {
         return ResponseEntity.ok(surveyService.getSurveys());
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<SurveyDto> getSurvey(@PathVariable("id") UUID id) {
-        return ResponseEntity.ok(surveyService.getSurvey(id));
+    @GetMapping("/{customerNationalId}/{type}/{date}")
+    public ResponseEntity<SurveyDto> getSurvey(
+            @PathVariable("customerNationalId") String customerNationalId,
+            @PathVariable("type") SurveyType surveyType,
+            @PathVariable("date") LocalDate date) {
+        return ResponseEntity.ok(surveyService.getSurvey(customerNationalId, surveyType, date));
     }
 
     @PostMapping
@@ -34,9 +38,13 @@ public class SurveyController {
         return new ResponseEntity<>(surveyService.createSurvey(request), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<SurveyDto> updateSurvey(@PathVariable("id") UUID id, @RequestBody @Valid SurveyDto request) {
+    @PutMapping("/{customerNationalId}/{type}/{date}")
+    public ResponseEntity<SurveyDto> updateSurvey(
+            @PathVariable("customerNationalId") String customerNationalId,
+            @PathVariable("type") SurveyType surveyType,
+            @PathVariable("date") LocalDate date,
+            @RequestBody @Valid SurveyDto request) {
         SurveyUtils.checkSurveyBeforeSave();
-        return ResponseEntity.ok(surveyService.updateSurvey(id, request));
+        return ResponseEntity.ok(surveyService.updateSurvey(customerNationalId, surveyType, date, request));
     }
 }

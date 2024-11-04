@@ -41,11 +41,11 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
             LocalDate optionsCreatedAt = options.getCreatedAt();
             Address address = branch.getAddress();
 
-            boolean cityCheck = (Optional.ofNullable(optionsCity).isEmpty() || address.getCity() == optionsCity);
-            boolean districtCheck = (Optional.ofNullable(optionsDistrict).isEmpty()|| address.getDistrict().equals(optionsDistrict));
-            boolean createdAtCheck = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().toLocalDate().isEqual(optionsCreatedAt));
+            boolean cityFilter = (Optional.ofNullable(optionsCity).isEmpty() || address.getCity() == optionsCity);
+            boolean districtFilter = (Optional.ofNullable(optionsDistrict).isEmpty()|| address.getDistrict().equals(optionsDistrict));
+            boolean createdAtFilter = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().toLocalDate().isEqual(optionsCreatedAt));
 
-            return cityCheck && districtCheck && createdAtCheck;
+            return cityFilter && districtFilter && createdAtFilter;
         };
 
         return branchRepository.findAll()

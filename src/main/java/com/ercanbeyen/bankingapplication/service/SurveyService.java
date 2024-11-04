@@ -1,13 +1,14 @@
 package com.ercanbeyen.bankingapplication.service;
 
+import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 
+import java.time.LocalDate;
 import java.util.List;
-import java.util.UUID;
 
 public interface SurveyService {
     List<SurveyDto> getSurveys();
-    SurveyDto getSurvey(UUID id);
+    SurveyDto getSurvey(String customerNationalId, SurveyType surveyType, LocalDate date);
     SurveyDto createSurvey(SurveyDto surveyDto);
-    SurveyDto updateSurvey(UUID id, SurveyDto surveyDto);
+    SurveyDto updateSurvey(String customerNationalId, SurveyType surveyType, LocalDate date, SurveyDto surveyDto);
 }
