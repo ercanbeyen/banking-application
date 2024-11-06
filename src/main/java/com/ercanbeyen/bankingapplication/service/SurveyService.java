@@ -9,6 +9,6 @@ import java.util.List;
 public interface SurveyService {
     List<SurveyDto> getSurveys();
     SurveyDto getSurvey(String customerNationalId, SurveyType surveyType, LocalDate date);
-    SurveyDto createSurvey(SurveyDto surveyDto);
-    SurveyDto updateSurvey(String customerNationalId, SurveyType surveyType, LocalDate date, SurveyDto surveyDto);
+    SurveyDto createSurvey(SurveyDto request);
+    SurveyDto updateSurvey(String customerNationalId, SurveyType surveyType, LocalDate date, SurveyDto request);
 }

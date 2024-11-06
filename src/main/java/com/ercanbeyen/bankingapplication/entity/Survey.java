@@ -11,7 +11,7 @@ import org.springframework.data.cassandra.core.mapping.Frozen;
 import org.springframework.data.cassandra.core.mapping.PrimaryKey;
 import org.springframework.data.cassandra.core.mapping.Table;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @Data
@@ -24,22 +24,25 @@ public class Survey {
     private SurveyCompositeKey key;
     @Column(value = "title")
     private String title;
-    @Column(value = "created_at")
-    private LocalDateTime createdAt;
+    @Column(value = "valid_until")
+    private LocalDate validUntil;
     @Column(value = "updated_at")
-    private LocalDateTime updatedAt;
+    private LocalDate updatedAt;
     @Frozen
     private List<Rating> ratings;
     @Column(value = "customer_suggestion")
     private String customerSuggestion;
 
     public static Survey valueOf(SurveyDto request) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDate now = LocalDate.now();
+        SurveyCompositeKey requestedKey = request.key();
+
+        requestedKey = new SurveyCompositeKey(requestedKey.getCustomerNationalId(), requestedKey.getSurveyType(), now);
 
         return Survey.builder()
-                .key(request.key())
+                .key(requestedKey)
                 .title(request.title())
-                .createdAt(now)
+                .validUntil(request.validUntil())
                 .updatedAt(now)
                 .customerSuggestion(request.customerSuggestion())
                 .ratings(request.ratings())

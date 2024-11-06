@@ -26,6 +26,6 @@ public class SurveyCompositeKey {
     @Column(value = "type")
     private SurveyType surveyType;
     @PrimaryKeyColumn(ordinal = 0, type = PrimaryKeyType.CLUSTERED, ordering = Ordering.DESCENDING)
-    @Column(value = "date")
-    private LocalDate date;
+    @Column(value = "created_at")
+    private LocalDate createdAt;
 }

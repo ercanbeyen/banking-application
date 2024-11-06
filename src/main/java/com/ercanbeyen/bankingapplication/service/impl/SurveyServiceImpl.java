@@ -17,7 +17,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -56,15 +55,16 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public SurveyDto updateSurvey(String customerNationalId, SurveyType surveyType, LocalDate date, SurveyDto surveyDto) {
+    public SurveyDto updateSurvey(String customerNationalId, SurveyType surveyType, LocalDate date, SurveyDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, surveyType, date);
         Survey survey = findByKey(key);
 
-        survey.setRatings(surveyDto.ratings());
-        survey.setCustomerSuggestion(surveyDto.customerSuggestion());
-        survey.setUpdatedAt(LocalDateTime.now());
+        survey.setRatings(request.ratings());
+        survey.setCustomerSuggestion(request.customerSuggestion());
+        survey.setUpdatedAt(LocalDate.now());
+        survey.setValidUntil(request.validUntil());
 
         Survey savedSurvey = surveyRepository.save(survey);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getKey());
