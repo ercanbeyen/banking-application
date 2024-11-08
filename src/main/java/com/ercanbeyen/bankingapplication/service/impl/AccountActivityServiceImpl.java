@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
+import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtils;
@@ -130,6 +131,33 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         }
 
         return outputStream;
+    }
+
+    @Override
+    public boolean existsByIdAndCustomerNationalId(String id, String customerNationalId) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        AccountActivity accountActivity = findById(id);
+        boolean accountActivityExists;
+
+        Predicate<Account> accountPredicate = account -> account.getCustomer()
+                .getNationalId()
+                .equals(customerNationalId);
+
+        if (accountActivity.getType() == AccountActivityType.MONEY_DEPOSIT || accountActivity.getType() == AccountActivityType.FEE) {
+            accountActivityExists = accountPredicate.test(accountActivity.getReceiverAccount());
+        } else if (accountActivity.getType() == AccountActivityType.WITHDRAWAL || accountActivity.getType() == AccountActivityType.CHARGE) {
+            accountActivityExists = accountPredicate.test(accountActivity.getSenderAccount());
+        } else if (accountActivity.getType() == AccountActivityType.MONEY_TRANSFER || accountActivity.getType() == AccountActivityType.MONEY_EXCHANGE) {
+            boolean receiverAccountIsCustomer = accountPredicate.test(accountActivity.getReceiverAccount());
+            boolean senderAccountIsCustomer = accountPredicate.test(accountActivity.getSenderAccount());
+            accountActivityExists = receiverAccountIsCustomer || senderAccountIsCustomer;
+        } else {
+            log.error("{} {} is improper for this method", Entity.ACCOUNT_ACTIVITY.getValue(), accountActivity.getType());
+            throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+        }
+
+        return accountActivityExists;
     }
 
     private AccountActivity findById(String id) {

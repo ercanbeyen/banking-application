@@ -6,11 +6,12 @@ import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.SurveyUtils;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -24,27 +25,40 @@ public class SurveyController {
         return ResponseEntity.ok(surveyService.getSurveys());
     }
 
-    @GetMapping("/{customerNationalId}/{type}/{date}")
+    @GetMapping("/customers/{customer-national-id}")
     public ResponseEntity<SurveyDto> getSurvey(
-            @PathVariable("customerNationalId") String customerNationalId,
-            @PathVariable("type") SurveyType surveyType,
-            @PathVariable("date") LocalDate date) {
-        return ResponseEntity.ok(surveyService.getSurvey(customerNationalId, surveyType, date));
+            @PathVariable("customer-national-id") String customerNationalId,
+            @RequestParam("account-activity-id") String accountActivityId,
+            @RequestParam("type") SurveyType surveyType,
+            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt) {
+        return ResponseEntity.ok(surveyService.getSurvey(customerNationalId, accountActivityId, createdAt, surveyType));
     }
 
     @PostMapping
     public ResponseEntity<SurveyDto> createSurvey(@RequestBody @Valid SurveyDto request) {
-        SurveyUtils.checkSurveyBeforeSave();
+        SurveyUtils.checkRequestBeforeSave(request);
         return new ResponseEntity<>(surveyService.createSurvey(request), HttpStatus.CREATED);
     }
 
-    @PutMapping("/{customerNationalId}/{type}/{date}")
+    @PutMapping("/customers/{customer-national-id}/account-activities/{account-activity-id}")
     public ResponseEntity<SurveyDto> updateSurvey(
-            @PathVariable("customerNationalId") String customerNationalId,
-            @PathVariable("type") SurveyType surveyType,
-            @PathVariable("date") LocalDate date,
+            @PathVariable("customer-national-id") String customerNationalId,
+            @PathVariable("account-activity-id") String accountActivityId,
+            @RequestParam("type") SurveyType surveyType,
+            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
             @RequestBody @Valid SurveyDto request) {
-        SurveyUtils.checkSurveyBeforeSave();
-        return ResponseEntity.ok(surveyService.updateSurvey(customerNationalId, surveyType, date, request));
+        SurveyUtils.checkRequestBeforeSave(request);
+        return ResponseEntity.ok(surveyService.updateSurvey(customerNationalId, accountActivityId, createdAt, surveyType, request));
+    }
+
+    @DeleteMapping("/customers/{customer-national-id}/account-activities/{account-activity-id}")
+    public ResponseEntity<Void> deleteSurvey(
+            @PathVariable("customer-national-id") String customerNationalId,
+            @PathVariable("account-activity-id") String accountActivityId,
+            @RequestParam("type") SurveyType surveyType,
+            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt) {
+        surveyService.deleteSurvey(customerNationalId, accountActivityId, createdAt, surveyType);
+        return ResponseEntity.noContent()
+                .build();
     }
 }

@@ -42,7 +42,7 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
             Address address = branch.getAddress();
 
             boolean cityFilter = (Optional.ofNullable(optionsCity).isEmpty() || address.getCity() == optionsCity);
-            boolean districtFilter = (Optional.ofNullable(optionsDistrict).isEmpty()|| address.getDistrict().equals(optionsDistrict));
+            boolean districtFilter = (Optional.ofNullable(optionsDistrict).isEmpty() || address.getDistrict().equals(optionsDistrict));
             boolean createdAtFilter = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().toLocalDate().isEqual(optionsCreatedAt));
 
             return cityFilter && districtFilter && createdAtFilter;
@@ -97,9 +97,12 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
         String entity = Entity.BRANCH.getValue();
 
         branchRepository.findById(id)
-                .ifPresentOrElse(branch -> branchRepository.deleteById(id), () -> {
-                            log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
-                            throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
+                .ifPresentOrElse(branch -> {
+                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    branchRepository.deleteById(id);
+                }, () -> {
+                    log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
                 });
 
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);

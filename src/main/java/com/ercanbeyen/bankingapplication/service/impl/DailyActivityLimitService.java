@@ -90,7 +90,10 @@ public class DailyActivityLimitService implements BaseService<DailyActivityLimit
         String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
 
         dailyActivityLimitRepository.findById(id)
-                .ifPresentOrElse(dailyActivityLimit -> dailyActivityLimitRepository.deleteById(id), () -> {
+                .ifPresentOrElse(dailyActivityLimit -> {
+                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    dailyActivityLimitRepository.deleteById(id);
+                }, () -> {
                     log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
                     throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
                 });
@@ -112,7 +115,7 @@ public class DailyActivityLimitService implements BaseService<DailyActivityLimit
     }
 
     private DailyActivityLimit findById(Integer id) {
-        String entity =  Entity.DAILY_ACTIVITY_LIMIT.getValue();
+        String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
         DailyActivityLimit dailyActivityLimit = dailyActivityLimitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 
