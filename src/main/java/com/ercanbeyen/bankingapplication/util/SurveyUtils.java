@@ -10,7 +10,12 @@ import java.time.LocalDateTime;
 public class SurveyUtils {
     public void checkRequestBeforeSave(SurveyDto request) {
         if (request.validUntil().isBefore(LocalDateTime.now())) {
-            throw new ResourceConflictException("Validation date should not be before today");
+            throw new ResourceConflictException("Validation time should not be before now");
         }
+    }
+
+    public LocalDateTime getNearestValidationTime() {
+        return LocalDateTime.now()
+                .plusHours(1);
     }
 }

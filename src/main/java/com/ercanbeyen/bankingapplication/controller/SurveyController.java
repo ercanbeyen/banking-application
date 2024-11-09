@@ -61,4 +61,14 @@ public class SurveyController {
         return ResponseEntity.noContent()
                 .build();
     }
+
+    @PatchMapping("/customers/{customer-national-id}/account-activities/{account-activity-id}")
+    public ResponseEntity<SurveyDto> updateValidationTime(
+            @PathVariable("customer-national-id") String customerNationalId,
+            @PathVariable("account-activity-id") String accountActivityId,
+            @RequestParam("type") SurveyType surveyType,
+            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
+            @RequestParam("valid-until") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime request) {
+        return ResponseEntity.ok(surveyService.updateValidationTime(customerNationalId, accountActivityId, createdAt, surveyType, request));
+    }
 }

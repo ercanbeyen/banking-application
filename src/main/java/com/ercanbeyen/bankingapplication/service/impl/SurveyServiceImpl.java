@@ -15,6 +15,7 @@ import com.ercanbeyen.bankingapplication.repository.SurveyRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.SurveyUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -55,7 +56,7 @@ public class SurveyServiceImpl implements SurveyService {
         checkCustomerAndAccountActivity(request.key().getCustomerNationalId(), request.key().getAccountActivityId());
         Survey survey = Survey.valueOf(request);
 
-        checkValidationDate(request, survey);
+        validateSurvey(survey);
 
         Survey savedSurvey = surveyRepository.save(survey);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getKey());
@@ -70,13 +71,12 @@ public class SurveyServiceImpl implements SurveyService {
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
 
-        checkValidationDate(request, survey);
+        validateSurvey(survey);
 
         survey.setTitle(request.title());
         survey.setRatings(request.ratings());
         survey.setCustomerSuggestion(request.customerSuggestion());
         survey.setUpdatedAt(LocalDateTime.now());
-        survey.setValidUntil(request.validUntil());
 
         return surveyMapper.entityToDto(surveyRepository.save(survey));
     }
@@ -98,6 +98,27 @@ public class SurveyServiceImpl implements SurveyService {
                 });
 
         log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, key);
+    }
+
+    @Override
+    public SurveyDto updateValidationTime(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, LocalDateTime request) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
+        Survey survey = findByKey(key);
+        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime nearestValidationTime = SurveyUtils.getNearestValidationTime();
+
+        if (request.isBefore(nearestValidationTime)) {
+            throw new ResourceConflictException(String.format("Validation time cannot be before %s", nearestValidationTime));
+        }
+
+        log.info("Requested validation time is appropriate");
+
+        survey.setUpdatedAt(now);
+        survey.setValidUntil(request);
+
+        return surveyMapper.entityToDto(surveyRepository.save(survey));
     }
 
     private Survey findByKey(SurveyCompositeKey key) {
@@ -130,15 +151,13 @@ public class SurveyServiceImpl implements SurveyService {
         }
     }
 
-    private void checkValidationDate(SurveyDto request, Survey entity) {
-        if (entity.getValidUntil().isBefore(LocalDateTime.now())) {
-            throw new ResourceConflictException(Entity.SURVEY.getValue() + " expired");
+    private static void validateSurvey(Survey survey) {
+        String entity = Entity.SURVEY.getValue();
+
+        if (survey.getValidUntil().isBefore(LocalDateTime.now())) {
+            throw new ResourceConflictException(entity + " expired");
         }
 
-        if (request.validUntil().isBefore(entity.getUpdatedAt())) {
-            throw new ResourceConflictException("Validation date cannot be before update date");
-        }
-
-        log.info("Validation date is valid");
+        log.info("{} is valid", entity);
     }
 }
