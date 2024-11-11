@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.entity.Survey;
 import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
@@ -11,6 +12,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.SurveyMapper;
+import com.ercanbeyen.bankingapplication.option.SurveyFilteringOptions;
 import com.ercanbeyen.bankingapplication.repository.SurveyRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
@@ -22,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.function.Predicate;
 
 @Service
 @RequiredArgsConstructor
@@ -33,11 +36,28 @@ public class SurveyServiceImpl implements SurveyService {
     private final AccountActivityService accountActivityService;
 
     @Override
-    public List<SurveyDto> getSurveys() {
+    public List<SurveyDto> getSurveys(SurveyFilteringOptions filteringOptions) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Predicate<Survey> surveyPredicate = survey -> {
+            SurveyCompositeKey key = survey.getKey();
+
+            boolean customerNationalIdFilter = (Optional.ofNullable(filteringOptions.customerNationalId()).isEmpty() || filteringOptions.customerNationalId().equals(key.getCustomerNationalId()));
+            boolean accountActivityTypeFilter = (Optional.ofNullable(filteringOptions.accountActivityType()).isEmpty() || filteringOptions.accountActivityType() == survey.getAccountActivityType());
+            boolean surveyTypeFilter = (Optional.ofNullable(filteringOptions.surveyType()).isEmpty() || filteringOptions.surveyType() == key.getSurveyType());
+            boolean createdAtFilter = (Optional.ofNullable(filteringOptions.createdAt()).isEmpty() || filteringOptions.createdAt().isEqual(key.getCreatedAt().toLocalDate()));
+            boolean validUntilFilter = (Optional.ofNullable(filteringOptions.validUntil()).isEmpty() || filteringOptions.validUntil().isEqual(survey.getValidUntil().toLocalDate()));
+
+            return customerNationalIdFilter && accountActivityTypeFilter && surveyTypeFilter && createdAtFilter && validUntilFilter;
+        };
+
+        Comparator<Survey> surveyComparator = Comparator.comparing(survey -> survey.getKey().getCreatedAt());
+        surveyComparator = surveyComparator.reversed();
 
         return surveyRepository.findAll()
                 .stream()
+                .filter(surveyPredicate)
+                .sorted(surveyComparator)
                 .map(surveyMapper::entityToDto)
                 .toList();
     }
@@ -54,7 +74,8 @@ public class SurveyServiceImpl implements SurveyService {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         checkCustomerAndAccountActivity(request.key().getCustomerNationalId(), request.key().getAccountActivityId());
-        Survey survey = Survey.valueOf(request);
+        AccountActivityDto accountActivityDto = accountActivityService.getAccountActivity(request.key().getAccountActivityId());
+        Survey survey = Survey.valueOf(request, accountActivityDto);
 
         validateSurvey(survey);
 

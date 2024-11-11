@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
+import com.ercanbeyen.bankingapplication.option.SurveyFilteringOptions;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.SurveyUtils;
 import jakarta.validation.Valid;
@@ -21,8 +22,8 @@ public class SurveyController {
     private final SurveyService surveyService;
 
     @GetMapping
-    public ResponseEntity<List<SurveyDto>> getSurveys() {
-        return ResponseEntity.ok(surveyService.getSurveys());
+    public ResponseEntity<List<SurveyDto>> getSurveys(SurveyFilteringOptions filteringOptions) {
+        return ResponseEntity.ok(surveyService.getSurveys(filteringOptions));
     }
 
     @GetMapping("/customers/{customer-national-id}")

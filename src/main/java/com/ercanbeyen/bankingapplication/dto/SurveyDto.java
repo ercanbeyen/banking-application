@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.dto;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -16,6 +17,7 @@ public record SurveyDto(
         @NotBlank(message = "Title should not be blank")
         @NotNull(message = "Title should not be null")
         String title,
+        AccountActivityType accountActivityType,
         LocalDateTime updatedAt,
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         LocalDateTime validUntil,

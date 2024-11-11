@@ -16,7 +16,6 @@ import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Component
@@ -36,15 +35,6 @@ public class CustomerScheduledTasks {
                 .queryParam("birthDate", birthday.toString())
                 .build();
         String notificationMessage = "happy birthday";
-        notifyCustomers(task, uriComponents, notificationMessage);
-    }
-
-    @Scheduled(cron = "0 0 0 1 9 ?") // Every September 1st at midnight
-    public void announceStartOfRating() {
-        final String task = "announce start of rating";
-        UriComponents uriComponents = UriComponentsBuilder.fromUriString(Entity.CUSTOMER.getCollectionUrl())
-                .build();
-        String notificationMessage = "Ratings for " + LocalDateTime.now().getYear() + " is started";
         notifyCustomers(task, uriComponents, notificationMessage);
     }
 

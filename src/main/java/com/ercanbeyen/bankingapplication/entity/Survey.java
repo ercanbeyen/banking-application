@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import lombok.AllArgsConstructor;
@@ -24,6 +26,8 @@ public class Survey {
     private SurveyCompositeKey key;
     @Column(value = "title")
     private String title;
+    @Column(value = "account-activity-type")
+    private AccountActivityType accountActivityType;
     @Column(value = "valid_until")
     private LocalDateTime validUntil;
     @Column(value = "updated_at")
@@ -33,22 +37,23 @@ public class Survey {
     @Frozen
     private List<Rating> ratings;
 
-    public static Survey valueOf(SurveyDto request) {
+    public static Survey valueOf(SurveyDto surveyDto, AccountActivityDto accountActivityDto) {
         LocalDateTime now = LocalDateTime.now();
         SurveyCompositeKey key = new SurveyCompositeKey(
-                request.key().getCustomerNationalId(),
-                request.key().getAccountActivityId(),
+                surveyDto.key().getCustomerNationalId(),
+                accountActivityDto.id(),
                 now,
-                request.key().getSurveyType()
+                surveyDto.key().getSurveyType()
         );
 
         return Survey.builder()
                 .key(key)
-                .title(request.title())
-                .validUntil(request.validUntil())
+                .title(surveyDto.title())
+                .validUntil(surveyDto.validUntil())
                 .updatedAt(now)
-                .customerSuggestion(request.customerSuggestion())
-                .ratings(request.ratings())
+                .accountActivityType(accountActivityDto.type())
+                .customerSuggestion(surveyDto.customerSuggestion())
+                .ratings(surveyDto.ratings())
                 .build();
     }
 }
