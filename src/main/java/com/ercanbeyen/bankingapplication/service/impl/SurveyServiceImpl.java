@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
+import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import com.ercanbeyen.bankingapplication.entity.Survey;
@@ -16,6 +17,7 @@ import com.ercanbeyen.bankingapplication.mapper.SurveyMapper;
 import com.ercanbeyen.bankingapplication.option.SurveyFilteringOptions;
 import com.ercanbeyen.bankingapplication.repository.SurveyRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
 import com.ercanbeyen.bankingapplication.util.SurveyUtils;
@@ -35,6 +37,7 @@ public class SurveyServiceImpl implements SurveyService {
     private final SurveyMapper surveyMapper;
     private final CustomerService customerService;
     private final AccountActivityService accountActivityService;
+    private final NotificationService notificationService;
 
     @Override
     public List<SurveyDto> getSurveys(SurveyFilteringOptions filteringOptions) {
@@ -81,7 +84,15 @@ public class SurveyServiceImpl implements SurveyService {
         checkExpiration(survey);
 
         Survey savedSurvey = surveyRepository.save(survey);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getKey());
+        String entity = Entity.SURVEY.getValue();
+        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, entity, savedSurvey.getKey());
+
+        NotificationDto notificationDto = new NotificationDto(
+                savedSurvey.getKey().getCustomerNationalId(),
+                String.format("Please evaluate your %s activity at %s in the %s", savedSurvey.getAccountActivityType().getValue(), accountActivityDto.createdAt(), entity)
+        );
+
+        notificationService.createNotification(notificationDto);
 
         return surveyMapper.entityToDto(savedSurvey);
     }
