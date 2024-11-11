@@ -46,6 +46,10 @@ public class Survey {
                 surveyDto.key().getSurveyType()
         );
 
+        /* Rates are null before updated by the customer */
+        surveyDto.ratings()
+                .forEach(rating -> rating.setRate(null));
+
         return Survey.builder()
                 .key(key)
                 .title(surveyDto.title())

@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
+import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import com.ercanbeyen.bankingapplication.entity.Survey;
 import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
@@ -77,7 +78,7 @@ public class SurveyServiceImpl implements SurveyService {
         AccountActivityDto accountActivityDto = accountActivityService.getAccountActivity(request.key().getAccountActivityId());
         Survey survey = Survey.valueOf(request, accountActivityDto);
 
-        validateSurvey(survey);
+        checkExpiration(survey);
 
         Survey savedSurvey = surveyRepository.save(survey);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), savedSurvey.getKey());
@@ -92,7 +93,7 @@ public class SurveyServiceImpl implements SurveyService {
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
 
-        validateSurvey(survey);
+        validateSurvey(survey, request);
 
         survey.setTitle(request.title());
         survey.setRatings(request.ratings());
@@ -172,13 +173,28 @@ public class SurveyServiceImpl implements SurveyService {
         }
     }
 
-    private static void validateSurvey(Survey survey) {
+    private static void validateSurvey(Survey survey, SurveyDto request) {
+        checkExpiration(survey);
+        String entity = Entity.SURVEY.getValue();
+
+        /* Rates should not be null after updated by customer */
+        for (Rating rating : request.ratings()) {
+            if (Optional.ofNullable(rating.getRate()).isEmpty()) {
+                log.error("Rate is null in {}", entity);
+                throw new ResourceConflictException("Rate cannot be null");
+            }
+        }
+
+        log.info("Rates are not null in {}", entity);
+    }
+
+    private static void checkExpiration(Survey survey) {
         String entity = Entity.SURVEY.getValue();
 
         if (survey.getValidUntil().isBefore(LocalDateTime.now())) {
             throw new ResourceConflictException(entity + " expired");
         }
 
-        log.info("{} is valid", entity);
+        log.info("{} has not expired", entity);
     }
 }
