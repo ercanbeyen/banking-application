@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
+import com.ercanbeyen.bankingapplication.dto.response.SurveyStatisticsResponse;
 import com.ercanbeyen.bankingapplication.option.SurveyFilteringOptions;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.SurveyUtils;
@@ -71,5 +72,16 @@ public class SurveyController {
             @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
             @RequestParam("valid-until") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime request) {
         return ResponseEntity.ok(surveyService.updateValidationTime(customerNationalId, accountActivityId, createdAt, surveyType, request));
+    }
+
+    @GetMapping("/customers/{customer-national-id}/statistics")
+    public ResponseEntity<SurveyStatisticsResponse<Integer, Integer>> getSurveyStatistics(
+            @PathVariable("customer-national-id") String customerNationalId,
+            @RequestParam("account-activity-id") String accountActivityId,
+            @RequestParam("type") SurveyType surveyType,
+            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
+            @RequestParam(value = "minimum-frequency", required = false, defaultValue = "0") Integer minimumFrequency) {
+        SurveyUtils.checkStatisticsParameters(createdAt, minimumFrequency);
+        return ResponseEntity.ok(surveyService.getSurveyStatistics(customerNationalId, accountActivityId, createdAt, surveyType, minimumFrequency));
     }
 }

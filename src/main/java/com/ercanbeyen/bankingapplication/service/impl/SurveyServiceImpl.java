@@ -7,6 +7,8 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
+import com.ercanbeyen.bankingapplication.dto.response.FrequencyStatisticsResponse;
+import com.ercanbeyen.bankingapplication.dto.response.SurveyStatisticsResponse;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import com.ercanbeyen.bankingapplication.entity.Survey;
 import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
@@ -20,6 +22,7 @@ import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.StatisticsUtils;
 import com.ercanbeyen.bankingapplication.util.SurveyUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -67,9 +70,9 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public SurveyDto getSurvey(String customerNationalId, String accountActivityId, LocalDateTime eventAt, SurveyType surveyType) {
+    public SurveyDto getSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
-        SurveyCompositeKey surveyCompositeKey = new SurveyCompositeKey(customerNationalId, accountActivityId, eventAt, surveyType);
+        SurveyCompositeKey surveyCompositeKey = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         return surveyMapper.entityToDto(findByKey(surveyCompositeKey));
     }
 
@@ -152,6 +155,33 @@ public class SurveyServiceImpl implements SurveyService {
         survey.setValidUntil(request);
 
         return surveyMapper.entityToDto(surveyRepository.save(survey));
+    }
+
+    @Override
+    public SurveyStatisticsResponse<Integer, Integer> getSurveyStatistics(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, Integer minimumFrequency) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
+        Survey survey = findByKey(key);
+
+        if (!survey.getUpdatedAt().isAfter(survey.getKey().getCreatedAt())) {
+            throw new ResourceConflictException(String.format("%s must be filled to get the statistics", Entity.SURVEY.getValue()));
+        }
+
+        List<Rating> ratings = survey.getRatings();
+        List<Integer> rates = ratings
+                .stream()
+                .map(Rating::getRate)
+                .toList();
+
+        FrequencyStatisticsResponse<Integer, Integer> frequencyStatisticsResponse = new FrequencyStatisticsResponse<>(StatisticsUtils.getFrequencies(rates, minimumFrequency));
+        Double average = ratings
+                .stream()
+                .mapToDouble(Rating::getRate)
+                .average()
+                .orElse(0);
+
+        return new SurveyStatisticsResponse<>(frequencyStatisticsResponse, average);
     }
 
     private Survey findByKey(SurveyCompositeKey key) {
