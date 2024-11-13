@@ -87,7 +87,10 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
         String entity = Entity.CHARGE.getValue();
 
         chargeRepository.findById(id)
-                .ifPresentOrElse(charge -> chargeRepository.deleteById(id), () -> {
+                .ifPresentOrElse(charge -> {
+                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    chargeRepository.deleteById(id);
+                }, () -> {
                     log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
                     throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
                 });
@@ -108,7 +111,7 @@ public class ChargeService implements BaseService<ChargeDto, ChargeFilteringOpti
     }
 
     private Charge findById(Integer id) {
-        String entity =  Entity.CHARGE.getValue();
+        String entity = Entity.CHARGE.getValue();
         Charge charge = chargeRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
 

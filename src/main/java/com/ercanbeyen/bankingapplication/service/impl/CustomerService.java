@@ -50,13 +50,14 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         Predicate<Customer> customerPredicate = customer -> {
-            LocalDate filteringDay = options.getBirthDate();
+            LocalDate optionsBirthDate = options.getBirthDate();
             LocalDate customerBirthday = customer.getBirthDate();
-            Boolean birthDayCondition = (filteringDay == null)
-                    || (filteringDay.getMonth() == customerBirthday.getMonth() && filteringDay.getDayOfMonth() == customerBirthday.getDayOfMonth());
-            Boolean createTimeCondition = (options.getCreatedAt() == null || options.getCreatedAt().isEqual(options.getCreatedAt()));
 
-            return (birthDayCondition && createTimeCondition);
+            Boolean birthDayFilter = (optionsBirthDate == null
+                    || optionsBirthDate.getMonth() == customerBirthday.getMonth() && optionsBirthDate.getDayOfMonth() == customerBirthday.getDayOfMonth());
+            Boolean createdAtFilter = (options.getCreatedAt() == null || options.getCreatedAt().isEqual(options.getCreatedAt()));
+
+            return (birthDayFilter && createdAtFilter);
         };
 
         return customerRepository.findAll()

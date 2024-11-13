@@ -36,12 +36,12 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
 
         Predicate<TransferOrder> transferOrderPredicate = transferOrder -> {
             RegularTransfer regularTransfer = transferOrder.getRegularTransfer();
-            boolean checkSenderAccountId = (options.getSenderAccountId() == null || options.getSenderAccountId().equals(transferOrder.getSenderAccount().getId()));
-            boolean checkReceiverAccountId = (options.getReceiverAccountId() == null || options.getReceiverAccountId().equals(regularTransfer.getReceiverAccount().getId()));
-            boolean checkTransferDate = (options.getTransferDate() == null || options.getTransferDate().isEqual(transferOrder.getTransferDate()));
-            boolean checkPaymentType = (options.getPaymentType() == null || options.getPaymentType() == regularTransfer.getPaymentType());
+            boolean senderAccountIdFilter = (options.getSenderAccountId() == null || options.getSenderAccountId().equals(transferOrder.getSenderAccount().getId()));
+            boolean receiverAccountIdFilter = (options.getReceiverAccountId() == null || options.getReceiverAccountId().equals(regularTransfer.getReceiverAccount().getId()));
+            boolean transferDateFilter = (options.getTransferDate() == null || options.getTransferDate().isEqual(transferOrder.getTransferDate()));
+            boolean paymentTypeFilter = (options.getPaymentType() == null || options.getPaymentType() == regularTransfer.getPaymentType());
 
-            return checkSenderAccountId && checkReceiverAccountId && checkTransferDate && checkPaymentType;
+            return senderAccountIdFilter && receiverAccountIdFilter && transferDateFilter && paymentTypeFilter;
         };
 
         return transferOrderRepository.findAll()

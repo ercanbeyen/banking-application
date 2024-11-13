@@ -90,7 +90,10 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         String entity = Entity.EXCHANGE.getValue();
 
         exchangeRepository.findById(id)
-                .ifPresentOrElse(exchange -> exchangeRepository.deleteById(id), () -> {
+                .ifPresentOrElse(exchange -> {
+                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    exchangeRepository.deleteById(id);
+                }, () -> {
                     log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
                     throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
                 });

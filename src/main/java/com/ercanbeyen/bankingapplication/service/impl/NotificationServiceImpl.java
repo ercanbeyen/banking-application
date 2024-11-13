@@ -51,7 +51,10 @@ public class NotificationServiceImpl implements NotificationService {
         String entity = Entity.NOTIFICATION.getValue();
 
         notificationRepository.findById(id)
-                .ifPresentOrElse(notification -> notificationRepository.deleteById(id), () -> {
+                .ifPresentOrElse(notification -> {
+                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    notificationRepository.deleteById(id);
+                }, () -> {
                     log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
                     throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
                 });

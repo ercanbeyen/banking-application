@@ -17,4 +17,5 @@ public interface AccountActivityService {
     void createAccountActivity(AccountActivityRequest request);
     List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer receiverAccountId);
     ByteArrayOutputStream createReceiptStream(String id);
+    boolean existsByIdAndCustomerNationalId(String id, String customerNationalId);
 }

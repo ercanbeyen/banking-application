@@ -17,7 +17,7 @@ Entities:
 - Transfer Order
 - News Report
 - News
-- Rating
+- Survey
 - Exchange
 - Branch
 - Daily Activity Limit
@@ -36,7 +36,7 @@ Entities:
 - Scheduled tasks run while application is running.
 - News are automatically added in chunks of size 40.
 - Notifications are created to inform the customer that the relevant transaction has been completed successfully.
-- Customer can rate the app between 1 and 5 once a year, starting in September.
+- Customers can participate in surveys related to their transactions.
 - Customer can generate a PDF formatted receipt for a specific account activity at any time.
 - Scripts inside resources/db.stored_procedure must be written into related database containers to call procedures.
 

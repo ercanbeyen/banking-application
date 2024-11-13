@@ -116,7 +116,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         if (account.getType() == AccountType.DEPOSIT && !Objects.equals(account.getDepositPeriod(), request.getDepositPeriod())) {
             double interestRatio = feeService.getInterestRatio(account.getCurrency(), request.getDepositPeriod(), account.getBalance());
-            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(account.getBalance(), request.getDepositPeriod(),interestRatio);
+            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(account.getBalance(), request.getDepositPeriod(), interestRatio);
 
             account.setDepositPeriod(request.getDepositPeriod());
             account.setInterestRatio(interestRatio);
@@ -148,6 +148,9 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         checkDailyAccountActivityLimit(account, amount, activityType);
 
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
+
+        NotificationDto notificationDto = constructNotificationForBalanceUpdate(activityType, amount, account);
+        notificationService.createNotification(notificationDto);
 
         return String.format(ResponseMessages.SUCCESS, activityType.getValue());
     }
@@ -194,8 +197,8 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, receiverAccount, chargedAccount);
 
-        NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transaction has been made from your account.", amount, currency));
-        NotificationDto receiverNotificationDto = new NotificationDto(receiverAccount.getCustomer().getNationalId(), String.format("%s %s money transaction has been made to your account.", amount, currency));
+        NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made from your account.", amount, currency));
+        NotificationDto receiverNotificationDto = new NotificationDto(receiverAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made to your account.", amount, currency));
 
         notificationService.createNotification(senderNotificationDto);
         notificationService.createNotification(receiverNotificationDto);
@@ -436,6 +439,19 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         }
 
         log.info("Daily limit of {} is not exceeded", activityType);
+    }
+
+    private static NotificationDto constructNotificationForBalanceUpdate(AccountActivityType activityType, Double amount, Account account) {
+        String message = switch (activityType) {
+            case MONEY_DEPOSIT, FEE -> "%s %s has been deposited into your %s %s";
+            case WITHDRAWAL, CHARGE -> "%s %s has been withdrawn from your %s %s";
+            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+        };
+
+        return new NotificationDto(
+                account.getCustomer().getNationalId(),
+                String.format(message, amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId())
+        );
     }
 
     private static AccountActivityFilteringOptions constructAccountActivityFilteringOptions(Integer accountId, AccountActivityType activityType) {
