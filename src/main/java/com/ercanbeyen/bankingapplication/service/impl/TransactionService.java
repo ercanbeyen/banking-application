@@ -8,9 +8,11 @@ import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.service.CashFlowService;
 import com.ercanbeyen.bankingapplication.util.AccountUtils;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class TransactionService {
     private final ExchangeService exchangeService;
     private final ChargeService chargeService;
     private final FeeService feeService;
+    private final CashFlowService cashFlowService;
 
     public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account) {
         Account[] accounts = new Account[2]; // first account is sender, second account is receiver
@@ -75,8 +78,10 @@ public class TransactionService {
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
-        createAccountActivity(activityType, amount, summary, accounts, null);
+        AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
+
+        cashFlowService.createCashFlow(account.getCustomer(), accountActivity);
     }
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
@@ -111,8 +116,13 @@ public class TransactionService {
         summary.put(SummaryFields.PAYMENT_TYPE,  request.paymentType());
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
-        createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
+        AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
         createAccountActivityForCharge(transactionFee, summary, accounts);
+
+        if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
+            cashFlowService.createCashFlow(senderAccount.getCustomer(), accountActivity);
+            cashFlowService.createCashFlow(receiverAccount.getCustomer(), accountActivity);
+        }
     }
 
     public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
@@ -185,8 +195,8 @@ public class TransactionService {
         createAccountActivity(AccountActivityType.CHARGE, transactionFee, summary, accounts, null);
     }
 
-    private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
+    private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
-        accountActivityService.createAccountActivity(accountActivityRequest);
+        return accountActivityService.createAccountActivity(accountActivityRequest);
     }
 }

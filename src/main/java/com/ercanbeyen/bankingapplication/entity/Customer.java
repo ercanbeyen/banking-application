@@ -57,6 +57,10 @@ public non-sealed class Customer extends BaseEntity {
     @Getter
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications = new ArrayList<>();
+    @Getter
+    //@OneToOne(mappedBy = "customer")
+    @OneToOne
+    private CashFlowCalendar cashFlowCalendar;
 
     @Transient
     public String getFullName() {

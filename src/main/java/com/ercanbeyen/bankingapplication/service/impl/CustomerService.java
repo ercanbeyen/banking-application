@@ -6,10 +6,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
-import com.ercanbeyen.bankingapplication.entity.Account;
-import com.ercanbeyen.bankingapplication.entity.Customer;
-import com.ercanbeyen.bankingapplication.entity.File;
-import com.ercanbeyen.bankingapplication.entity.TransferOrder;
+import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.*;
@@ -18,6 +15,7 @@ import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
+import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.FileStorageService;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtils;
@@ -44,6 +42,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
+    private final CashFlowCalendarService cashFlowCalendarService;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOptions options) {
@@ -74,6 +73,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return customerMapper.entityToDto(customer);
     }
 
+    @Transactional
     @Override
     public CustomerDto createEntity(CustomerDto request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
@@ -81,6 +81,9 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         checkUniqueness(null, request);
 
         Customer customer = customerMapper.dtoToEntity(request);
+        CashFlowCalendar cashFlowCalendar = cashFlowCalendarService.createCashFlowCalendar();
+        customer.setCashFlowCalendar(cashFlowCalendar);
+
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
@@ -198,7 +201,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .map(Account::getId)
                 .toList();
 
-        /* Get all transactions of each account */
+        /* Get all account activities of each account */
         accountIds.forEach(accountId -> {
             getAccountActivities(accountId, BalanceActivity.DECREASE, options, accountActivityDtos);
             getAccountActivities(accountId, BalanceActivity.INCREASE, options, accountActivityDtos);

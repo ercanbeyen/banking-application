@@ -18,7 +18,9 @@ public enum Entity {
     BRANCH("Branch"),
     FEE("Fee"),
     CHARGE("Charge"),
-    DAILY_ACTIVITY_LIMIT("Daily Activity Limit");
+    DAILY_ACTIVITY_LIMIT("Daily Activity Limit"),
+    CASH_FLOW_CALENDAR("Cash Flow Calendar"),
+    CASH_FLOW("Cash Flow");
 
     private final String value;
 

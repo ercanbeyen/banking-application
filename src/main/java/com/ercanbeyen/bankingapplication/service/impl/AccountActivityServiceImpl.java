@@ -80,7 +80,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     }
 
     @Override
-    public void createAccountActivity(AccountActivityRequest request) {
+    public AccountActivity createAccountActivity(AccountActivityRequest request) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
 
         if (request == null) {
@@ -98,6 +98,8 @@ public class AccountActivityServiceImpl implements AccountActivityService {
 
         AccountActivity savedAccountActivity = accountActivityRepository.save(accountActivity);
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT_ACTIVITY.getValue(), savedAccountActivity.getId());
+
+        return savedAccountActivity;
     }
 
     @Override

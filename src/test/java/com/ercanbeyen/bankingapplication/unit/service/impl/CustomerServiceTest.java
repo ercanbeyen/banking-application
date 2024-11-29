@@ -4,16 +4,19 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
+import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.factory.MockCashFlowCalendarFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
 import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
+import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
 import com.ercanbeyen.bankingapplication.service.impl.FileStorageServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -47,8 +50,11 @@ class CustomerServiceTest {
     private CustomerMapper customerMapper;
     @Mock
     private FileStorageServiceImpl fileStorageService;
+    @Mock
+    private CashFlowCalendarService cashFlowCalendarService;
     private List<Customer> customers;
     private List<CustomerDto> customerDtos;
+    private List<CashFlowCalendar> cashFlowCalendars;
 
     @BeforeAll
     static void start() {
@@ -65,6 +71,7 @@ class CustomerServiceTest {
         log.info(LogMessages.Test.SETUP);
         customers = MockCustomerFactory.generateMockCustomers();
         customerDtos = MockCustomerFactory.generateMockCustomerDtos();
+        cashFlowCalendars = MockCashFlowCalendarFactory.generateMockCashFlowCalendars();
     }
 
     @AfterEach
@@ -154,10 +161,14 @@ class CustomerServiceTest {
         Customer customer = customers.getFirst();
         CustomerDto expected = customerDtos.getFirst();
         CustomerDto request = customerDtos.getFirst();
+        CashFlowCalendar cashFlowCalendar = cashFlowCalendars.getFirst();
 
         doReturn(customer)
                 .when(customerMapper)
                 .dtoToEntity(any());
+        doReturn(cashFlowCalendar)
+                .when(cashFlowCalendarService)
+                .createCashFlowCalendar();
         doReturn(customer)
                 .when(customerRepository)
                 .save(any());
@@ -173,6 +184,8 @@ class CustomerServiceTest {
                 .findAll();
         verify(customerMapper, times(1))
                 .dtoToEntity(any());
+        verify(cashFlowCalendarService, times(1))
+                .createCashFlowCalendar();
         verify(customerRepository, times(1))
                 .save(any());
         verify(customerMapper, times(1))

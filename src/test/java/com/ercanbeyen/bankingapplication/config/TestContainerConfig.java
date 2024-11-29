@@ -1,4 +1,4 @@
-package com.ercanbeyen.bankingapplication;
+package com.ercanbeyen.bankingapplication.config;
 
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;

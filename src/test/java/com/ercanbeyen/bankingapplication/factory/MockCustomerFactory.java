@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.factory;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Gender;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
+import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 
 import java.time.LocalDate;
@@ -12,6 +13,8 @@ public class MockCustomerFactory {
     private MockCustomerFactory() {}
 
     public static List<Customer> generateMockCustomers() {
+        List<CashFlowCalendar> cashFlowCalendars = MockCashFlowCalendarFactory.generateMockCashFlowCalendars();
+
         int id = 1;
 
         Customer customer1 = new Customer();
@@ -24,6 +27,7 @@ public class MockCustomerFactory {
         customer1.setGender(Gender.MALE);
         customer1.setBirthDate(LocalDate.of(1980, 8, 15));
         customer1.setAddresses(new ArrayList<>());
+        customer1.setCashFlowCalendar(cashFlowCalendars.getFirst());
 
         id++;
 
@@ -37,6 +41,7 @@ public class MockCustomerFactory {
         customer2.setGender(Gender.FEMALE);
         customer2.setBirthDate(LocalDate.of(1985, 4, 6));
         customer2.setAddresses(new ArrayList<>());
+        customer2.setCashFlowCalendar(cashFlowCalendars.get(1));
 
         id++;
 
@@ -50,6 +55,7 @@ public class MockCustomerFactory {
         customer3.setGender(Gender.FEMALE);
         customer3.setBirthDate(LocalDate.of(1993, 2, 20));
         customer3.setAddresses(new ArrayList<>());
+        customer3.setCashFlowCalendar(cashFlowCalendars.getLast());
 
         return List.of(customer1, customer2, customer3);
     }
