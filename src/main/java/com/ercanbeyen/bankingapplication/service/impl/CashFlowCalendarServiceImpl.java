@@ -2,6 +2,8 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
+import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.repository.CashFlowCalendarRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
@@ -26,5 +28,18 @@ public class CashFlowCalendarServiceImpl implements CashFlowCalendarService {
         log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.CASH_FLOW_CALENDAR.getValue(), savedCashFlowCalendar.getId());
 
         return savedCashFlowCalendar;
+    }
+
+    public void createCashFlow(CashFlowCalendar cashFlowCalendar, AccountActivity accountActivity) {
+        CashFlow cashFlow = new CashFlow();
+
+        cashFlow.setAccountActivityId(accountActivity.getId());
+        cashFlow.setAccountActivityType(accountActivity.getType());
+        cashFlow.setAmount(accountActivity.getAmount());
+        cashFlow.setDate(accountActivity.getCreatedAt().toLocalDate());
+
+        cashFlowCalendar.getCashFlows().add(cashFlow);
+
+        cashFlowCalendarRepository.save(cashFlowCalendar);
     }
 }

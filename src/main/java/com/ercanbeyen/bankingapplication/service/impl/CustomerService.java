@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -39,6 +40,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final AccountMapper accountMapper;
     private final TransferOrderMapper transferOrderMapper;
     private final NotificationMapper notificationMapper;
+    private final CashFlowCalendarMapper cashFlowCalendarMapper;
     private final FileStorageService fileStorageService;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
@@ -257,9 +259,25 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return transferOrderDtos;
     }
 
+    public CashFlowCalendarDto getCashFlowCalendar(Integer id, Integer year, Integer month) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        CashFlowCalendar cashFlowCalendar = findById(id)
+                .getCashFlowCalendar();
+
+        List<CashFlow> cashFlows = cashFlowCalendar.getCashFlows()
+                .stream()
+                .filter(cashFlow -> cashFlow.getDate().getYear() == year && cashFlow.getDate().getMonthValue() == month)
+                .toList();
+
+        cashFlowCalendar.setCashFlows(cashFlows);
+
+        return cashFlowCalendarMapper.entityToDto(cashFlowCalendar);
+    }
+
     /**
      * @param nationalId is national identity which is unique for each customer
-     * @return customer corresponds to that nationalId
+     * @return customer corresponds to the given nationalId
      */
     public Customer findByNationalId(String nationalId) {
         log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());

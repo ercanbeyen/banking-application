@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
+import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import jakarta.persistence.*;
 import lombok.Data;
 
@@ -14,6 +15,13 @@ public class CashFlowCalendar {
     private String id;
     @OneToOne(mappedBy = "cashFlowCalendar")
     private Customer customer;
-    @OneToMany(mappedBy = "cashFlowCalendar")
+    @ElementCollection
+    @CollectionTable(
+            name =  "calendar_cash_flows",
+            joinColumns = @JoinColumn(
+                    name = "calendar_id",
+                    referencedColumnName = "id"
+            )
+    )
     private List<CashFlow> cashFlows;
 }

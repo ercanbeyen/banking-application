@@ -1,20 +1,15 @@
-package com.ercanbeyen.bankingapplication.entity;
+package com.ercanbeyen.bankingapplication.embeddable;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.embeddable.CashFlowPK;
 import jakarta.persistence.*;
 import lombok.Data;
 
 import java.time.LocalDate;
 
 @Data
-@Entity
-@Table(name = "cash_flows")
+@Embeddable
 public class CashFlow {
-    @EmbeddedId
-    private CashFlowPK cashFlowPK;
-    @ManyToOne
-    private CashFlowCalendar cashFlowCalendar;
+    private String accountActivityId;
     @Enumerated(EnumType.STRING)
     private AccountActivityType accountActivityType;
     private Double amount;

@@ -104,4 +104,12 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         TransferOrderUtils.checkDatesBeforeFiltering(fromDate, toDate);
         return ResponseEntity.ok(customerService.getTransferOrders(id, fromDate, toDate, currency, paymentType));
     }
+
+    @GetMapping("/{id}/cash-flow-calendar")
+    public ResponseEntity<CashFlowCalendarDto> getCashFlowCalendar(
+            @PathVariable("id") Integer id,
+            @RequestParam("year") Integer year,
+            @RequestParam("month") Integer month) {
+        return ResponseEntity.ok(customerService.getCashFlowCalendar(id, year, month));
+    }
 }

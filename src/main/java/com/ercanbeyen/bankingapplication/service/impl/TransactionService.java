@@ -12,7 +12,7 @@ import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
-import com.ercanbeyen.bankingapplication.service.CashFlowService;
+import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.util.AccountUtils;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +35,7 @@ public class TransactionService {
     private final ExchangeService exchangeService;
     private final ChargeService chargeService;
     private final FeeService feeService;
-    private final CashFlowService cashFlowService;
+    private final CashFlowCalendarService cashFlowCalendarService;
 
     public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account) {
         Account[] accounts = new Account[2]; // first account is sender, second account is receiver
@@ -81,7 +81,7 @@ public class TransactionService {
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
 
-        cashFlowService.createCashFlow(account.getCustomer(), accountActivity);
+        cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity);
     }
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
@@ -120,8 +120,8 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, accounts);
 
         if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
-            cashFlowService.createCashFlow(senderAccount.getCustomer(), accountActivity);
-            cashFlowService.createCashFlow(receiverAccount.getCustomer(), accountActivity);
+            cashFlowCalendarService.createCashFlow(senderAccount.getCustomer().getCashFlowCalendar(), accountActivity);
+            cashFlowCalendarService.createCashFlow(receiverAccount.getCustomer().getCashFlowCalendar(), accountActivity);
         }
     }
 
