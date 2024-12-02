@@ -10,7 +10,7 @@ import static java.util.stream.Collectors.collectingAndThen;
 import static java.util.stream.Collectors.groupingBy;
 
 @UtilityClass
-public class StatisticsUtils {
+public class StatisticsUtil {
     public <T> Map<T, Integer> getFrequencies(List<T> elements, Integer minimumFrequency) {
         return elements.stream()
                 .collect(groupingBy(

@@ -1,10 +1,10 @@
 package com.ercanbeyen.bankingapplication.unit.controller;
 
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.controller.CustomerController;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
@@ -36,38 +36,38 @@ class CustomerControllerTest {
 
     @BeforeEach
     void start() {
-      log.info(LogMessages.Test.START, LogMessages.Test.UNIT, TESTED_CLASS);
+      log.info(LogMessage.Test.START, LogMessage.Test.UNIT, TESTED_CLASS);
     }
 
     @AfterAll
     static void end() {
-        log.info(LogMessages.Test.END, LogMessages.Test.UNIT, TESTED_CLASS);
+        log.info(LogMessage.Test.END, LogMessage.Test.UNIT, TESTED_CLASS);
     }
 
     @BeforeEach
     void setUp() {
-        log.info(LogMessages.Test.SETUP);
+        log.info(LogMessage.Test.SETUP);
         customerDtos = MockCustomerFactory.generateMockCustomerDtos();
     }
 
     @AfterEach
     void tearDown() {
-        log.info(LogMessages.Test.TEAR_DOWN);
+        log.info(LogMessage.Test.TEAR_DOWN);
     }
 
     @Test
     @DisplayName("Happy path test: Get customers case")
-    void givenFilteringOptions_whenGetEntity_thenReturnCustomerDtos() {
+    void givenFilteringOption_whenGetEntity_thenReturnCustomerDtos() {
         // given
-        CustomerFilteringOptions filteringOptions = new CustomerFilteringOptions();
-        filteringOptions.setBirthDate(LocalDate.of(1980, 8, 15));
+        CustomerFilteringOption filteringOption = new CustomerFilteringOption();
+        filteringOption.setBirthDate(LocalDate.of(1980, 8, 15));
 
         doReturn(customerDtos)
                 .when(customerService)
                 .getEntities(any());
 
         // when
-        ResponseEntity<List<CustomerDto>> responseEntity = customerController.getEntities(filteringOptions);
+        ResponseEntity<List<CustomerDto>> responseEntity = customerController.getEntities(filteringOption);
 
         verify(customerService, times(1)).getEntities(any());
 

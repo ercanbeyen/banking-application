@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.NewsType;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.NewsDto;
 import com.ercanbeyen.bankingapplication.entity.News;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
@@ -9,7 +9,7 @@ import com.ercanbeyen.bankingapplication.mapper.NewsMapper;
 import com.ercanbeyen.bankingapplication.repository.BankNewsRepository;
 import com.ercanbeyen.bankingapplication.repository.OfferNewsRepository;
 import com.ercanbeyen.bankingapplication.service.NewsService;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
@@ -30,7 +30,7 @@ public class NewsServiceImpl implements NewsService {
 
     @Override
     public List<NewsDto> getNews(NewsType type, int pageNumber, int pageSize) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         List<NewsDto> newsDtoList = new ArrayList<>();
 

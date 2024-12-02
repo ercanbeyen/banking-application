@@ -3,10 +3,11 @@ package com.ercanbeyen.bankingapplication.util;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import lombok.experimental.UtilityClass;
@@ -21,19 +22,19 @@ import java.util.function.Predicate;
 
 @Slf4j
 @UtilityClass
-public class AccountUtils {
+public class AccountUtil {
     private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
         if (Optional.ofNullable(accountDto.getIsBlocked()).isPresent() || Optional.ofNullable(accountDto.getClosedAt()).isPresent()) {
-            throw new ResourceConflictException("Request should not contain block and closed at statuses");
+            throw new BadRequestException("Request should not contain block and closed at statuses");
         }
 
         checkAccountType(accountDto);
         Double balance = accountDto.getBalance();
 
         if (Optional.ofNullable(balance).isPresent() && balance != 0) {
-            throw new ResourceConflictException("Not any balance value should be assigned directly from request");
+            throw new BadRequestException("Not any balance value should be assigned directly from request");
         }
     }
 
@@ -70,7 +71,7 @@ public class AccountUtils {
                 AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL, AccountActivityType.FEE, AccountActivityType.CHARGE);
 
         if (!accountActivityTypes.contains(activityType)) {
-            throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+            throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
     }
 
@@ -91,7 +92,7 @@ public class AccountUtils {
     }
 
     public double calculateBalanceAfterNextFee(Double balance, Integer depositPeriod, Double interestRatio) {
-        double interest = AccountUtils.calculateInterest(balance, depositPeriod, interestRatio);
+        double interest = AccountUtil.calculateInterest(balance, depositPeriod, interestRatio);
         double balanceAfterNextFee = balance + interest;
         log.info("Balance after fee: {}", balanceAfterNextFee);
 
@@ -110,7 +111,7 @@ public class AccountUtils {
 
     public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {
         if (from != to) {
-            throw new ResourceConflictException(String.format(ResponseMessages.UNPAIRED_CURRENCIES, "same"));
+            throw new ResourceConflictException(String.format(ResponseMessage.UNPAIRED_CURRENCIES, "same"));
         }
     }
 
@@ -129,7 +130,7 @@ public class AccountUtils {
             throw new ResourceConflictException("Fees are for deposit accounts");
         }
 
-        FeeUtils.checkValidityOfDepositPeriod(depositPeriod);
+        FeeUtil.checkValidityOfDepositPeriod(depositPeriod);
     }
 
     private void checkValidityOfBalanceAndInterestRatio(Double balance, Double interestRatio) {
@@ -137,7 +138,7 @@ public class AccountUtils {
         boolean isInterestRatioValid = interestRatio >= LOWEST_THRESHOLD;
 
         if (!isBalanceValid || !isInterestRatioValid) {
-            throw new ResourceConflictException(String.format("Balance and interest ratio must be greater than or equal to %s", LOWEST_THRESHOLD));
+            throw new BadRequestException(String.format("Balance and interest ratio must be greater than or equal to %s", LOWEST_THRESHOLD));
         }
     }
 
@@ -145,7 +146,7 @@ public class AccountUtils {
         checkOptionalFieldsOfAccount(accountDto);
 
         if (accountDto.getType() == AccountType.DEPOSIT) {
-            FeeUtils.checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
+            FeeUtil.checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
             accountDto.setBalanceAfterNextFee(0D);
         } else {
             log.warn("{} account does not have deposit period", accountDto.getType().getValue());

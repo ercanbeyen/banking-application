@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.BaseDto;
-import com.ercanbeyen.bankingapplication.option.BaseFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.BaseFilteringOption;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -14,12 +14,12 @@ import java.util.List;
 
 @RequiredArgsConstructor
 @Slf4j
-public abstract class BaseController<T extends BaseDto, V extends BaseFilteringOptions> {
+public abstract class BaseController<T extends BaseDto, V extends BaseFilteringOption> {
     private final BaseService<T, V> baseService;
 
     @GetMapping
-    public ResponseEntity<List<T>> getEntities(V options) {
-        return new ResponseEntity<>(baseService.getEntities(options), HttpStatus.OK);
+    public ResponseEntity<List<T>> getEntities(V filteringOption) {
+        return new ResponseEntity<>(baseService.getEntities(filteringOption), HttpStatus.OK);
     }
 
     @GetMapping("/{id}")

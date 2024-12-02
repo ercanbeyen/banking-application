@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.controller;
 
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.dto.response.FileResponse;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
@@ -26,7 +26,7 @@ public class FileStorageController {
     @PostMapping
     public ResponseEntity<MessageResponse<String>> uploadFile(@RequestParam("file") MultipartFile file) {
         fileStorageService.storeFile(file);
-        MessageResponse<String> response = new MessageResponse<>(ResponseMessages.FILE_UPLOAD_SUCCESS);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_UPLOAD_SUCCESS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -2,8 +2,8 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
@@ -12,15 +12,15 @@ import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.*;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
+import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.FileStorageService;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -35,7 +35,7 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CustomerService implements BaseService<CustomerDto, CustomerFilteringOptions> {
+public class CustomerService implements BaseService<CustomerDto, CustomerFilteringOption> {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
@@ -48,16 +48,16 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final CashFlowCalendarService cashFlowCalendarService;
 
     @Override
-    public List<CustomerDto> getEntities(CustomerFilteringOptions options) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<CustomerDto> getEntities(CustomerFilteringOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Predicate<Customer> customerPredicate = customer -> {
-            LocalDate optionsBirthDate = options.getBirthDate();
+            LocalDate birthDateOption = filteringOption.getBirthDate();
             LocalDate customerBirthday = customer.getBirthDate();
 
-            Boolean birthDayFilter = (optionsBirthDate == null
-                    || optionsBirthDate.getMonth() == customerBirthday.getMonth() && optionsBirthDate.getDayOfMonth() == customerBirthday.getDayOfMonth());
-            Boolean createdAtFilter = (options.getCreatedAt() == null || options.getCreatedAt().isEqual(options.getCreatedAt()));
+            Boolean birthDayFilter = (birthDateOption == null
+                    || birthDateOption.getMonth() == customerBirthday.getMonth() && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
+            Boolean createdAtFilter = (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().isEqual(filteringOption.getCreatedAt()));
 
             return (birthDayFilter && createdAtFilter);
         };
@@ -71,7 +71,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
     @Override
     public CustomerDto getEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Customer customer = findById(id);
         return customerMapper.entityToDto(customer);
     }
@@ -79,7 +79,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     @Transactional
     @Override
     public CustomerDto createEntity(CustomerDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         checkUniqueness(null, request);
 
@@ -88,7 +88,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         customer.setCashFlowCalendar(cashFlowCalendar);
 
         Customer savedCustomer = customerRepository.save(customer);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
         return customerMapper.entityToDto(savedCustomer);
     }
@@ -96,7 +96,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     @Transactional
     @Override
     public CustomerDto updateEntity(Integer id, CustomerDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         checkUniqueness(customer, request);
@@ -114,41 +114,41 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
     @Override
     public void deleteEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Customer customer = findById(id);
         customerRepository.delete(customer);
     }
 
     public String uploadProfilePhoto(Integer id, MultipartFile file) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         CompletableFuture<File> photo = fileStorageService.storeFile(file);
         customer.setProfilePhoto(photo.join()); // Profile photo upload
         customerRepository.save(customer);
 
-        return ResponseMessages.FILE_UPLOAD_SUCCESS;
+        return ResponseMessage.FILE_UPLOAD_SUCCESS;
     }
 
     public File downloadProfilePhoto(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Customer customer = findById(id);
         return customer.getProfilePhoto()
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseMessages.NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(ResponseMessage.NOT_FOUND));
     }
 
     public String deleteProfilePhoto(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         customer.setProfilePhoto(null); // Profile photo deletion
         customerRepository.save(customer);
 
-        return ResponseMessages.FILE_DELETE_SUCCESS;
+        return ResponseMessage.FILE_DELETE_SUCCESS;
     }
 
     public CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         List<Account> accounts = findByNationalId(nationalId).getAccounts();
         double earning = 0;
@@ -170,13 +170,13 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return new CustomerStatusResponse(earning, spending, netStatus);
     }
 
-    public List<AccountDto> getAccounts(Integer id, AccountFilteringOptions options) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         Predicate<Account> accountPredicate = account -> (account.getCustomer().getNationalId().equals(customer.getNationalId()))
-                && (options.getType() == null || options.getType() == account.getType())
-                && (options.getCreatedAt() == null || options.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
+                && (filteringOption.getType() == null || filteringOption.getType() == account.getType())
+                && (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
 
         Comparator<Account> accountComparator = Comparator.comparing(Account::getCreatedAt)
                 .reversed();
@@ -193,8 +193,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return accountDtos;
     }
 
-    public List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringOptions options) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         List<AccountActivityDto> accountActivityDtos = new ArrayList<>();
@@ -206,8 +206,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         /* Get all account activities of each account */
         accountIds.forEach(accountId -> {
-            getAccountActivities(accountId, BalanceActivity.DECREASE, options, accountActivityDtos);
-            getAccountActivities(accountId, BalanceActivity.INCREASE, options, accountActivityDtos);
+            getAccountActivities(accountId, BalanceActivity.DECREASE, filteringOption, accountActivityDtos);
+            getAccountActivities(accountId, BalanceActivity.INCREASE, filteringOption, accountActivityDtos);
         });
 
         Comparator<AccountActivityDto> transactionDtoComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
@@ -218,7 +218,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     }
 
     public List<NotificationDto> getNotifications(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         List<NotificationDto> notificationDtos = new ArrayList<>();
@@ -230,7 +230,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     }
 
     public List<TransferOrderDto> getTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(customerId);
         List<TransferOrderDto> transferOrderDtos = new ArrayList<>();
@@ -261,7 +261,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     }
 
     public CashFlowCalendarDto getCashFlowCalendar(Integer id, Integer year, Integer month) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         CashFlowCalendar cashFlowCalendar = findById(id)
                 .getCashFlowCalendar();
@@ -276,12 +276,12 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return cashFlowCalendarMapper.entityToDto(cashFlowCalendar);
     }
 
-    public List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer months) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         List<ExpectedTransaction> expectedTransactions = new ArrayList<>();
-        LocalDate nextDate = LocalDate.now().plusMonths(months);
+        LocalDate nextDate = LocalDate.now().plusMonths(month);
 
         for (Account account : customer.getAccounts()) {
             if (account.getType() == AccountType.DEPOSIT) {
@@ -324,13 +324,13 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
      * @return customer corresponds to the given nationalId
      */
     public Customer findByNationalId(String nationalId) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.CUSTOMER.getValue();
         Customer customer = customerRepository.findByNationalId(nationalId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return customer;
     }
@@ -341,32 +341,32 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
      * @return status for customer existence corresponds to nationalId
      */
     public boolean existsByNationalId(String nationalId) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return customerRepository.existsByNationalId(nationalId);
     }
 
     private Customer findById(Integer id) {
         String entity = Entity.CUSTOMER.getValue();
         Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return customer;
     }
 
     private double calculateTotalAmount(Account account, BalanceActivity balanceActivity, Currency toCurrency) {
-        AccountActivityFilteringOptions options = balanceActivity == BalanceActivity.INCREASE
-                ? new AccountActivityFilteringOptions(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
-                : new AccountActivityFilteringOptions(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
+        AccountActivityFilteringOption filteringOption = balanceActivity == BalanceActivity.INCREASE
+                ? new AccountActivityFilteringOption(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null)
+                : new AccountActivityFilteringOption(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null);
 
-        return accountActivityService.getAccountActivitiesOfParticularAccounts(options, account.getCurrency())
+        return accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency())
                 .stream()
                 .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), toCurrency, accountActivityDto.amount()))
                 .reduce(0D, Double::sum);
     }
 
-    private void getAccountActivities(Integer accountId, BalanceActivity balanceActivity, AccountActivityFilteringOptions options, List<AccountActivityDto> accountActivityDtos) {
+    private void getAccountActivities(Integer accountId, BalanceActivity balanceActivity, AccountActivityFilteringOption filteringOption, List<AccountActivityDto> accountActivityDtos) {
         Integer[] accountIds = new Integer[2]; // first value is sender account id, second value is receiver account id
 
         if (balanceActivity == BalanceActivity.DECREASE) {
@@ -375,15 +375,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             accountIds[1] = accountId;
         }
 
-        AccountActivityFilteringOptions accountActivityFilteringOptions = new AccountActivityFilteringOptions(
-                options.activityTypes(),
+        AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
+                filteringOption.activityTypes(),
                 accountIds[0],
                 accountIds[1],
-                options.minimumAmount(),
-                options.createdAt()
+                filteringOption.minimumAmount(),
+                filteringOption.createdAt()
         );
 
-        List<AccountActivityDto> currentAccountActivityDtos = accountActivityService.getAccountActivities(accountActivityFilteringOptions);
+        List<AccountActivityDto> currentAccountActivityDtos = accountActivityService.getAccountActivities(accountActivityFilteringOption);
         accountActivityDtos.addAll(currentAccountActivityDtos);
     }
 
@@ -418,10 +418,10 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         String entity = Entity.CUSTOMER.getValue();
 
         if (customerExists) {
-            log.error(LogMessages.RESOURCE_NOT_UNIQUE, entity);
-            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, entity));
+            log.error(LogMessage.RESOURCE_NOT_UNIQUE, entity);
+            throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, entity));
         }
 
-        log.info(LogMessages.RESOURCE_UNIQUE, entity);
+        log.info(LogMessage.RESOURCE_UNIQUE, entity);
     }
 }

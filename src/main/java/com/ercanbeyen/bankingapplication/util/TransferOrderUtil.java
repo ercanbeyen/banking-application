@@ -1,26 +1,26 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
-import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
 
 import java.time.LocalDate;
 import java.util.function.Predicate;
 
 @UtilityClass
-public class TransferOrderUtils {
+public class TransferOrderUtil {
 
     public void checkTransferDate(LocalDate request) {
         LocalDate today = LocalDate.now();
 
         if (!request.isAfter(today)) {
-            throw new ResourceConflictException(String.format("The earliest date for the transfer order can be tomorrow (%s)", today.plusDays(1)));
+            throw new BadRequestException(String.format("The earliest date for the transfer order can be tomorrow (%s)", today.plusDays(1)));
         }
     }
 
     public void checkDatesBeforeFiltering(LocalDate fromDate, LocalDate toDate) {
         if (!toDate.isAfter(fromDate)) {
-            throw new ResourceConflictException("\"From\" date must be less than \"To\" date");
+            throw new BadRequestException("\"From\" date must be less than \"To\" date");
         }
     }
 

@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
@@ -13,7 +13,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
-import com.ercanbeyen.bankingapplication.util.AccountUtils;
+import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,7 +50,7 @@ public class TransactionService {
                 newBalance = account.getBalance() - amount;
                 accounts[0] = account; // sender
             }
-            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
         account.setBalance(newBalance);
@@ -58,7 +58,7 @@ public class TransactionService {
         if (account.getType() == AccountType.DEPOSIT) {
             log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
             double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
-            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
+            double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
 
             account.setInterestRatio(interestRatio);
             account.setBalanceAfterNextFee(balanceAfterNextFee);
@@ -147,10 +147,10 @@ public class TransactionService {
         accountRepository.saveAllAndFlush(List.of(sellerAccount, chargedAccount, buyerAccount));
 
         String spentAmountInSummary = FormatterUtil.convertNumberToFormalExpression(spentAmount);
-        log.info(LogMessages.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
+        log.info(LogMessage.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
 
         String earnedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(earnedAmount);
-        log.info(LogMessages.PROCESSED_AMOUNT, earnedAmountInSummary, "Earn");
+        log.info(LogMessage.PROCESSED_AMOUNT, earnedAmountInSummary, "Earn");
 
         Account[] accounts = {sellerAccount, buyerAccount};
 
@@ -182,7 +182,7 @@ public class TransactionService {
             }
             case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL -> 0;
             case AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE -> chargeService.getAmountByActivityType(activityType);
-            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         };
     }
 

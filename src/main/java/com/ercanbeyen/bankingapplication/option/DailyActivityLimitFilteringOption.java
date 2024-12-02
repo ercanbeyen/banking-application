@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public non-sealed class DailyActivityLimitFilteringOptions extends BaseFilteringOptions {
+public non-sealed class DailyActivityLimitFilteringOption extends BaseFilteringOption {
     private AccountActivityType activityType;
     private Double amount;
 }

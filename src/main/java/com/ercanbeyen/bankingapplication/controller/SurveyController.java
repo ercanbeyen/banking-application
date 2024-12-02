@@ -3,9 +3,9 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.dto.response.SurveyStatisticsResponse;
-import com.ercanbeyen.bankingapplication.option.SurveyFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.SurveyFilteringOption;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
-import com.ercanbeyen.bankingapplication.util.SurveyUtils;
+import com.ercanbeyen.bankingapplication.util.SurveyUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -23,8 +23,8 @@ public class SurveyController {
     private final SurveyService surveyService;
 
     @GetMapping
-    public ResponseEntity<List<SurveyDto>> getSurveys(SurveyFilteringOptions filteringOptions) {
-        return ResponseEntity.ok(surveyService.getSurveys(filteringOptions));
+    public ResponseEntity<List<SurveyDto>> getSurveys(SurveyFilteringOption filteringOption) {
+        return ResponseEntity.ok(surveyService.getSurveys(filteringOption));
     }
 
     @GetMapping("/customers/{customer-national-id}")
@@ -38,7 +38,7 @@ public class SurveyController {
 
     @PostMapping
     public ResponseEntity<SurveyDto> createSurvey(@RequestBody @Valid SurveyDto request) {
-        SurveyUtils.checkRequestBeforeSave(request);
+        SurveyUtil.checkRequestBeforeSave(request);
         return new ResponseEntity<>(surveyService.createSurvey(request), HttpStatus.CREATED);
     }
 
@@ -49,7 +49,7 @@ public class SurveyController {
             @RequestParam("type") SurveyType surveyType,
             @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
             @RequestBody @Valid SurveyDto request) {
-        SurveyUtils.checkRequestBeforeSave(request);
+        SurveyUtil.checkRequestBeforeSave(request);
         return ResponseEntity.ok(surveyService.updateSurvey(customerNationalId, accountActivityId, createdAt, surveyType, request));
     }
 
@@ -81,7 +81,7 @@ public class SurveyController {
             @RequestParam("type") SurveyType surveyType,
             @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
             @RequestParam(value = "minimum-frequency", required = false, defaultValue = "0") Integer minimumFrequency) {
-        SurveyUtils.checkStatisticsParameters(createdAt, minimumFrequency);
+        SurveyUtil.checkStatisticsParameters(createdAt, minimumFrequency);
         return ResponseEntity.ok(surveyService.getSurveyStatistics(customerNationalId, accountActivityId, createdAt, surveyType, minimumFrequency));
     }
 }

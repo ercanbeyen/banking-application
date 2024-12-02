@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -21,8 +21,8 @@ public class AccountActivityController {
     private final AccountActivityService accountActivityService;
 
     @GetMapping
-    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(AccountActivityFilteringOptions options) {
-        List<AccountActivityDto> accountActivityDtos = accountActivityService.getAccountActivities(options);
+    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(AccountActivityFilteringOption filteringOption) {
+        List<AccountActivityDto> accountActivityDtos = accountActivityService.getAccountActivities(filteringOption);
         return ResponseEntity.ok(accountActivityDtos);
     }
 

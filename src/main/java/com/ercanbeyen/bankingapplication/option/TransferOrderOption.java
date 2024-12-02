@@ -6,7 +6,7 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public non-sealed class TransferOrderOptions extends BaseFilteringOptions {
+public non-sealed class TransferOrderOption extends BaseFilteringOption {
     private Integer senderAccountId;
     private Integer receiverAccountId;
     private LocalDate transferDate;

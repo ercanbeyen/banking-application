@@ -3,18 +3,18 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
 import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.BranchDto;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchMapper;
-import com.ercanbeyen.bankingapplication.option.BranchFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.BranchFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.BranchRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -27,23 +27,23 @@ import java.util.function.Predicate;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class BranchService implements BaseService<BranchDto, BranchFilteringOptions> {
+public class BranchService implements BaseService<BranchDto, BranchFilteringOption> {
     private final BranchRepository branchRepository;
     private final BranchMapper branchMapper;
 
     @Override
-    public List<BranchDto> getEntities(BranchFilteringOptions options) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<BranchDto> getEntities(BranchFilteringOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Predicate<Branch> branchPredicate = branch -> {
-            City optionsCity = options.getCity();
-            String optionsDistrict = options.getDistrict();
-            LocalDate optionsCreatedAt = options.getCreatedAt();
+            City cityOption = filteringOption.getCity();
+            String districtOption = filteringOption.getDistrict();
+            LocalDate createdAtOption = filteringOption.getCreatedAt();
             Address address = branch.getAddress();
 
-            boolean cityFilter = (Optional.ofNullable(optionsCity).isEmpty() || address.getCity() == optionsCity);
-            boolean districtFilter = (Optional.ofNullable(optionsDistrict).isEmpty() || address.getDistrict().equals(optionsDistrict));
-            boolean createdAtFilter = (Optional.ofNullable(optionsCreatedAt).isEmpty() || branch.getCreatedAt().toLocalDate().isEqual(optionsCreatedAt));
+            boolean cityFilter = (Optional.ofNullable(cityOption).isEmpty() || address.getCity() == cityOption);
+            boolean districtFilter = (Optional.ofNullable(districtOption).isEmpty() || address.getDistrict().equals(districtOption));
+            boolean createdAtFilter = (Optional.ofNullable(createdAtOption).isEmpty() || branch.getCreatedAt().toLocalDate().isEqual(createdAtOption));
 
             return cityFilter && districtFilter && createdAtFilter;
         };
@@ -57,13 +57,13 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
 
     @Override
     public BranchDto getEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return branchMapper.entityToDto(findById(id));
     }
 
     @Override
     public BranchDto createEntity(BranchDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         checkUniqueness(request, null);
 
@@ -71,14 +71,14 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
         branch.getAddress().setType(AddressType.WORK);
         Branch savedBranch = branchRepository.save(branch);
 
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.BRANCH.getValue(), savedBranch.getId());
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.BRANCH.getValue(), savedBranch.getId());
 
         return branchMapper.entityToDto(savedBranch);
     }
 
     @Override
     public BranchDto updateEntity(Integer id, BranchDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Branch branch = findById(id);
         checkUniqueness(request, branch.getName());
@@ -92,30 +92,30 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
 
     @Override
     public void deleteEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.BRANCH.getValue();
 
         branchRepository.findById(id)
                 .ifPresentOrElse(branch -> {
-                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    log.info(LogMessage.RESOURCE_FOUND, entity);
                     branchRepository.deleteById(id);
                 }, () -> {
-                    log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
+                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
                 });
 
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
     public Branch findByName(String name) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.BRANCH.getValue();
         Branch branch = branchRepository.findByName(name)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return branch;
     }
@@ -131,24 +131,24 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
 
         try {
             findByName(request.getName());
-            log.error(LogMessages.RESOURCE_NOT_UNIQUE, entity);
+            log.error(LogMessage.RESOURCE_NOT_UNIQUE, entity);
             isUnique = false;
         } catch (Exception exception) {
-            log.info(LogMessages.RESOURCE_UNIQUE, entity);
+            log.info(LogMessage.RESOURCE_UNIQUE, entity);
             isUnique = true;
         }
 
         if (!isUnique) {
-            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, entity));
+            throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, entity));
         }
     }
 
     private Branch findById(Integer id) {
         String entity = Entity.BRANCH.getValue();
         Branch branch = branchRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return branch;
     }

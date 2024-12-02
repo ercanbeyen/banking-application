@@ -5,6 +5,6 @@ import lombok.Data;
 import java.time.LocalDate;
 
 @Data
-public non-sealed class CustomerFilteringOptions extends BaseFilteringOptions {
+public non-sealed class CustomerFilteringOption extends BaseFilteringOption {
     LocalDate birthDate;
 }

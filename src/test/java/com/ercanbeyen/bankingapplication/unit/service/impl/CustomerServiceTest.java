@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.unit.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -14,7 +14,7 @@ import com.ercanbeyen.bankingapplication.factory.MockCashFlowCalendarFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
 import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
@@ -58,17 +58,17 @@ class CustomerServiceTest {
 
     @BeforeAll
     static void start() {
-        log.info(LogMessages.Test.START, LogMessages.Test.UNIT, TESTED_CLASS);
+        log.info(LogMessage.Test.START, LogMessage.Test.UNIT, TESTED_CLASS);
     }
 
     @AfterAll
     static void end() {
-        log.info(LogMessages.Test.END, LogMessages.Test.UNIT, TESTED_CLASS);
+        log.info(LogMessage.Test.END, LogMessage.Test.UNIT, TESTED_CLASS);
     }
 
     @BeforeEach
     void setUp() {
-        log.info(LogMessages.Test.SETUP);
+        log.info(LogMessage.Test.SETUP);
         customers = MockCustomerFactory.generateMockCustomers();
         customerDtos = MockCustomerFactory.generateMockCustomerDtos();
         cashFlowCalendars = MockCashFlowCalendarFactory.generateMockCashFlowCalendars();
@@ -76,16 +76,16 @@ class CustomerServiceTest {
 
     @AfterEach
     void tearDown() {
-        log.info(LogMessages.Test.TEAR_DOWN);
+        log.info(LogMessage.Test.TEAR_DOWN);
     }
 
     @Test
     @DisplayName("Happy path test: Get customers case")
-    void givenFilteringOptions_whenGetEntity_thenReturnCustomerDtos() {
+    void givenFilteringOption_whenGetEntity_thenReturnCustomerDtos() {
         // given
         List<CustomerDto> expected = List.of(customerDtos.getFirst());
-        CustomerFilteringOptions filteringOptions = new CustomerFilteringOptions();
-        filteringOptions.setBirthDate(LocalDate.of(1980, 8, 15));
+        CustomerFilteringOption filteringOption = new CustomerFilteringOption();
+        filteringOption.setBirthDate(LocalDate.of(1980, 8, 15));
 
         doReturn(customers)
                 .when(customerRepository)
@@ -95,7 +95,7 @@ class CustomerServiceTest {
                 .entityToDto(any());
 
         // when
-        List<CustomerDto> actual = customerService.getEntities(filteringOptions);
+        List<CustomerDto> actual = customerService.getEntities(filteringOption);
 
         // then
         verify(customerRepository, times(1))
@@ -136,7 +136,7 @@ class CustomerServiceTest {
     @DisplayName("Exception path test: Get customer case")
     void givenNotExistingId_whenGetEntity_thenThrowsResourceNotFoundException() {
         // given
-        String expected = String.format(ResponseMessages.NOT_FOUND, Entity.CUSTOMER.getValue());
+        String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
 
         doReturn(Optional.empty())
                 .when(customerRepository)
@@ -199,7 +199,7 @@ class CustomerServiceTest {
     void givenCustomerDto_whenCreateEntity_thenThrowResourceConflictException() {
         // given
         CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
-        String expected = String.format(ResponseMessages.ALREADY_EXISTS, Entity.CUSTOMER.getValue());
+        String expected = String.format(ResponseMessage.ALREADY_EXISTS, Entity.CUSTOMER.getValue());
 
         doReturn(customers).when(customerRepository).findAll();
 
@@ -255,7 +255,7 @@ class CustomerServiceTest {
     void givenIdAndCustomerDto_whenUpdateEntity_thenThrowResourceConflictException(String email) {
         // given
         CustomerDto request = getUpdateMockCustomerDtoRequest(email);
-        String expected = String.format(ResponseMessages.ALREADY_EXISTS, Entity.CUSTOMER.getValue());
+        String expected = String.format(ResponseMessage.ALREADY_EXISTS, Entity.CUSTOMER.getValue());
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
@@ -305,7 +305,7 @@ class CustomerServiceTest {
     @DisplayName("Exception path test: Delete customer case")
     void givenNotExistingId_whenDeleteEntity_thenThrowResourceNotFoundException() {
         // given
-        String expected = String.format(ResponseMessages.NOT_FOUND, Entity.CUSTOMER.getValue());
+        String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
 
         doReturn(Optional.empty())
                 .when(customerRepository)
@@ -328,7 +328,7 @@ class CustomerServiceTest {
     @DisplayName("Happy path test: Upload photo case")
     void givenMultipartFile_whenUploadPhoto_thenReturnMessage() throws IOException {
         // given
-        String expected = ResponseMessages.FILE_UPLOAD_SUCCESS;
+        String expected = ResponseMessage.FILE_UPLOAD_SUCCESS;
         MultipartFile multipartFile = MockFileFactory.generateMockMultipartFile();
         File file = MockFileFactory.generateMockFile();
         CompletableFuture<File> fileCompletableFuture = CompletableFuture.supplyAsync(() -> file);
@@ -359,14 +359,14 @@ class CustomerServiceTest {
     @DisplayName("Exception path test: Upload photo case")
     void givenMultipartFile_whenUploadFile_thenThrowResourceExpectationFailedException() {
         // given
-        String expected = ResponseMessages.FILE_UPLOAD_ERROR;
+        String expected = ResponseMessage.FILE_UPLOAD_ERROR;
         MultipartFile multipartFile = MockFileFactory.generateMockMultipartFile();
         int id = 20;
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
-        doThrow(new ResourceExpectationFailedException(ResponseMessages.FILE_UPLOAD_ERROR))
+        doThrow(new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR))
                 .when(fileStorageService)
                 .storeFile(any());
 
@@ -411,7 +411,7 @@ class CustomerServiceTest {
     @Disabled(value = "This test is not increasing any coverage data")
     void givenId_whenDownloadProfilePhoto_thenThrowResourceNotFoundException() {
         // given
-        String expected = String.format(ResponseMessages.NOT_FOUND, Entity.CUSTOMER.getValue());
+        String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
 
         doReturn(Optional.empty())
                 .when(customerRepository)
@@ -432,7 +432,7 @@ class CustomerServiceTest {
     @DisplayName("Happy path test: Delete profile photo case")
     void givenId_whenDeletePhoto_thenReturnMessage() {
         // given
-        String expected = ResponseMessages.FILE_DELETE_SUCCESS;
+        String expected = ResponseMessage.FILE_DELETE_SUCCESS;
         int id = customers.getFirst().getId();
 
         doReturn(Optional.of(customers.getFirst()))

@@ -5,6 +5,6 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public non-sealed class ChargeFilteringOptions extends BaseFilteringOptions {
+public non-sealed class ChargeFilteringOption extends BaseFilteringOption {
     private Double amount;
 }

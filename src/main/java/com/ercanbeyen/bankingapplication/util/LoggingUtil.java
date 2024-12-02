@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.util;
 import lombok.experimental.UtilityClass;
 
 @UtilityClass
-public class LoggingUtils {
+public class LoggingUtil {
     private final String NO_ITEMS_IN_STACK_TRACE = "There are no %s in the stack trace";
 
     public String getCurrentClassName() {

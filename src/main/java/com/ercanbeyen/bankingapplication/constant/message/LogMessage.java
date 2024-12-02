@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.constant.message;
 
-public final class LogMessages {
+public final class LogMessage {
     public static final String ECHO = "Program is in class {} and method {}";
     public static final String RESOURCE_FOUND = "{} is found";
     public static final String RESOURCE_NOT_FOUND = "{} is not found";
@@ -43,5 +43,5 @@ public final class LogMessages {
         private Test() {}
     }
 
-    private LogMessages() {}
+    private LogMessage() {}
 }

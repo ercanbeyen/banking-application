@@ -19,7 +19,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @UtilityClass
-public class AccountActivityUtils {
+public class AccountActivityUtil {
     private static final List<String> customerCredentials = List.of(SummaryFields.FULL_NAME, SummaryFields.NATIONAL_IDENTITY);
 
     public ByteArrayOutputStream generatePdfStream(Map<String, Object> summary) throws DocumentException, IOException {

@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.integration.controller;
 
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.google.gson.Gson;
@@ -165,7 +165,7 @@ class CustomerControllerTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.BAD_REQUEST.value())
-                .body("phoneNumber", equalTo(ResponseMessages.INVALID_PHONE_NUMBER));
+                .body("phoneNumber", equalTo(ResponseMessage.INVALID_PHONE_NUMBER));
     }
 
     @Test
@@ -195,7 +195,7 @@ class CustomerControllerTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.OK.value())
-                .body("response", equalTo(ResponseMessages.FILE_UPLOAD_SUCCESS));
+                .body("response", equalTo(ResponseMessage.FILE_UPLOAD_SUCCESS));
     }
 
     @Test
@@ -213,7 +213,7 @@ class CustomerControllerTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.EXPECTATION_FAILED.value())
-                .body("message", equalTo(ResponseMessages.INVALID_PHOTO_CONTENT_TYPE));
+                .body("message", equalTo(ResponseMessage.INVALID_PHOTO_CONTENT_TYPE));
     }
 
     private static MultiPartSpecification constructMultiPartSpecification(String profilePhotoName, String mediaType) throws IOException {

@@ -7,7 +7,7 @@ import jakarta.validation.constraints.NotNull;
 import java.time.LocalDate;
 import java.util.List;
 
-public record AccountActivityFilteringOptions(
+public record AccountActivityFilteringOption(
         List<AccountActivityType> activityTypes,
         Integer senderAccountId,
         Integer receiverAccountId,

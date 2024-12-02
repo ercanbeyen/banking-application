@@ -5,6 +5,6 @@ import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 
 import java.time.LocalDate;
 
-public record SurveyFilteringOptions(String customerNationalId, AccountActivityType accountActivityType, SurveyType surveyType, LocalDate createdAt, LocalDate validUntil) {
+public record SurveyFilteringOption(String customerNationalId, AccountActivityType accountActivityType, SurveyType surveyType, LocalDate createdAt, LocalDate validUntil) {
 
 }

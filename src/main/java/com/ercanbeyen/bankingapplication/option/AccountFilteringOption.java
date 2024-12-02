@@ -6,7 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public non-sealed class AccountFilteringOptions extends BaseFilteringOptions {
+public non-sealed class AccountFilteringOption extends BaseFilteringOption {
     private AccountType type;
     private Boolean isBlocked;
     private Boolean isClosed;

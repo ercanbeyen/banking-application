@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.scheduler;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -24,7 +24,7 @@ import java.util.Map;
 @EnableScheduling
 @Slf4j
 @RequiredArgsConstructor
-public class AccountScheduledTasks {
+public class AccountScheduledTask {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
     private static final String ID = "id";
@@ -32,7 +32,7 @@ public class AccountScheduledTasks {
     @Scheduled(cron = "0 0 9 * * *") // 9:00 everyday
     public void addMoneyToDepositAccounts() {
         final String task = "periodic money deposit to deposit account";
-        log.info(LogMessages.SCHEDULED_TASK_STARTED, task);
+        log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
         List<AccountDto> accountDtos;
 
@@ -46,14 +46,14 @@ public class AccountScheduledTasks {
 
             List<?> response = restTemplate.getForObject(url, List.class);
             assert response != null;
-            log.info(LogMessages.CLASS_OF_RESPONSE, response.getClass());
+            log.info(LogMessage.CLASS_OF_RESPONSE, response.getClass());
 
             accountDtos = objectMapper.convertValue(response, new TypeReference<>() {});
-            accountDtos.forEach(accountDto -> log.info(LogMessages.CLASS_OF_OBJECT, "AccountDto", accountDto.getClass()));
+            accountDtos.forEach(accountDto -> log.info(LogMessage.CLASS_OF_OBJECT, "AccountDto", accountDto.getClass()));
 
-            log.info(LogMessages.REST_TEMPLATE_SUCCESS, accountDtos);
+            log.info(LogMessage.REST_TEMPLATE_SUCCESS, accountDtos);
         } catch (Exception exception) {
-            log.error(LogMessages.EXCEPTION, exception.getMessage());
+            log.error(LogMessage.EXCEPTION, exception.getMessage());
             return;
         }
 
@@ -66,7 +66,7 @@ public class AccountScheduledTasks {
         log.info("AccountIdList: {}", accountIdList);
 
         accountIdList.forEach(accountId -> {
-            log.info(LogMessages.BEFORE_REQUEST);
+            log.info(LogMessage.BEFORE_REQUEST);
 
             Map<String, Integer> parameters = Map.of(ID, accountId);
             String url = Entity.ACCOUNT.getCollectionUrl() + "/{" + ID + "}/deposit/monthly";
@@ -74,14 +74,14 @@ public class AccountScheduledTasks {
             try {
                 restTemplate.put(url, null, parameters);
                 String logMessage = Entity.ACCOUNT.getValue() + " " + accountId + " is successfully updated";
-                log.info(LogMessages.REST_TEMPLATE_SUCCESS, logMessage);
+                log.info(LogMessage.REST_TEMPLATE_SUCCESS, logMessage);
             } catch (Exception exception) {
-                log.error(LogMessages.EXCEPTION, exception.getMessage());
+                log.error(LogMessage.EXCEPTION, exception.getMessage());
             }
 
-            log.info(LogMessages.AFTER_REQUEST);
+            log.info(LogMessage.AFTER_REQUEST);
         });
 
-        log.info(LogMessages.SCHEDULED_TASK_ENDED, task);
+        log.info(LogMessage.SCHEDULED_TASK_ENDED, task);
     }
 }

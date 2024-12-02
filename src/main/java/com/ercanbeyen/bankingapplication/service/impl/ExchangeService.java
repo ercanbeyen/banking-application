@@ -2,20 +2,20 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.ExchangeDto;
 import com.ercanbeyen.bankingapplication.entity.Exchange;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.ExchangeMapper;
-import com.ercanbeyen.bankingapplication.option.ExchangeFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.ExchangeFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.ExchangeRepository;
 import com.ercanbeyen.bankingapplication.view.repository.ExchangeViewRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.util.ExchangeUtils;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.javatuples.Pair;
@@ -28,14 +28,14 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteringOptions> {
+public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteringOption> {
     private final ExchangeRepository exchangeRepository;
     private final ExchangeViewRepository exchangeViewRepository;
     private final ExchangeMapper exchangeMapper;
 
     @Override
-    public List<ExchangeDto> getEntities(ExchangeFilteringOptions options) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<ExchangeDto> getEntities(ExchangeFilteringOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         List<ExchangeDto> exchangeDtos = new ArrayList<>();
         exchangeRepository.findAll()
@@ -46,27 +46,27 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
 
     @Override
     public ExchangeDto getEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Exchange exchange = findById(id);
         return exchangeMapper.entityToDto(exchange);
     }
 
     @Override
     public ExchangeDto createEntity(ExchangeDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Exchange exchange = exchangeMapper.dtoToEntity(request);
         checkExistsByBaseAndTargetCurrencies(exchange.getBaseCurrency(), exchange.getTargetCurrency());
 
         Exchange savedExchange = exchangeRepository.save(exchange);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.EXCHANGE.getValue(), savedExchange.getId());
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.EXCHANGE.getValue(), savedExchange.getId());
 
         return exchangeMapper.entityToDto(savedExchange);
     }
 
     @Override
     public ExchangeDto updateEntity(Integer id, ExchangeDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Exchange exchange = findById(id);
 
@@ -85,24 +85,24 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
 
     @Override
     public void deleteEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.EXCHANGE.getValue();
 
         exchangeRepository.findById(id)
                 .ifPresentOrElse(exchange -> {
-                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    log.info(LogMessage.RESOURCE_FOUND, entity);
                     exchangeRepository.deleteById(id);
                 }, () -> {
-                    log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
+                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
                 });
 
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
     public Double convertMoneyBetweenCurrencies(Currency fromCurrency, Currency toCurrency, Double amount) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return convertMoneyBetweenCurrenciesWithBankRates(
                 fromCurrency,
                 toCurrency,
@@ -111,12 +111,12 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     }
 
     public List<ExchangeView> getExchangeViews() {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return exchangeViewRepository.findAll();
     }
 
     public Double getBankExchangeRate(Currency fromCurrency, Currency toCurrency) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Pair<Double, Double> exchangeRate = getExchangeRate(fromCurrency, toCurrency);
         return exchangeRate.getValue0();
     }
@@ -124,9 +124,9 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     private Exchange findById(Integer id) {
         String entity = Entity.EXCHANGE.getValue();
         Exchange exchange = exchangeRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return exchange;
     }
@@ -154,15 +154,15 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         double rate;
 
         if (maybeExchangeView.isPresent()) { // Bank sells foreign currency & Customer buys foreign currency
-            log.info(LogMessages.RESOURCE_FOUND, Entity.EXCHANGE.getValue());
+            log.info(LogMessage.RESOURCE_FOUND, Entity.EXCHANGE.getValue());
             exchangeView = maybeExchangeView.get();
             exponential = -1; // foreign currency sell
             rate = exchangeView.getSellRate();
 
         } else { // Bank buys foreign currency & Customer sells foreign currency
             exchangeView = exchangeViewRepository.findByTargetCurrencyAndBaseCurrency(baseCurrency, targetCurrency)
-                    .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.EXCHANGE.getValue())));
-            log.info(LogMessages.RESOURCE_FOUND, "Reverse " + Entity.EXCHANGE.getValue());
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.EXCHANGE.getValue())));
+            log.info(LogMessage.RESOURCE_FOUND, "Reverse " + Entity.EXCHANGE.getValue());
             exponential = 1; // foreign currency buy
             rate = exchangeView.getBuyRate();
         }
@@ -173,7 +173,7 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
     }
 
     private void checkExistsByBaseAndTargetCurrencies(Currency base, Currency target) {
-        ExchangeUtils.checkCurrenciesBeforeMoneyExchange(base, target);
+        ExchangeUtil.checkCurrenciesBeforeMoneyExchange(base, target);
 
         final String logMessage = "Existence of Exchange (Base: {} & Target: {}): {}";
         boolean existsByBaseAndTarget = exchangeRepository.existsByBaseCurrencyAndTargetCurrency(base, target);
@@ -183,7 +183,7 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         log.info(logMessage, target, base, existsByTargetAndBase);
 
         if (existsByBaseAndTarget || existsByTargetAndBase) {
-            throw new ResourceConflictException(String.format(ResponseMessages.ALREADY_EXISTS, Entity.EXCHANGE.getValue()));
+            throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.EXCHANGE.getValue()));
         }
     }
 }

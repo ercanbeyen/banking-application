@@ -10,7 +10,7 @@ import java.util.List;
 
 @Slf4j
 @UtilityClass
-public class FileUtils {
+public class FileUtil {
     private final int FILE_NAME_LENGTH_THRESHOLD = 100;
 
     public void checkIsFileEmpty(MultipartFile file) {
@@ -44,7 +44,7 @@ public class FileUtils {
 
     public List<String> getPlainContentTypes(List<String> contentTypes) {
         return contentTypes.stream()
-                .map(FileUtils::getPlainContentType)
+                .map(FileUtil::getPlainContentType)
                 .toList();
     }
 

@@ -4,7 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.enums.Ownership;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
-import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
@@ -12,7 +12,7 @@ import java.util.List;
 
 @UtilityClass
 @Slf4j
-public class AddressUtils {
+public class AddressUtil {
     public void checkAddressRequest(Address request) {
         checkCompanyName(request.getType(), request.getCompanyName());
         checkOwnership(request.getType(), request.getOwnership());
@@ -23,11 +23,11 @@ public class AddressUtils {
         boolean companyNameExists = companyName != null && !companyName.isBlank();
 
         if (type == AddressType.WORK && !companyNameExists) {
-            throw new ResourceConflictException(String.format("%s address must have a company name", type));
+            throw new BadRequestException(String.format("%s address must have a company name", type));
         }
 
         if (type == AddressType.HOUSE && companyNameExists) {
-            throw new ResourceConflictException(String.format("%s address should not have a company name", type));
+            throw new BadRequestException(String.format("%s address should not have a company name", type));
         }
     }
 
@@ -37,7 +37,7 @@ public class AddressUtils {
                 : List.of(Ownership.FAMILY_PROPERTY, Ownership.RENT, Ownership.PUBLIC_HOUSING);
 
         if (!validOwnerships.contains(ownership)) {
-            throw new ResourceConflictException(String.format("%s address must have %s ownerships", addressType, validOwnerships));
+            throw new BadRequestException(String.format("%s address must have %s ownerships", addressType, validOwnerships));
         }
     }
 }

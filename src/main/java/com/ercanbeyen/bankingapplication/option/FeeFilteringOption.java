@@ -6,8 +6,7 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public final class ExchangeFilteringOptions extends BaseFilteringOptions {
-    private Currency targetCurrency;
-    private Currency sourceCurrency;
-    private Double rate;
+public non-sealed class FeeFilteringOption extends BaseFilteringOption {
+    private Currency currency;
+    private Integer depositPeriod;
 }
