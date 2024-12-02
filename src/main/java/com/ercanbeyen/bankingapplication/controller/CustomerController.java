@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
@@ -111,5 +112,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
             @RequestParam("year") Integer year,
             @RequestParam("month") Integer month) {
         return ResponseEntity.ok(customerService.getCashFlowCalendar(id, year, month));
+    }
+
+    @GetMapping("/{id}/expected-transactions")
+    public ResponseEntity<List<ExpectedTransaction>> getExpectedTransactions(@PathVariable("id") Integer id, @RequestParam("months") Integer months) {
+        return ResponseEntity.ok(customerService.getExpectedTransactions(id, months));
     }
 }

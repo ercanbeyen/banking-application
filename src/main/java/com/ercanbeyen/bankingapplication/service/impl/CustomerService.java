@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
+import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -273,6 +274,49 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         cashFlowCalendar.setCashFlows(cashFlows);
 
         return cashFlowCalendarMapper.entityToDto(cashFlowCalendar);
+    }
+
+    public List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer months) {
+        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+
+        Customer customer = findById(id);
+        List<ExpectedTransaction> expectedTransactions = new ArrayList<>();
+        LocalDate nextDate = LocalDate.now().plusMonths(months);
+
+        for (Account account : customer.getAccounts()) {
+            if (account.getType() == AccountType.DEPOSIT) {
+                LocalDate nextPaymentDate = account.getUpdatedAt().plusMonths(account.getDepositPeriod()).toLocalDate();
+                double fee = account.getBalanceAfterNextFee() - account.getBalance();
+
+                if (!nextPaymentDate.isAfter(nextDate)) {
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(
+                            AccountActivityType.FEE,
+                            fee,
+                            nextPaymentDate
+                    );
+
+                    expectedTransactions.add(expectedTransaction);
+                }
+
+                continue;
+            }
+
+            for (TransferOrder transferOrder : account.getTransferOrders()) {
+                LocalDate nextPaymentDate = transferOrder.getTransferDate();
+
+                if (!nextPaymentDate.isAfter(nextDate)) {
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(
+                            AccountActivityType.MONEY_TRANSFER,
+                            transferOrder.getRegularTransfer().getAmount(),
+                            nextPaymentDate
+                    );
+
+                    expectedTransactions.add(expectedTransaction);
+                }
+            }
+        }
+
+        return expectedTransactions;
     }
 
     /**
