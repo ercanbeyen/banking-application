@@ -40,7 +40,7 @@ public class AccountUtil {
 
     public void checkMoneyTransferRequest(MoneyTransferRequest request) {
         if (Objects.equals(request.senderAccountId(), request.receiverAccountId())) {
-            throw new ResourceExpectationFailedException("Identity of sender and receiver accounts should not be equal");
+            throw new BadRequestException("Identity of sender and receiver accounts should not be equal");
         }
 
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
@@ -54,7 +54,7 @@ public class AccountUtil {
 
     public void checkMoneyExchangeRequest(MoneyExchangeRequest request) {
         if (Objects.equals(request.sellerAccountId(), request.buyerAccountId())) {
-            throw new ResourceExpectationFailedException("Identity of seller and buyer accounts should not be equal");
+            throw new BadRequestException("Identity of seller and buyer accounts should not be equal");
         }
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
@@ -67,8 +67,7 @@ public class AccountUtil {
     }
 
     public void checkAccountActivityForCurrentAccount(AccountActivityType activityType) {
-        List<AccountActivityType> accountActivityTypes = List.of(
-                AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL, AccountActivityType.FEE, AccountActivityType.CHARGE);
+        List<AccountActivityType> accountActivityTypes = List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL, AccountActivityType.FEE, AccountActivityType.CHARGE);
 
         if (!accountActivityTypes.contains(activityType)) {
             throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
@@ -115,7 +114,7 @@ public class AccountUtil {
         }
     }
 
-    public void checkAccountsTypesBeforeMoneyTransferAndExchange(AccountType from, AccountType to) {
+    public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to) {
         AccountType accountType = AccountType.CURRENT;
 
         if (from != accountType || to != accountType) {

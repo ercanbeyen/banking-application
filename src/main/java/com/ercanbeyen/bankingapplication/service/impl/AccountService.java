@@ -356,7 +356,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             return;
         }
 
-        AccountUtil.checkAccountsTypesBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
     }
 
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
@@ -366,7 +366,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             throw new ResourceConflictException(String.format("Money %s between different customers is disallowed", Entity.EXCHANGE.getValue()));
         }
 
-        AccountUtil.checkAccountsTypesBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType());
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType());
     }
 
     private Account getChargedAccountInMoneyExchange(Integer id, List<Account> accounts) {

@@ -281,42 +281,43 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         Customer customer = findById(id);
         List<ExpectedTransaction> expectedTransactions = new ArrayList<>();
-        LocalDate nextDate = LocalDate.now().plusMonths(month);
+        LocalDate finalDate = LocalDate.now().plusMonths(month);
 
         for (Account account : customer.getAccounts()) {
             if (account.getType() == AccountType.DEPOSIT) {
+                log.info("Account is deposit, so only fees are going to be processed");
                 LocalDate nextPaymentDate = account.getUpdatedAt().plusMonths(account.getDepositPeriod()).toLocalDate();
                 double fee = account.getBalanceAfterNextFee() - account.getBalance();
 
-                if (!nextPaymentDate.isAfter(nextDate)) {
-                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(
-                            AccountActivityType.FEE,
-                            fee,
-                            nextPaymentDate
-                    );
-
+                while (!nextPaymentDate.isAfter(finalDate)) {
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.FEE, fee, nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
+                    nextPaymentDate = nextPaymentDate.plusMonths(account.getDepositPeriod());
                 }
 
                 continue;
             }
 
             for (TransferOrder transferOrder : account.getTransferOrders()) {
+                log.info("Account is deposit, so only transfer orders are going to be processed");
                 LocalDate nextPaymentDate = transferOrder.getTransferDate();
 
-                if (!nextPaymentDate.isAfter(nextDate)) {
-                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(
-                            AccountActivityType.MONEY_TRANSFER,
-                            transferOrder.getRegularTransfer().getAmount(),
-                            nextPaymentDate
-                    );
-
+                while (!nextPaymentDate.isAfter(finalDate)) {
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.MONEY_TRANSFER, transferOrder.getRegularTransfer().getAmount(), nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
+                    nextPaymentDate = switch (transferOrder.getRegularTransfer().getPaymentPeriod()) {
+                        case ONE_TIME -> nextPaymentDate;
+                        case DAILY -> nextPaymentDate.plusDays(1);
+                        case WEEKLY -> nextPaymentDate.plusWeeks(1);
+                        case MONTHLY -> nextPaymentDate.plusMonths(1);
+                    };
                 }
             }
         }
 
-        return expectedTransactions;
+        return expectedTransactions.stream()
+                .sorted(Comparator.comparing(ExpectedTransaction::date))
+                .toList();
     }
 
     /**

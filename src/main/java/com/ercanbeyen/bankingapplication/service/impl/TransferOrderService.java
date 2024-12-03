@@ -132,6 +132,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         Account senderAccount = accountService.findActiveAccountById(request.getSenderAccountId());
         Account receiverAccount = accountService.findActiveAccountById(request.getRegularTransferDto().receiverAccountId());
 
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
         AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
         Account chargedAccount = accountService.getChargedAccount(request.getChargedAccountId(), List.of(senderAccount));
