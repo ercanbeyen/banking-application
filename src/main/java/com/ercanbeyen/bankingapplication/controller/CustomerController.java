@@ -17,6 +17,7 @@ import com.ercanbeyen.bankingapplication.util.PhotoUtil;
 import com.ercanbeyen.bankingapplication.util.TransferOrderUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.validator.constraints.Range;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -111,7 +112,8 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public ResponseEntity<CashFlowCalendarDto> getCashFlowCalendar(
             @PathVariable("id") Integer id,
             @RequestParam("year") Integer year,
-            @RequestParam("month") Integer month) {
+            @RequestParam("month") @Range(min = 1, max = 12, message = "Month should be between {min} and {max}") Integer month) {
+        CashFlowCalendarUtil.checkMonthAndYearForCashFlowCalendar(year, month);
         return ResponseEntity.ok(customerService.getCashFlowCalendar(id, year, month));
     }
 

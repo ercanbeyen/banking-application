@@ -9,6 +9,7 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.entity.*;
+import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.*;
@@ -20,6 +21,8 @@ import com.ercanbeyen.bankingapplication.service.BaseService;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.FileStorageService;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.util.AccountUtil;
+import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -263,13 +266,25 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     public CashFlowCalendarDto getCashFlowCalendar(Integer id, Integer year, Integer month) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        CashFlowCalendar cashFlowCalendar = findById(id)
-                .getCashFlowCalendar();
+        Customer customer = findById(id);
+        CashFlowCalendar cashFlowCalendar = customer.getCashFlowCalendar();
+        List<CashFlow> cashFlows = new ArrayList<>();
+        LocalDate today = LocalDate.now();
 
-        List<CashFlow> cashFlows = cashFlowCalendar.getCashFlows()
-                .stream()
-                .filter(cashFlow -> cashFlow.getDate().getYear() == year && cashFlow.getDate().getMonthValue() == month)
-                .toList();
+        if (CashFlowCalendarUtil.isDateFuture(today, year, month)) {
+            log.info("Past cash flows are requested");
+            getPastCashFlows(year, month, cashFlowCalendar, cashFlows);
+        } else if (CashFlowCalendarUtil.isDatePast(today, year, month)) {
+            log.info("Future cash flows are requested");
+            getFutureCashFlows(year, month, customer, cashFlows);
+        } else if (CashFlowCalendarUtil.isDateThisMonth(today, year, month)) {
+            log.info("This month's cash flows are requested");
+            getPastCashFlows(year, month, cashFlowCalendar, cashFlows);
+            getFutureCashFlows(year, month, customer, cashFlows);
+        } else {
+            log.error("Unhandled time case. Year {} & Month: {}", year, month);
+            throw new InternalServerErrorException("Error occurred while processing the cash flow calendar");
+        }
 
         cashFlowCalendar.setCashFlows(cashFlows);
 
@@ -285,12 +300,11 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         for (Account account : customer.getAccounts()) {
             if (account.getType() == AccountType.DEPOSIT) {
-                log.info("Account is deposit, so only fees are going to be processed");
+                log.info("Account is deposit, so only expected fees are going to be processed");
                 LocalDate nextPaymentDate = account.getUpdatedAt().plusMonths(account.getDepositPeriod()).toLocalDate();
-                double fee = account.getBalanceAfterNextFee() - account.getBalance();
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
-                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.FEE, fee, nextPaymentDate);
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.FEE, account.getInterestRatio(), nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
                     nextPaymentDate = nextPaymentDate.plusMonths(account.getDepositPeriod());
                 }
@@ -299,18 +313,25 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             }
 
             for (TransferOrder transferOrder : account.getTransferOrders()) {
-                log.info("Account is deposit, so only transfer orders are going to be processed");
+                log.info("Account is current, so only expected money transfers are going to be processed");
                 LocalDate nextPaymentDate = transferOrder.getTransferDate();
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
                     ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.MONEY_TRANSFER, transferOrder.getRegularTransfer().getAmount(), nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
-                    nextPaymentDate = switch (transferOrder.getRegularTransfer().getPaymentPeriod()) {
+
+                    PaymentPeriod paymentPeriod = transferOrder.getRegularTransfer().getPaymentPeriod();
+                    nextPaymentDate = switch (paymentPeriod) {
                         case ONE_TIME -> nextPaymentDate;
                         case DAILY -> nextPaymentDate.plusDays(1);
                         case WEEKLY -> nextPaymentDate.plusWeeks(1);
                         case MONTHLY -> nextPaymentDate.plusMonths(1);
                     };
+
+                    if (paymentPeriod == PaymentPeriod.ONE_TIME) {
+                        log.info("One Time transfer order. So the expected transaction is added");
+                        break;
+                    }
                 }
             }
         }
@@ -354,6 +375,94 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return customer;
+    }
+
+    private static void getFutureCashFlows(Integer year, Integer month, Customer customer, List<CashFlow> cashFlows) {
+        for (Account account : customer.getAccounts()) {
+            if (account.getType() == AccountType.DEPOSIT) {
+                log.info("Account is deposit, so only fees are going to be processed");
+
+                LocalDate paymentDate = account.getUpdatedAt().toLocalDate();
+                LocalDate counterDate = LocalDate.now();
+                LocalDate createdDate = account.getCreatedAt().toLocalDate();
+
+                while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
+                    if (counterDate.getYear() == paymentDate.getYear() && counterDate.getMonthValue() == paymentDate.getMonthValue()) {
+                        log.info("Payment date has come for money transfer. Update the next payment date");
+                        if (createdDate.getYear() == counterDate.getYear() && createdDate.getMonthValue() == counterDate.getMonthValue()) {
+                            log.info("Calendar shows for deposit account creating time, so no fee");
+                        } else {
+                            log.info("Add the fee to the balance");
+                            account.setBalance(account.getBalanceAfterNextFee());
+                            double interest = AccountUtil.calculateInterest(account.getBalance(), account.getDepositPeriod(), account.getInterestRatio());
+                            double balanceAfterNextFee = account.getBalance() + interest;
+                            account.setBalanceAfterNextFee(balanceAfterNextFee);
+
+                            if (paymentDate.getYear() == year && paymentDate.getMonthValue() == month) {
+                                log.info("Fee matches with future cash flow");
+                                CashFlow cashFlow = new CashFlow();
+                                cashFlow.setAmount(interest);
+                                cashFlow.setDate(paymentDate);
+                                cashFlow.setAccountActivityType(AccountActivityType.FEE);
+                                cashFlows.add(cashFlow);
+                            }
+                        }
+
+                        paymentDate = paymentDate.plusMonths(account.getDepositPeriod());
+                    }
+
+                    counterDate = counterDate.plusMonths(1);
+                }
+            }
+
+            for (TransferOrder transferOrder : account.getTransferOrders()) {
+                log.info("Account is current, so only transfer orders are going to be processed");
+                LocalDate paymentDate = transferOrder.getTransferDate();
+                LocalDate counterDate = LocalDate.now();
+                PaymentPeriod paymentPeriod = transferOrder.getRegularTransfer().getPaymentPeriod();
+
+                while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
+                    if (counterDate.getYear() == paymentDate.getYear() && counterDate.getMonthValue() == paymentDate.getMonthValue()) {
+                        log.info("Payment date of transfer order has come. Update the next payment date");
+                        paymentDate = switch (paymentPeriod) {
+                            case ONE_TIME -> paymentDate;
+                            case DAILY -> paymentDate.plusDays(1);
+                            case WEEKLY -> paymentDate.plusWeeks(1);
+                            case MONTHLY -> paymentDate.plusMonths(1);
+                        };
+
+                        if (paymentDate.getYear() == year && paymentDate.getMonthValue() == month) {
+                            log.info("Money transfer matches with future cash flow");
+                            CashFlow cashFlow = new CashFlow();
+                            cashFlow.setAmount(transferOrder.getRegularTransfer().getAmount());
+                            cashFlow.setDate(paymentDate);
+                            cashFlow.setAccountActivityType(AccountActivityType.MONEY_TRANSFER);
+                            cashFlows.add(cashFlow);
+
+                            if (paymentPeriod == PaymentPeriod.ONE_TIME) {
+                                log.info("One Time transfer order. So future money transfer is added");
+                                break;
+                            }
+                        }
+                    }
+
+                    counterDate = switch (paymentPeriod) {
+                        case ONE_TIME, DAILY -> counterDate.plusDays(1);
+                        case WEEKLY -> counterDate.plusWeeks(1);
+                        case MONTHLY -> counterDate.plusMonths(1);
+                    };
+                }
+            }
+        }
+
+        cashFlows.sort(Comparator.comparing(CashFlow::getDate));
+    }
+
+    private static void getPastCashFlows(Integer year, Integer month, CashFlowCalendar cashFlowCalendar, List<CashFlow> cashFlows) {
+        cashFlowCalendar.getCashFlows()
+                .stream()
+                .filter(cashFlow -> cashFlow.getDate().getYear() == year && cashFlow.getDate().getMonthValue() == month)
+                .forEach(cashFlows::add);
     }
 
     private double calculateTotalAmount(Account account, BalanceActivity balanceActivity, Currency toCurrency) {
