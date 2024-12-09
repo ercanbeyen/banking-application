@@ -24,6 +24,8 @@ public final class LogMessage {
     public static final String PROCESSED_AMOUNT = "Amount after {}: {}";
     public static final String NO_ACCOUNT_ACTIVITY_CHANGE = "No change for account activity type of {}";
     public static final String ENOUGH_BALANCE = "Balance is enough for {}";
+    public static final String PAYMENT_DATE_HAS_ARRIVED = "Payment date has arrived for {}. Update the next payment date";
+    public static final String ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED = "Only {}s are going to be processed for {} {}";
 
     public static class Batch {
         public static final String JOB_STATUS = "!!! Job {}! Time to verify the results";
