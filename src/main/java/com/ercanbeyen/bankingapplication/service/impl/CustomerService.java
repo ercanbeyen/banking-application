@@ -303,7 +303,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             String entity = Entity.ACCOUNT.getValue();
 
             if (accountType == AccountType.DEPOSIT) {
-                log.info("Only expected fees are going to be processed for {} {}", accountType, entity);
+                log.info("Only expected fees are going to be processed for {} {}", accountType.getValue(), entity);
                 LocalDate nextPaymentDate = account.getUpdatedAt().plusMonths(account.getDepositPeriod()).toLocalDate();
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
@@ -331,7 +331,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                         case MONTHLY -> nextPaymentDate.plusMonths(1);
                     };
 
-                    if (paymentPeriod == PaymentPeriod.ONE_TIME) {
+                    if (paymentPeriod == PaymentPeriod.ONE_TIME) {  // One Time Transfer Order Case
                         log.info("One Time transfer order. So the expected transaction has already been added");
                         break;
                     }
@@ -402,10 +402,16 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
             LocalDate paymentDate = transferOrder.getTransferDate();
             LocalDate counterDate = LocalDate.now();
             PaymentPeriod paymentPeriod = transferOrder.getRegularTransfer().getPaymentPeriod();
+            AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+
+            if (paymentPeriod == PaymentPeriod.ONE_TIME && doesDateMatchesWithYearAndMonth(paymentDate, year, month)) { // One Time Transfer Order Case
+                addCashFlow(cashFlows, paymentDate, transferOrder.getRegularTransfer().getAmount(), activityType, year, month);
+                log.info("One Time Transfer Order, so related cash flow was 1 and it has already been added");
+                continue;
+            }
 
             while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
                 if (doesDateMatchesWithYearAndMonth(paymentDate, counterDate.getYear(), counterDate.getMonthValue())) {
-                    AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
                     log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, activityType.getValue());
 
                     addCashFlow(cashFlows, paymentDate, transferOrder.getRegularTransfer().getAmount(), activityType, year, month);
@@ -416,11 +422,6 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                         case WEEKLY -> paymentDate.plusWeeks(1);
                         case MONTHLY -> paymentDate.plusMonths(1);
                     };
-
-                    if (paymentPeriod == PaymentPeriod.ONE_TIME) {
-                        log.info("One Time Transfer Order, so related cash flow was 1 and it has already been added");
-                        break;
-                    }
                 }
 
                 counterDate = switch (paymentPeriod) {
