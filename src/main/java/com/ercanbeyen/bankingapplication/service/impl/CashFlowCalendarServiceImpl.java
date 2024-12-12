@@ -30,13 +30,11 @@ public class CashFlowCalendarServiceImpl implements CashFlowCalendarService {
         return savedCashFlowCalendar;
     }
 
-    public void createCashFlow(CashFlowCalendar cashFlowCalendar, AccountActivity accountActivity) {
+    public void createCashFlow(CashFlowCalendar cashFlowCalendar, AccountActivity accountActivity, String explanation) {
         CashFlow cashFlow = new CashFlow();
 
-        cashFlow.setAccountActivityId(accountActivity.getId());
-        cashFlow.setAccountActivityType(accountActivity.getType());
-        cashFlow.setAmount(accountActivity.getAmount());
         cashFlow.setDate(accountActivity.getCreatedAt().toLocalDate());
+        cashFlow.setExplanation(explanation);
 
         cashFlowCalendar.getCashFlows().add(cashFlow);
 

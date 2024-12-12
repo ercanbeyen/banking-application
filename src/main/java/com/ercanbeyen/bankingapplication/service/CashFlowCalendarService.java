@@ -5,5 +5,5 @@ import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 
 public interface CashFlowCalendarService {
     CashFlowCalendar createCashFlowCalendar();
-    void createCashFlow(CashFlowCalendar cashFlowCalendar, AccountActivity accountActivity);
+    void createCashFlow(CashFlowCalendar cashFlowCalendar, AccountActivity accountActivity, String explanation);
 }

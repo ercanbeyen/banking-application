@@ -81,7 +81,15 @@ public class TransactionService {
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
 
-        cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity);
+        String explanation = switch (activityType) {
+            case MONEY_DEPOSIT -> Entity.ACCOUNT.getValue() + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
+            case WITHDRAWAL -> Entity.ACCOUNT.getValue() + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
+            case FEE -> amount + " " + account.getCurrency() + " is transferred to " + Entity.ACCOUNT.getValue() + " " + account.getId();
+            case CHARGE -> amount + " " + account.getCurrency() + " is transferred from " + Entity.ACCOUNT.getValue() + " " + account.getId();
+            default -> throw new ResourceConflictException("Unexpected account activity type");
+        };
+
+        cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
     }
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
@@ -120,8 +128,11 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, accounts);
 
         if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
-            cashFlowCalendarService.createCashFlow(senderAccount.getCustomer().getCashFlowCalendar(), accountActivity);
-            cashFlowCalendarService.createCashFlow(receiverAccount.getCustomer().getCashFlowCalendar(), accountActivity);
+            String entity = Entity.ACCOUNT.getValue();
+            String explanation = entity + " " + senderAccount.getId() + " sent " + amount + " " + senderAccount.getCurrency();
+            cashFlowCalendarService.createCashFlow(senderAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
+            explanation = entity + " " + receiverAccount.getId() + " received " + amount + receiverAccount.getCurrency();
+            cashFlowCalendarService.createCashFlow(receiverAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
         }
     }
 
