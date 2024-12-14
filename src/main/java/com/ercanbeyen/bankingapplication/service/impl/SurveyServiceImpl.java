@@ -2,8 +2,8 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
@@ -16,14 +16,14 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.SurveyMapper;
-import com.ercanbeyen.bankingapplication.option.SurveyFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.SurveyFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.SurveyRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
-import com.ercanbeyen.bankingapplication.util.StatisticsUtils;
-import com.ercanbeyen.bankingapplication.util.SurveyUtils;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.StatisticsUtil;
+import com.ercanbeyen.bankingapplication.util.SurveyUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,17 +43,17 @@ public class SurveyServiceImpl implements SurveyService {
     private final NotificationService notificationService;
 
     @Override
-    public List<SurveyDto> getSurveys(SurveyFilteringOptions filteringOptions) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<SurveyDto> getSurveys(SurveyFilteringOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Predicate<Survey> surveyPredicate = survey -> {
             SurveyCompositeKey key = survey.getKey();
 
-            boolean customerNationalIdFilter = (Optional.ofNullable(filteringOptions.customerNationalId()).isEmpty() || filteringOptions.customerNationalId().equals(key.getCustomerNationalId()));
-            boolean accountActivityTypeFilter = (Optional.ofNullable(filteringOptions.accountActivityType()).isEmpty() || filteringOptions.accountActivityType() == survey.getAccountActivityType());
-            boolean surveyTypeFilter = (Optional.ofNullable(filteringOptions.surveyType()).isEmpty() || filteringOptions.surveyType() == key.getSurveyType());
-            boolean createdAtFilter = (Optional.ofNullable(filteringOptions.createdAt()).isEmpty() || filteringOptions.createdAt().isEqual(key.getCreatedAt().toLocalDate()));
-            boolean validUntilFilter = (Optional.ofNullable(filteringOptions.validUntil()).isEmpty() || filteringOptions.validUntil().isEqual(survey.getValidUntil().toLocalDate()));
+            boolean customerNationalIdFilter = (Optional.ofNullable(filteringOption.customerNationalId()).isEmpty() || filteringOption.customerNationalId().equals(key.getCustomerNationalId()));
+            boolean accountActivityTypeFilter = (Optional.ofNullable(filteringOption.accountActivityType()).isEmpty() || filteringOption.accountActivityType() == survey.getAccountActivityType());
+            boolean surveyTypeFilter = (Optional.ofNullable(filteringOption.surveyType()).isEmpty() || filteringOption.surveyType() == key.getSurveyType());
+            boolean createdAtFilter = (Optional.ofNullable(filteringOption.createdAt()).isEmpty() || filteringOption.createdAt().isEqual(key.getCreatedAt().toLocalDate()));
+            boolean validUntilFilter = (Optional.ofNullable(filteringOption.validUntil()).isEmpty() || filteringOption.validUntil().isEqual(survey.getValidUntil().toLocalDate()));
 
             return customerNationalIdFilter && accountActivityTypeFilter && surveyTypeFilter && createdAtFilter && validUntilFilter;
         };
@@ -71,14 +71,14 @@ public class SurveyServiceImpl implements SurveyService {
 
     @Override
     public SurveyDto getSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         SurveyCompositeKey surveyCompositeKey = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         return surveyMapper.entityToDto(findByKey(surveyCompositeKey));
     }
 
     @Override
     public SurveyDto createSurvey(SurveyDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         checkCustomerAndAccountActivity(request.key().getCustomerNationalId(), request.key().getAccountActivityId());
         AccountActivityDto accountActivityDto = accountActivityService.getAccountActivity(request.key().getAccountActivityId());
@@ -88,7 +88,7 @@ public class SurveyServiceImpl implements SurveyService {
 
         Survey savedSurvey = surveyRepository.save(survey);
         String entity = Entity.SURVEY.getValue();
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, entity, savedSurvey.getKey());
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedSurvey.getKey());
 
         NotificationDto notificationDto = new NotificationDto(
                 savedSurvey.getKey().getCustomerNationalId(),
@@ -102,7 +102,7 @@ public class SurveyServiceImpl implements SurveyService {
 
     @Override
     public SurveyDto updateSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, SurveyDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
@@ -119,31 +119,31 @@ public class SurveyServiceImpl implements SurveyService {
 
     @Override
     public void deleteSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         String entity = Entity.SURVEY.getValue();
 
         surveyRepository.findById(key)
                 .ifPresentOrElse(survey -> {
-                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    log.info(LogMessage.RESOURCE_FOUND, entity);
                     surveyRepository.deleteById(key);
                 }, () -> {
-                    log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
+                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
                 });
 
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, key);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, key);
     }
 
     @Override
     public SurveyDto updateValidationTime(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, LocalDateTime request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
         LocalDateTime now = LocalDateTime.now();
-        LocalDateTime nearestValidationTime = SurveyUtils.getNearestValidationTime();
+        LocalDateTime nearestValidationTime = SurveyUtil.getNearestValidationTime();
 
         if (request.isBefore(nearestValidationTime)) {
             throw new ResourceConflictException(String.format("Validation time cannot be before %s", nearestValidationTime));
@@ -159,7 +159,7 @@ public class SurveyServiceImpl implements SurveyService {
 
     @Override
     public SurveyStatisticsResponse<Integer, Integer> getSurveyStatistics(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, Integer minimumFrequency) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
@@ -174,7 +174,7 @@ public class SurveyServiceImpl implements SurveyService {
                 .map(Rating::getRate)
                 .toList();
 
-        FrequencyStatisticsResponse<Integer, Integer> frequencyStatisticsResponse = new FrequencyStatisticsResponse<>(StatisticsUtils.getFrequencies(rates, minimumFrequency));
+        FrequencyStatisticsResponse<Integer, Integer> frequencyStatisticsResponse = new FrequencyStatisticsResponse<>(StatisticsUtil.getFrequencies(rates, minimumFrequency));
         Double average = ratings
                 .stream()
                 .mapToDouble(Rating::getRate)
@@ -189,9 +189,9 @@ public class SurveyServiceImpl implements SurveyService {
         String entity = Entity.SURVEY.getValue();
 
         Survey survey = surveyRepository.findById(key)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return survey;
     }
@@ -200,16 +200,16 @@ public class SurveyServiceImpl implements SurveyService {
         String entity = Entity.CUSTOMER.getValue();
 
         if (!customerService.existsByNationalId(customerNationalId)) {
-            log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
-            throw new ResourceExpectationFailedException(String.format(ResponseMessages.NOT_FOUND, entity));
+            log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+            throw new ResourceExpectationFailedException(String.format(ResponseMessage.NOT_FOUND, entity));
         }
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
         entity = Entity.ACCOUNT_ACTIVITY.getValue();
 
         if (!accountActivityService.existsByIdAndCustomerNationalId(accountActivityId, customerNationalId)) {
             String customerEntity = Entity.CUSTOMER.getValue();
-            log.error(LogMessages.RESOURCE_NOT_FOUND + " in {}", entity, customerEntity);
+            log.error(LogMessage.RESOURCE_NOT_FOUND + " in {}", entity, customerEntity);
             throw new ResourceExpectationFailedException(entity + " is not related with " + customerEntity);
         }
     }

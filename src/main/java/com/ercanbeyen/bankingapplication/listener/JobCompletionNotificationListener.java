@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.listener;
 
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
@@ -14,14 +14,14 @@ public class JobCompletionNotificationListener extends JobExecutionListenerSuppo
     @Override
     public void afterJob(JobExecution jobExecution) {
         if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
-            log.info(LogMessages.Batch.JOB_STATUS, "FINISHED");
+            log.info(LogMessage.Batch.JOB_STATUS, "FINISHED");
         }
     }
 
     @Override
     public void beforeJob(JobExecution jobExecution) {
         if (jobExecution.getStatus() == BatchStatus.STARTING) {
-            log.info(LogMessages.Batch.JOB_STATUS, "STARTED");
+            log.info(LogMessage.Batch.JOB_STATUS, "STARTED");
         }
     }
 }

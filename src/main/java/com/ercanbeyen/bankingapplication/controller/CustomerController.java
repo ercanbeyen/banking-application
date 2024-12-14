@@ -4,17 +4,20 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.entity.File;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOptions;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
+import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
-import com.ercanbeyen.bankingapplication.util.CustomerUtils;
-import com.ercanbeyen.bankingapplication.util.PhotoUtils;
-import com.ercanbeyen.bankingapplication.util.TransferOrderUtils;
+import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
+import com.ercanbeyen.bankingapplication.util.CustomerUtil;
+import com.ercanbeyen.bankingapplication.util.PhotoUtil;
+import com.ercanbeyen.bankingapplication.util.TransferOrderUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.hibernate.validator.constraints.Range;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -27,7 +30,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/customers")
 @Slf4j
-public class CustomerController extends BaseController<CustomerDto, CustomerFilteringOptions> {
+public class CustomerController extends BaseController<CustomerDto, CustomerFilteringOption> {
     private final CustomerService customerService;
 
     public CustomerController(CustomerService customerService) {
@@ -38,20 +41,20 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PostMapping
     @Override
     public ResponseEntity<CustomerDto> createEntity(@RequestBody @Valid CustomerDto request) {
-        CustomerUtils.checkRequest(request);
+        CustomerUtil.checkRequest(request);
         return new ResponseEntity<>(customerService.createEntity(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @Override
     public ResponseEntity<CustomerDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid CustomerDto request) {
-        CustomerUtils.checkRequest(request);
+        CustomerUtil.checkRequest(request);
         return ResponseEntity.ok(customerService.updateEntity(id, request));
     }
 
     @PostMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") Integer id, @RequestParam("file") MultipartFile file) {
-        PhotoUtils.checkPhoto(file);
+        PhotoUtil.checkPhoto(file);
         MessageResponse<String> response = new MessageResponse<>(customerService.uploadProfilePhoto(id, file));
         return ResponseEntity.ok(response);
     }
@@ -80,13 +83,13 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @GetMapping("/{id}/accounts")
-    public ResponseEntity<List<AccountDto>> getAccounts(@PathVariable("id") Integer id, AccountFilteringOptions options) {
-        return ResponseEntity.ok(customerService.getAccounts(id, options));
+    public ResponseEntity<List<AccountDto>> getAccounts(@PathVariable("id") Integer id, AccountFilteringOption option) {
+        return ResponseEntity.ok(customerService.getAccounts(id, option));
     }
 
     @GetMapping("/{id}/account-activities")
-    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") Integer id, AccountActivityFilteringOptions options) {
-        return ResponseEntity.ok(customerService.getAccountActivities(id, options));
+    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") Integer id, AccountActivityFilteringOption filteringOption) {
+        return ResponseEntity.ok(customerService.getAccountActivities(id, filteringOption));
     }
 
     @GetMapping("/{id}/notifications")
@@ -101,7 +104,22 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
             @RequestParam("to") LocalDate toDate,
             @RequestParam(value = "currency", required = false) Currency currency,
             @RequestParam(value = "payment-type", required = false) PaymentType paymentType) {
-        TransferOrderUtils.checkDatesBeforeFiltering(fromDate, toDate);
+        TransferOrderUtil.checkDatesBeforeFiltering(fromDate, toDate);
         return ResponseEntity.ok(customerService.getTransferOrders(id, fromDate, toDate, currency, paymentType));
+    }
+
+    @GetMapping("/{id}/cash-flow-calendar")
+    public ResponseEntity<CashFlowCalendarDto> getCashFlowCalendar(
+            @PathVariable("id") Integer id,
+            @RequestParam("year") Integer year,
+            @RequestParam("month") @Range(min = 1, max = 12, message = "Month should be between {min} and {max}") Integer month) {
+        CashFlowCalendarUtil.checkMonthAndYearForCashFlowCalendar(year, month);
+        return ResponseEntity.ok(customerService.getCashFlowCalendar(id, year, month));
+    }
+
+    @GetMapping("/{id}/expected-transactions")
+    public ResponseEntity<List<ExpectedTransaction>> getExpectedTransactions(@PathVariable("id") Integer id, @RequestParam(value = "month", defaultValue = "1") Integer month) {
+        CashFlowCalendarUtil.checkMonthValueForExpectedTransactions(month);
+        return ResponseEntity.ok(customerService.getExpectedTransactions(id, month));
     }
 }

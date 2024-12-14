@@ -4,11 +4,11 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.impl.AccountService;
-import com.ercanbeyen.bankingapplication.util.AccountUtils;
+import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.HttpStatus;
@@ -19,7 +19,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
-public class AccountController extends BaseController<AccountDto, AccountFilteringOptions> {
+public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;
 
     public AccountController(AccountService accountService) {
@@ -30,14 +30,14 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PostMapping
     @Override
     public ResponseEntity<AccountDto> createEntity(@RequestBody @Valid AccountDto request) {
-        AccountUtils.checkRequest(request);
+        AccountUtil.checkRequest(request);
         return new ResponseEntity<>(accountService.createEntity(request), HttpStatus.CREATED);
     }
 
     @PutMapping("/{id}")
     @Override
     public ResponseEntity<AccountDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid AccountDto request) {
-        AccountUtils.checkRequest(request);
+        AccountUtil.checkRequest(request);
         return new ResponseEntity<>(accountService.updateEntity(id, request), HttpStatus.OK);
     }
 
@@ -46,7 +46,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @PathVariable("id") Integer id,
             @RequestParam("activityType") AccountActivityType activityType,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        AccountUtils.checkAccountActivityForCurrentAccount(activityType);
+        AccountUtil.checkAccountActivityForCurrentAccount(activityType);
         MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfAccount(id, activityType, amount));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -59,14 +59,14 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PutMapping("/transfer")
     public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid MoneyTransferRequest request) {
-        AccountUtils.checkMoneyTransferRequest(request);
+        AccountUtil.checkMoneyTransferRequest(request);
         MessageResponse<String> response = new MessageResponse<>(accountService.transferMoney(request));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PutMapping("/exchange")
     public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid MoneyExchangeRequest request) {
-        AccountUtils.checkMoneyExchangeRequest(request);
+        AccountUtil.checkMoneyExchangeRequest(request);
         MessageResponse<String> response = new MessageResponse<>(accountService.exchangeMoney(request));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

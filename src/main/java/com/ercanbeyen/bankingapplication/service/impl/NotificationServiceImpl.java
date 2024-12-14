@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.Notification;
@@ -10,7 +10,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.NotificationMapper;
 import com.ercanbeyen.bankingapplication.repository.NotificationRepository;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
@@ -30,7 +30,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Async
     @Override
     public CompletableFuture<NotificationDto> createNotification(NotificationDto notificationDto) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         return CompletableFuture.supplyAsync(() -> {
             Notification notification = notificationMapper.dtoToEntity(notificationDto);
@@ -38,7 +38,7 @@ public class NotificationServiceImpl implements NotificationService {
             notification.setCustomer(customer);
 
             Notification savedNotification = notificationRepository.save(notification);
-            log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.NOTIFICATION.getValue(), savedNotification.getId());
+            log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.NOTIFICATION.getValue(), savedNotification.getId());
 
             return notificationMapper.entityToDto(savedNotification);
         });
@@ -46,20 +46,20 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Override
     public String deleteNotification(String id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.NOTIFICATION.getValue();
 
         notificationRepository.findById(id)
                 .ifPresentOrElse(notification -> {
-                    log.info(LogMessages.RESOURCE_FOUND, entity);
+                    log.info(LogMessage.RESOURCE_FOUND, entity);
                     notificationRepository.deleteById(id);
                 }, () -> {
-                    log.error(LogMessages.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity));
+                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
                 });
 
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, entity, id);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
 
         return entity + " " + id + " is successfully deleted";
     }
@@ -67,10 +67,10 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     @Override
     public void deleteNotifications(String nationalId) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = customerService.findByNationalId(nationalId);
-        log.info(LogMessages.RESOURCE_FOUND, Entity.CUSTOMER.getValue());
+        log.info(LogMessage.RESOURCE_FOUND, Entity.CUSTOMER.getValue());
 
         notificationRepository.deleteAllByCustomer(customer);
     }

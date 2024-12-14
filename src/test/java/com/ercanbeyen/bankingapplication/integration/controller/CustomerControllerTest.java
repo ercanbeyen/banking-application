@@ -1,10 +1,8 @@
 package com.ercanbeyen.bankingapplication.integration.controller;
 
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
-import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
-import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.google.gson.Gson;
 import io.restassured.RestAssured;
 import io.restassured.builder.MultiPartSpecBuilder;
@@ -46,8 +44,6 @@ class CustomerControllerTest {
     private static final String PHOTOS_LOCATION = "C:\\Users\\ercanbeyen\\Photos\\Banking-App\\Source\\Test\\Resources\\";
     @LocalServerPort
     private Integer port;
-    @Autowired
-    private CustomerRepository customerRepository;
     @Autowired
     private Gson gson;
 
@@ -105,26 +101,19 @@ class CustomerControllerTest {
     @DisplayName("Happy path test: Create customer case")
     void givenCustomerDto_whenCreateEntity_thenReturnCustomerDto() {
         CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
-        String body = gson.toJson(request);
+        generateCustomer(request);
 
-        given()
-                .contentType(ContentType.JSON)
-                .body(body)
-                .when()
-                .post(CUSTOMER_COLLECTION_ENDPOINT)
-                .then()
-                .assertThat()
-                .statusCode(HttpStatus.CREATED.value())
-                .body("nationalId", equalTo(request.getNationalId()));
+        request = MockCustomerFactory.generateMockCustomerDtos().get(1);
+        generateCustomer(request);
+
+        request = MockCustomerFactory.generateMockCustomerDtos().getLast();
+        generateCustomer(request);
     }
 
     @Test
     @Order(3)
     @DisplayName("Happy path test: Get customers case with birth date")
     void givenBirthDate_whenGetEntities_thenReturnCustomerDtos() {
-        Customer newCustomer = MockCustomerFactory.generateMockCustomers().getLast();
-        customerRepository.save(newCustomer);
-
         given()
                 .queryParam("birthDate", String.valueOf(MockCustomerFactory.generateMockCustomers().getFirst().getBirthDate()))
                 .when()
@@ -176,7 +165,7 @@ class CustomerControllerTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.BAD_REQUEST.value())
-                .body("phoneNumber", equalTo(ResponseMessages.INVALID_PHONE_NUMBER));
+                .body("phoneNumber", equalTo(ResponseMessage.INVALID_PHONE_NUMBER));
     }
 
     @Test
@@ -206,7 +195,7 @@ class CustomerControllerTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.OK.value())
-                .body("response", equalTo(ResponseMessages.FILE_UPLOAD_SUCCESS));
+                .body("response", equalTo(ResponseMessage.FILE_UPLOAD_SUCCESS));
     }
 
     @Test
@@ -224,7 +213,7 @@ class CustomerControllerTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.EXPECTATION_FAILED.value())
-                .body("message", equalTo(ResponseMessages.INVALID_PHOTO_CONTENT_TYPE));
+                .body("message", equalTo(ResponseMessage.INVALID_PHOTO_CONTENT_TYPE));
     }
 
     private static MultiPartSpecification constructMultiPartSpecification(String profilePhotoName, String mediaType) throws IOException {
@@ -245,5 +234,19 @@ class CustomerControllerTest {
                 .get(CUSTOMER_RESOURCE_ENDPOINT + "/photo", 2)
                 .then()
                 .statusCode(HttpStatus.OK.value());
+    }
+
+    private void generateCustomer(CustomerDto request) {
+        String body = gson.toJson(request);
+
+        given()
+                .contentType(ContentType.JSON)
+                .body(body)
+                .when()
+                .post(CUSTOMER_COLLECTION_ENDPOINT)
+                .then()
+                .assertThat()
+                .statusCode(HttpStatus.CREATED.value())
+                .body("nationalId", equalTo(request.getNationalId()));
     }
 }

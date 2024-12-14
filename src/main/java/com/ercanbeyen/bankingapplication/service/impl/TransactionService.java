@@ -1,17 +1,19 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
-import com.ercanbeyen.bankingapplication.util.AccountUtils;
+import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
+import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -33,6 +35,7 @@ public class TransactionService {
     private final ExchangeService exchangeService;
     private final ChargeService chargeService;
     private final FeeService feeService;
+    private final CashFlowCalendarService cashFlowCalendarService;
 
     public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account) {
         Account[] accounts = new Account[2]; // first account is sender, second account is receiver
@@ -47,7 +50,7 @@ public class TransactionService {
                 newBalance = account.getBalance() - amount;
                 accounts[0] = account; // sender
             }
-            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
         account.setBalance(newBalance);
@@ -55,7 +58,7 @@ public class TransactionService {
         if (account.getType() == AccountType.DEPOSIT) {
             log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
             double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
-            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
+            double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
 
             account.setInterestRatio(interestRatio);
             account.setBalanceAfterNextFee(balanceAfterNextFee);
@@ -75,8 +78,18 @@ public class TransactionService {
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
-        createAccountActivity(activityType, amount, summary, accounts, null);
+        AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
+
+        String explanation = switch (activityType) {
+            case MONEY_DEPOSIT -> Entity.ACCOUNT.getValue() + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
+            case WITHDRAWAL -> Entity.ACCOUNT.getValue() + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
+            case FEE -> amount + " " + account.getCurrency() + " is transferred to " + Entity.ACCOUNT.getValue() + " " + account.getId();
+            case CHARGE -> amount + " " + account.getCurrency() + " is transferred from " + Entity.ACCOUNT.getValue() + " " + account.getId();
+            default -> throw new ResourceConflictException("Unexpected account activity type");
+        };
+
+        cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
     }
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
@@ -111,8 +124,16 @@ public class TransactionService {
         summary.put(SummaryFields.PAYMENT_TYPE,  request.paymentType());
         summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
 
-        createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
+        AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
         createAccountActivityForCharge(transactionFee, summary, accounts);
+
+        if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
+            String entity = Entity.ACCOUNT.getValue();
+            String explanation = entity + " " + senderAccount.getId() + " sent " + amount + " " + senderAccount.getCurrency();
+            cashFlowCalendarService.createCashFlow(senderAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
+            explanation = entity + " " + receiverAccount.getId() + " received " + amount + receiverAccount.getCurrency();
+            cashFlowCalendarService.createCashFlow(receiverAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
+        }
     }
 
     public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
@@ -137,10 +158,10 @@ public class TransactionService {
         accountRepository.saveAllAndFlush(List.of(sellerAccount, chargedAccount, buyerAccount));
 
         String spentAmountInSummary = FormatterUtil.convertNumberToFormalExpression(spentAmount);
-        log.info(LogMessages.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
+        log.info(LogMessage.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
 
         String earnedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(earnedAmount);
-        log.info(LogMessages.PROCESSED_AMOUNT, earnedAmountInSummary, "Earn");
+        log.info(LogMessage.PROCESSED_AMOUNT, earnedAmountInSummary, "Earn");
 
         Account[] accounts = {sellerAccount, buyerAccount};
 
@@ -172,7 +193,7 @@ public class TransactionService {
             }
             case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL -> 0;
             case AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE -> chargeService.getAmountByActivityType(activityType);
-            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         };
     }
 
@@ -185,8 +206,8 @@ public class TransactionService {
         createAccountActivity(AccountActivityType.CHARGE, transactionFee, summary, accounts, null);
     }
 
-    private void createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
+    private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
-        accountActivityService.createAccountActivity(accountActivityRequest);
+        return accountActivityService.createAccountActivity(accountActivityRequest);
     }
 }

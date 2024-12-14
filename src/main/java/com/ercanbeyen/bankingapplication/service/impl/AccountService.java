@@ -2,8 +2,8 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
@@ -18,16 +18,16 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOptions;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOptions;
+import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
-import com.ercanbeyen.bankingapplication.util.AccountUtils;
-import com.ercanbeyen.bankingapplication.util.ExchangeUtils;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.AccountUtil;
+import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,7 +41,7 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AccountService implements BaseService<AccountDto, AccountFilteringOptions> {
+public class AccountService implements BaseService<AccountDto, AccountFilteringOption> {
     private static final Currency CHARGE_CURRENCY = Currency.getChargeCurrency();
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
@@ -54,14 +54,14 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final FeeService feeService;
 
     @Override
-    public List<AccountDto> getEntities(AccountFilteringOptions options) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<AccountDto> getEntities(AccountFilteringOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Predicate<Account> accountPredicate = account -> {
-            boolean typeFilter = (Optional.ofNullable(options.getType()).isEmpty() || options.getType() == account.getType());
-            boolean timeFilter = (Optional.ofNullable(options.getCreatedAt()).isEmpty() || options.getCreatedAt().isEqual(options.getCreatedAt()));
-            boolean blockedFilter = (Optional.ofNullable(options.getIsBlocked()).isEmpty() || options.getIsBlocked() == account.isBlocked());
-            boolean closedAtFilter = (Optional.ofNullable(options.getIsClosed()).isEmpty() || options.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
+            boolean typeFilter = (Optional.ofNullable(filteringOption.getType()).isEmpty() || filteringOption.getType() == account.getType());
+            boolean timeFilter = (Optional.ofNullable(filteringOption.getCreatedAt()).isEmpty() || filteringOption.getCreatedAt().isEqual(filteringOption.getCreatedAt()));
+            boolean blockedFilter = (Optional.ofNullable(filteringOption.getIsBlocked()).isEmpty() || filteringOption.getIsBlocked() == account.isBlocked());
+            boolean closedAtFilter = (Optional.ofNullable(filteringOption.getIsClosed()).isEmpty() || filteringOption.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
             return typeFilter && timeFilter && blockedFilter && closedAtFilter;
         };
 
@@ -74,14 +74,14 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
     @Override
     public AccountDto getEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return accountMapper.entityToDto(findById(id));
     }
 
     @Transactional
     @Override
     public AccountDto createEntity(AccountDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = accountMapper.dtoToEntity(request);
         Customer customer = customerService.findByNationalId(request.getCustomerNationalId());
@@ -97,7 +97,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         account.setBranch(branch);
 
         Account savedAccount = accountRepository.save(account);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
 
         createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
 
@@ -107,7 +107,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     @Transactional
     @Override
     public AccountDto updateEntity(Integer id, AccountDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
 
@@ -116,7 +116,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         if (account.getType() == AccountType.DEPOSIT && !Objects.equals(account.getDepositPeriod(), request.getDepositPeriod())) {
             double interestRatio = feeService.getInterestRatio(account.getCurrency(), request.getDepositPeriod(), account.getBalance());
-            double balanceAfterNextFee = AccountUtils.calculateBalanceAfterNextFee(account.getBalance(), request.getDepositPeriod(), interestRatio);
+            double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(account.getBalance(), request.getDepositPeriod(), interestRatio);
 
             account.setDepositPeriod(request.getDepositPeriod());
             account.setInterestRatio(interestRatio);
@@ -128,20 +128,20 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
     @Override
     public void deleteEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         if (!accountRepository.existsById(id)) {
-            throw new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, Entity.ACCOUNT.getValue()));
+            throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.ACCOUNT.getValue()));
         }
 
-        log.info(LogMessages.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
+        log.info(LogMessage.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
 
         accountRepository.deleteById(id);
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, Entity.ACCOUNT.getValue(), id);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.ACCOUNT.getValue(), id);
     }
 
     public String updateBalanceOfAccount(Integer id, AccountActivityType activityType, Double amount) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
         checkBalanceBeforeSingleAccountOperations(account, amount, activityType);
@@ -152,20 +152,20 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         NotificationDto notificationDto = constructNotificationForBalanceUpdate(activityType, amount, account);
         notificationService.createNotification(notificationDto);
 
-        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
     public String updateBalanceOfDepositAccountMonthly(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
 
-        if (!AccountUtils.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositPeriod())) {
+        if (!AccountUtil.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositPeriod())) {
             log.warn("Deposit period is not completed");
             return "Today is not the completion of deposit period";
         }
 
-        Double amount = AccountUtils.calculateInterest(account.getBalance(), account.getDepositPeriod(), account.getInterestRatio());
+        Double amount = AccountUtil.calculateInterest(account.getBalance(), account.getDepositPeriod(), account.getInterestRatio());
         AccountActivityType activityType = AccountActivityType.FEE;
 
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
@@ -175,11 +175,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         String response = activityType.getValue() + " transfer";
 
-        return String.format(ResponseMessages.SUCCESS, response);
+        return String.format(ResponseMessage.SUCCESS, response);
     }
 
     public String transferMoney(MoneyTransferRequest request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account senderAccount = findActiveAccountById(request.senderAccountId());
         Account receiverAccount = findActiveAccountById(request.receiverAccountId());
@@ -203,11 +203,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         notificationService.createNotification(senderNotificationDto);
         notificationService.createNotification(receiverNotificationDto);
 
-        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
     public String exchangeMoney(MoneyExchangeRequest request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account sellerAccount = findActiveAccountById(request.sellerAccountId());
         Account buyerAccount = findActiveAccountById(request.buyerAccountId());
@@ -224,12 +224,12 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, chargedAccount);
 
-        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
     @Transactional
     public String updateBlockStatus(Integer id, boolean status) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findById(id);
         checkAccountClosed(account);
@@ -249,12 +249,12 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         String message = status ? activityType.getValue()
                 : "Account blockage removal";
 
-        return String.format(ResponseMessages.SUCCESS, message);
+        return String.format(ResponseMessage.SUCCESS, message);
     }
 
     @Transactional
     public String closeAccount(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
         double balance = account.getBalance();
@@ -269,11 +269,11 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
         createAccountActivityForAccountStatusUpdate(account, activityType);
 
-        return String.format(ResponseMessages.SUCCESS, activityType.getValue());
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
     public String getTotalActiveAccounts(AccountType type, Currency currency, City city) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         int count = accountRepository.getTotalAccountsByCityAndTypeAndCurrency(
                 city.name(),
@@ -287,12 +287,12 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     }
 
     public List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
     }
 
     public Account getChargedAccount(Integer extraChargedAccountId, List<Account> relatedAccounts) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account chargedAccount;
 
@@ -307,7 +307,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     }
 
     public Account findChargedAccountById(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
 
@@ -321,19 +321,19 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             throw new ResourceConflictException(String.format("Charged account type should be %s", accountType));
         }
 
-        log.info(LogMessages.RESOURCE_FOUND, "Charged " + Entity.ACCOUNT.getValue());
+        log.info(LogMessage.RESOURCE_FOUND, "Charged " + Entity.ACCOUNT.getValue());
 
         return account;
     }
 
     public Account findActiveAccountById(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findById(id);
         checkAccountBlocked(account);
         checkAccountClosed(account);
 
-        log.info(LogMessages.RESOURCE_FOUND, "Active " + Entity.ACCOUNT.getValue());
+        log.info(LogMessage.RESOURCE_FOUND, "Active " + Entity.ACCOUNT.getValue());
 
         return account;
     }
@@ -341,32 +341,32 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private Account findById(Integer id) {
         String entity = Entity.ACCOUNT.getValue();
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return account;
     }
 
     private static void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount) {
-        AccountUtils.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
+        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
         if (senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
             log.warn("Same customer is transferring money between accounts");
             return;
         }
 
-        AccountUtils.checkAccountsTypesBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
     }
 
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
-        ExchangeUtils.checkCurrenciesBeforeMoneyExchange(sellerAccount.getCurrency(), buyerAccount.getCurrency());
+        ExchangeUtil.checkCurrenciesBeforeMoneyExchange(sellerAccount.getCurrency(), buyerAccount.getCurrency());
 
         if (!buyerAccount.getCustomer().getNationalId().equals(sellerAccount.getCustomer().getNationalId())) {
             throw new ResourceConflictException(String.format("Money %s between different customers is disallowed", Entity.EXCHANGE.getValue()));
         }
 
-        AccountUtils.checkAccountsTypesBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType());
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType());
     }
 
     private Account getChargedAccountInMoneyExchange(Integer id, List<Account> accounts) {
@@ -420,8 +420,8 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
         for (Account currentAccount : account.getCustomer().getAccounts()) {
-            AccountActivityFilteringOptions filteringOptions = constructAccountActivityFilteringOptions(currentAccount.getId(), activityType);
-            accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOptions, account.getCurrency()));
+            AccountActivityFilteringOption filteringOption = constructAccountActivityFilteringOption(currentAccount.getId(), activityType);
+            accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency()));
         }
 
         double dailyActivityAmount = accountActivityDtos.stream()
@@ -445,7 +445,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         String message = switch (activityType) {
             case MONEY_DEPOSIT, FEE -> "%s %s has been deposited into your %s %s";
             case WITHDRAWAL, CHARGE -> "%s %s has been withdrawn from your %s %s";
-            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         };
 
         return new NotificationDto(
@@ -454,17 +454,17 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         );
     }
 
-    private static AccountActivityFilteringOptions constructAccountActivityFilteringOptions(Integer accountId, AccountActivityType activityType) {
+    private static AccountActivityFilteringOption constructAccountActivityFilteringOption(Integer accountId, AccountActivityType activityType) {
         Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is receiver id
 
         switch (activityType) {
             case AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER,
                  AccountActivityType.MONEY_EXCHANGE -> accountIds[0] = accountId;
             case AccountActivityType.MONEY_DEPOSIT -> accountIds[1] = accountId;
-            default -> throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT_ACTIVITY);
+            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
-        return new AccountActivityFilteringOptions(
+        return new AccountActivityFilteringOption(
                 List.of(activityType),
                 accountIds[0],
                 accountIds[1],
@@ -479,7 +479,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         if (account.isBlocked()) {
             log.error("{} {} has been blocked", entity, id);
-            throw new ResourceConflictException(ResponseMessages.IMPROPER_ACCOUNT + ". It has been blocked");
+            throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT + ". It has been blocked");
         }
 
         log.info("{} {} has not been blocked", entity, id);
@@ -492,7 +492,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         if (Optional.ofNullable(closedAt).isPresent()) {
             log.error("{} {} has already been closed at {}", entity, id, closedAt);
-            throw new ResourceConflictException(String.format(ResponseMessages.IMPROPER_ACCOUNT + ". It has already been closed at %s", closedAt));
+            throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_ACCOUNT + ". It has already been closed at %s", closedAt));
         }
 
         log.info("{} {} has not been closed", entity, id);
@@ -521,41 +521,41 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
     private void checkBalanceBeforeSingleAccountOperations(Account account, Double requestedAmount, AccountActivityType activityType) {
         Double transactionFee = transactionService.getTransactionFee(activityType, List.of(account));
-        log.info(LogMessages.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
+        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
 
         if (activityType == AccountActivityType.MONEY_DEPOSIT || activityType == AccountActivityType.FEE) {
             if (account.getBalance() < transactionFee) {
-                throw new ResourceExpectationFailedException(ResponseMessages.TRANSACTION_FEE_CANNOT_BE_PAYED);
+                throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
             }
         } else if (account.getBalance() < requestedAmount + transactionFee) { // Withdrawal case
-            throw new ResourceExpectationFailedException(ResponseMessages.INSUFFICIENT_FUNDS);
+            throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
         }
 
-        log.info(LogMessages.ENOUGH_BALANCE, activityType);
+        log.info(LogMessage.ENOUGH_BALANCE, activityType);
     }
 
     private void checkBalanceBeforeMoneyTransferAndExchange(Account chargedAccount, List<Account> relatedAccounts, Double requestedAmount, AccountActivityType activityType) {
         Double transactionFee = transactionService.getTransactionFee(activityType, relatedAccounts);
-        log.info(LogMessages.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
+        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
 
         if (Objects.equals(chargedAccount.getId(), relatedAccounts.getFirst().getId())) {
             log.info("Extra charged account does not exist");
 
             if (chargedAccount.getBalance() < (requestedAmount + transactionFee)) {
-                throw new ResourceExpectationFailedException(ResponseMessages.INSUFFICIENT_FUNDS);
+                throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
             }
         } else {
             log.info("Extra charged account exists");
 
             if (chargedAccount.getBalance() < transactionFee) {
-                throw new ResourceExpectationFailedException(ResponseMessages.TRANSACTION_FEE_CANNOT_BE_PAYED);
+                throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
             }
 
             if (relatedAccounts.getFirst().getBalance() < requestedAmount) {
-                throw new ResourceExpectationFailedException(ResponseMessages.INSUFFICIENT_FUNDS);
+                throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
             }
         }
 
-        log.info(LogMessages.ENOUGH_BALANCE, activityType);
+        log.info(LogMessage.ENOUGH_BALANCE, activityType);
     }
 }

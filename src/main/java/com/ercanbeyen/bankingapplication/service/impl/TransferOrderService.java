@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessages;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessages;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.RegularTransferDto;
 import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
 import com.ercanbeyen.bankingapplication.embeddable.RegularTransfer;
@@ -10,11 +10,11 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.TransferOrder;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.TransferOrderMapper;
-import com.ercanbeyen.bankingapplication.option.TransferOrderOptions;
+import com.ercanbeyen.bankingapplication.option.TransferOrderOption;
 import com.ercanbeyen.bankingapplication.repository.TransferOrderRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.util.AccountUtils;
-import com.ercanbeyen.bankingapplication.util.LoggingUtils;
+import com.ercanbeyen.bankingapplication.util.AccountUtil;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,21 +25,21 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class TransferOrderService implements BaseService<TransferOrderDto, TransferOrderOptions> {
+public class TransferOrderService implements BaseService<TransferOrderDto, TransferOrderOption> {
     private final TransferOrderRepository transferOrderRepository;
     private final TransferOrderMapper transferOrderMapper;
     private final AccountService accountService;
 
     @Override
-    public List<TransferOrderDto> getEntities(TransferOrderOptions options) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+    public List<TransferOrderDto> getEntities(TransferOrderOption filteringOption) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Predicate<TransferOrder> transferOrderPredicate = transferOrder -> {
             RegularTransfer regularTransfer = transferOrder.getRegularTransfer();
-            boolean senderAccountIdFilter = (options.getSenderAccountId() == null || options.getSenderAccountId().equals(transferOrder.getSenderAccount().getId()));
-            boolean receiverAccountIdFilter = (options.getReceiverAccountId() == null || options.getReceiverAccountId().equals(regularTransfer.getReceiverAccount().getId()));
-            boolean transferDateFilter = (options.getTransferDate() == null || options.getTransferDate().isEqual(transferOrder.getTransferDate()));
-            boolean paymentTypeFilter = (options.getPaymentType() == null || options.getPaymentType() == regularTransfer.getPaymentType());
+            boolean senderAccountIdFilter = (filteringOption.getSenderAccountId() == null || filteringOption.getSenderAccountId().equals(transferOrder.getSenderAccount().getId()));
+            boolean receiverAccountIdFilter = (filteringOption.getReceiverAccountId() == null || filteringOption.getReceiverAccountId().equals(regularTransfer.getReceiverAccount().getId()));
+            boolean transferDateFilter = (filteringOption.getTransferDate() == null || filteringOption.getTransferDate().isEqual(transferOrder.getTransferDate()));
+            boolean paymentTypeFilter = (filteringOption.getPaymentType() == null || filteringOption.getPaymentType() == regularTransfer.getPaymentType());
 
             return senderAccountIdFilter && receiverAccountIdFilter && transferDateFilter && paymentTypeFilter;
         };
@@ -53,25 +53,25 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
 
     @Override
     public TransferOrderDto getEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         TransferOrder transferOrder = findById(id);
         return transferOrderMapper.entityToDto(transferOrder);
     }
 
     @Override
     public TransferOrderDto createEntity(TransferOrderDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         TransferOrder transferOrder = constructTransferOrder(request);
         TransferOrder savedTransferOrder = transferOrderRepository.save(transferOrder);
-        log.info(LogMessages.RESOURCE_CREATE_SUCCESS, Entity.TRANSFER_ORDER.getValue(), savedTransferOrder.getId());
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.TRANSFER_ORDER.getValue(), savedTransferOrder.getId());
 
         return transferOrderMapper.entityToDto(savedTransferOrder);
     }
 
     @Override
     public TransferOrderDto updateEntity(Integer id, TransferOrderDto request) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         TransferOrder transferOrder = findById(id);
 
@@ -93,10 +93,10 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
 
     @Override
     public void deleteEntity(Integer id) {
-        log.info(LogMessages.ECHO, LoggingUtils.getCurrentClassName(), LoggingUtils.getCurrentMethodName());
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         TransferOrder transferOrder = findById(id);
         transferOrderRepository.delete(transferOrder);
-        log.info(LogMessages.RESOURCE_DELETE_SUCCESS, Entity.TRANSFER_ORDER.getValue(), id);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.TRANSFER_ORDER.getValue(), id);
     }
 
     private TransferOrder constructTransferOrder(TransferOrderDto request) {
@@ -132,7 +132,8 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         Account senderAccount = accountService.findActiveAccountById(request.getSenderAccountId());
         Account receiverAccount = accountService.findActiveAccountById(request.getRegularTransferDto().receiverAccountId());
 
-        AccountUtils.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
+        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
         Account chargedAccount = accountService.getChargedAccount(request.getChargedAccountId(), List.of(senderAccount));
 
@@ -142,9 +143,9 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
     private TransferOrder findById(Integer id) {
         String entity = Entity.TRANSFER_ORDER.getValue();
         TransferOrder transferOrder = transferOrderRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessages.NOT_FOUND, entity)));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
-        log.info(LogMessages.RESOURCE_FOUND, entity);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return transferOrder;
     }
