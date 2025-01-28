@@ -19,7 +19,7 @@ import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
-import com.ercanbeyen.bankingapplication.service.FileStorageService;
+import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
@@ -45,7 +45,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final TransferOrderMapper transferOrderMapper;
     private final NotificationMapper notificationMapper;
     private final CashFlowCalendarMapper cashFlowCalendarMapper;
-    private final FileStorageService fileStorageService;
+    private final FileService fileService;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
     private final CashFlowCalendarService cashFlowCalendarService;
@@ -126,7 +126,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
-        CompletableFuture<File> photo = fileStorageService.storeFile(file);
+        CompletableFuture<File> photo = fileService.storeFile(file);
         customer.setProfilePhoto(photo.join()); // Profile photo upload
         customerRepository.save(customer);
 

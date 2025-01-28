@@ -4,7 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.dto.response.FileResponse;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
-import com.ercanbeyen.bankingapplication.service.FileStorageService;
+import com.ercanbeyen.bankingapplication.service.FileService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -20,19 +20,19 @@ import java.util.List;
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
 @Slf4j
-public class FileStorageController {
-    private final FileStorageService fileStorageService;
+public class FileController {
+    private final FileService fileService;
 
     @PostMapping
     public ResponseEntity<MessageResponse<String>> uploadFile(@RequestParam("file") MultipartFile file) {
-        fileStorageService.storeFile(file);
+        fileService.storeFile(file);
         MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_UPLOAD_SUCCESS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<byte[]> downloadFile(@PathVariable("id") String id) {
-        File file = fileStorageService.getFile(id);
+        File file = fileService.getFile(id);
         String fileName = file.getName();
         log.info("file.getName(): {}", fileName);
 
@@ -43,13 +43,13 @@ public class FileStorageController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> deleteFile(@PathVariable("id") String id) {
-        MessageResponse<String> response = new MessageResponse<>(fileStorageService.deleteFile(id));
+        MessageResponse<String> response = new MessageResponse<>(fileService.deleteFile(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @GetMapping
     public ResponseEntity<List<FileResponse>> getFileList() {
-        List<FileResponse> fileResponseList = fileStorageService.getAllFiles()
+        List<FileResponse> fileResponseList = fileService.getAllFiles()
                 .map(file -> {
                     String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
                             .path("/api/v1/files")

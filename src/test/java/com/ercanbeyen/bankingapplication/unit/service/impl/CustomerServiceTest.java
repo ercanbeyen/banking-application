@@ -18,7 +18,7 @@ import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
-import com.ercanbeyen.bankingapplication.service.impl.FileStorageServiceImpl;
+import com.ercanbeyen.bankingapplication.service.impl.FileServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,7 +49,7 @@ class CustomerServiceTest {
     @Mock
     private CustomerMapper customerMapper;
     @Mock
-    private FileStorageServiceImpl fileStorageService;
+    private FileServiceImpl fileService;
     @Mock
     private CashFlowCalendarService cashFlowCalendarService;
     private List<Customer> customers;
@@ -337,7 +337,7 @@ class CustomerServiceTest {
                 .when(customerRepository)
                 .findById(customers.getFirst().getId());
         doReturn(fileCompletableFuture)
-                .when(fileStorageService)
+                .when(fileService)
                 .storeFile(any());
         doReturn(customers.getFirst())
                 .when(customerRepository)
@@ -349,7 +349,7 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(fileStorageService, times(1))
+        verify(fileService, times(1))
                 .storeFile(any());
 
         assertEquals(expected, actual);
@@ -367,7 +367,7 @@ class CustomerServiceTest {
                 .when(customerRepository)
                 .findById(anyInt());
         doThrow(new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR))
-                .when(fileStorageService)
+                .when(fileService)
                 .storeFile(any());
 
         // when
@@ -377,7 +377,7 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(fileStorageService, times(1))
+        verify(fileService, times(1))
                 .storeFile(any());
         verifyNoMoreInteractions(customerRepository);
 

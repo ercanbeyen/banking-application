@@ -3,7 +3,6 @@ package com.ercanbeyen.bankingapplication.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.GenericGenerator;
 
 @Entity
 @Table(name = "files")

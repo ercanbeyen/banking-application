@@ -6,7 +6,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
-public interface FileStorageService {
+public interface FileService {
     CompletableFuture<File> storeFile(MultipartFile file);
     File getFile(String id);
     String deleteFile(String id);
