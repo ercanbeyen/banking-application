@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.dto;
 
-import java.time.LocalDateTime;
 
-public record ContractDto(String id, String name, String fileId, String customerNationalId, LocalDateTime approvedAt) {
+public record ContractDto(String id, String subject, String fileId) {
 
 }

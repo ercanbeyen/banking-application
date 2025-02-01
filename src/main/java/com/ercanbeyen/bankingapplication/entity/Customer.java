@@ -51,6 +51,9 @@ public non-sealed class Customer extends BaseEntity {
     @JoinColumn(name = "profile_photo")
     private File profilePhoto;
     @Getter
+    @ManyToMany(mappedBy = "customers")
+    private Set<Contract> contracts = new HashSet<>();
+    @Getter
     @SQLRestriction("closed_at IS NULL")
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Account> accounts = new ArrayList<>();

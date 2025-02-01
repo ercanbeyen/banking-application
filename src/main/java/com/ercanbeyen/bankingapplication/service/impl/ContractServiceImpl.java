@@ -24,7 +24,6 @@ public class ContractServiceImpl implements ContractService {
     private final ContractRepository contractRepository;
     private final ContractMapper contractMapper;
     private final FileService fileService;
-    private final CustomerService customerService;
 
     @Override
     public ContractDto createContract(ContractDto request) {
@@ -32,10 +31,8 @@ public class ContractServiceImpl implements ContractService {
 
         Contract contract = contractMapper.dtoToEntity(request);
         File file = fileService.getFile(request.fileId());
-        Customer customer = customerService.findByNationalId(request.customerNationalId());
 
         contract.setFile(file);
-        contract.setCustomer(customer);
 
         Contract savedContract = contractRepository.save(contract);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CONTRACT.getValue(), savedContract.getId());
@@ -51,8 +48,7 @@ public class ContractServiceImpl implements ContractService {
         File file = fileService.getFile(request.fileId());
 
         contract.setFile(file);
-        contract.setName(request.name());
-        //contract.setApprovedAt(null); // Since contract is updated, customer has to re-approve the contract
+        contract.setSubject(request.subject());
 
         Contract savedContract = contractRepository.save(contract);
 
@@ -64,6 +60,17 @@ public class ContractServiceImpl implements ContractService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Contract contract = findById(id);
         return contractMapper.entityToDto(contract);
+    }
+
+    @Override
+    public void addCustomerToContract(String subject, Customer customer) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Contract contract = findContractBySubject(subject);
+        contract.getCustomers().add(customer);
+        contractRepository.save(contract);
+
+        log.info("Customer {} is successfully added to contract {}", customer.getNationalId(), contract.getSubject());
     }
 
     @Override
@@ -89,6 +96,18 @@ public class ContractServiceImpl implements ContractService {
     private Contract findById(String id) {
         String entity = Entity.CONTRACT.getValue();
         Contract contract = contractRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
+
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        return contract;
+    }
+
+    private Contract findContractBySubject(String subject) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        String entity = Entity.CONTRACT.getValue();
+        Contract contract = contractRepository.findBySubject(subject)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
         log.info(LogMessage.RESOURCE_FOUND, entity);

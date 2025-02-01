@@ -17,10 +17,7 @@ import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
-import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
-import com.ercanbeyen.bankingapplication.service.FileService;
-import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
@@ -49,6 +46,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
     private final CashFlowCalendarService cashFlowCalendarService;
+    private final ContractService contractService;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOption filteringOption) {
@@ -92,6 +90,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
+
+        contractService.addCustomerToContract("CUSTOMER_REGISTRATION_CONTRACT", customer);
 
         return customerMapper.entityToDto(savedCustomer);
     }

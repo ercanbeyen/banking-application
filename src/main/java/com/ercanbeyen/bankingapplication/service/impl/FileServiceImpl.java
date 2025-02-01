@@ -63,8 +63,10 @@ public class FileServiceImpl implements FileService {
     public String deleteFile(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
+        String entity = Entity.FILE.getValue();
+
         fileRepository.findById(id).ifPresentOrElse(file -> {
-            log.info(LogMessage.RESOURCE_FOUND, Entity.FILE.getValue());
+            log.info(LogMessage.RESOURCE_FOUND, entity);
 
             try {
                 fileRepository.delete(file);
@@ -74,11 +76,11 @@ public class FileServiceImpl implements FileService {
                 throw new ResourceExpectationFailedException(message);
             }
         }, () -> {
-            log.error(LogMessage.RESOURCE_NOT_FOUND, Entity.FILE.getValue());
-            throw new ResourceNotFoundException(ResponseMessage.NOT_FOUND);
+            log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+            throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
         });
 
-        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.FILE.getValue(), id);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
 
         return ResponseMessage.FILE_DELETE_SUCCESS;
     }
