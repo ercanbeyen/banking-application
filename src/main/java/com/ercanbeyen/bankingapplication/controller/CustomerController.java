@@ -122,4 +122,11 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         CashFlowCalendarUtil.checkMonthValueForExpectedTransactions(month);
         return ResponseEntity.ok(customerService.getExpectedTransactions(id, month));
     }
+
+    @GetMapping("/{id}/contracts")
+    public ResponseEntity<MessageResponse<List<String>>> getContractSubjects(@PathVariable("id") Integer id) {
+        List<String> contractSubjects = customerService.getContractSubjects(id);
+        MessageResponse<List<String>> response = new MessageResponse<>(contractSubjects);
+        return ResponseEntity.ok(response);
+    }
 }

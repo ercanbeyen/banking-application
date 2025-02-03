@@ -344,6 +344,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .toList();
     }
 
+    public List<String> getContractSubjects(Integer id) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        Customer customer = findById(id);
+        return customer.getContracts()
+                .stream()
+                .map(Contract::getSubject)
+                .toList();
+    }
+
     /**
      * @param nationalId is national identity which is unique for each customer
      * @return customer corresponds to the given nationalId
