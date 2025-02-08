@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedExce
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.FileRepository;
 import com.ercanbeyen.bankingapplication.service.FileService;
+import com.ercanbeyen.bankingapplication.util.FileUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,28 +30,18 @@ public class FileServiceImpl implements FileService {
 
     @Async
     @Override
-    public CompletableFuture<File> storeFile(MultipartFile multipartFile) {
+    public void storeFile(MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        String name = StringUtils.cleanPath(Objects.requireNonNull(request.getOriginalFilename()));
+        saveFile(request, name);
+    }
 
-        String fileName = StringUtils.cleanPath(Objects.requireNonNull(multipartFile.getOriginalFilename()));
-
-        return CompletableFuture.supplyAsync(() -> {
-            File file;
-
-            try {
-                file = new File(fileName, multipartFile.getContentType(), multipartFile.getBytes());
-            } catch (IOException exception) {
-                throw new ResourceExpectationFailedException("Error occurred in method getBytes");
-            }
-
-            File savedFile = fileRepository.save(file);
-            log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.FILE.getValue(), savedFile.getId());
-
-            return savedFile;
-        }).exceptionally(exception -> {
-            log.error(LogMessage.EXCEPTION, exception.getMessage());
-            throw new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR);
-        });
+    @Async
+    @Override
+    public CompletableFuture<File> storeFile(MultipartFile request, String name) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        String fileName = name + "." + FileUtil.getPlainContentTypeOfFile(request); // file extension is added
+        return saveFile(request, fileName);
     }
 
     @Override
@@ -65,20 +56,21 @@ public class FileServiceImpl implements FileService {
 
         String entity = Entity.FILE.getValue();
 
-        fileRepository.findById(id).ifPresentOrElse(file -> {
-            log.info(LogMessage.RESOURCE_FOUND, entity);
+        fileRepository.findById(id)
+                .ifPresentOrElse(file -> {
+                    log.info(LogMessage.RESOURCE_FOUND, entity);
 
-            try {
-                fileRepository.delete(file);
-            } catch (Exception exception) {
-                log.error(LogMessage.EXCEPTION, exception.getMessage());
-                String message = "File is a profile photo. So, it might only be deleted from customer api";
-                throw new ResourceExpectationFailedException(message);
-            }
-        }, () -> {
-            log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
-            throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
-        });
+                    try {
+                        fileRepository.delete(file);
+                    } catch (Exception exception) {
+                        log.error(LogMessage.EXCEPTION, exception.getMessage());
+                        String message = "File is a profile photo. So, it might only be deleted from customer api";
+                        throw new ResourceExpectationFailedException(message);
+                    }
+                }, () -> {
+                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
+                });
 
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
 
@@ -100,5 +92,25 @@ public class FileServiceImpl implements FileService {
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return file;
+    }
+
+    private CompletableFuture<File> saveFile(MultipartFile multipartFile, String name) {
+        return CompletableFuture.supplyAsync(() -> {
+            File file;
+
+            try {
+                file = new File(name, multipartFile.getContentType(), multipartFile.getBytes());
+            } catch (IOException exception) {
+                throw new ResourceExpectationFailedException("Error occurred in method getBytes");
+            }
+
+            File savedFile = fileRepository.save(file);
+            log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.FILE.getValue(), savedFile.getId());
+
+            return savedFile;
+        }).exceptionally(exception -> {
+            log.error(LogMessage.EXCEPTION, exception.getMessage());
+            throw new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR);
+        });
     }
 }

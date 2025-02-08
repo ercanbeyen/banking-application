@@ -346,7 +346,7 @@ class CustomerServiceTest {
                 .findById(customers.getFirst().getId());
         doReturn(fileCompletableFuture)
                 .when(fileService)
-                .storeFile(any());
+                .storeFile(any(), any());
         doReturn(customers.getFirst())
                 .when(customerRepository)
                 .save(any());
@@ -358,7 +358,7 @@ class CustomerServiceTest {
         verify(customerRepository, times(1))
                 .findById(anyInt());
         verify(fileService, times(1))
-                .storeFile(any());
+                .storeFile(any(), any());
 
         assertEquals(expected, actual);
     }
@@ -368,25 +368,24 @@ class CustomerServiceTest {
     void givenMultipartFile_whenUploadFile_thenThrowResourceExpectationFailedException() {
         // given
         String expected = ResponseMessage.FILE_UPLOAD_ERROR;
-        MultipartFile multipartFile = MockFileFactory.generateMockMultipartFile();
-        int id = 20;
+        int id = 1;
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
         doThrow(new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR))
                 .when(fileService)
-                .storeFile(any());
+                .storeFile(any(), any());
 
         // when
-        RuntimeException exception = assertThrows(ResourceExpectationFailedException.class, () -> customerService.uploadProfilePhoto(id, multipartFile));
+        RuntimeException exception = assertThrows(ResourceExpectationFailedException.class, () -> customerService.uploadProfilePhoto(id, null));
         String actual = exception.getMessage();
 
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
         verify(fileService, times(1))
-                .storeFile(any());
+                .storeFile(any(), any());
         verifyNoMoreInteractions(customerRepository);
 
         assertEquals(expected, actual);
@@ -432,6 +431,7 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
+        verifyNoMoreInteractions(fileService);
 
         assertEquals(expected, actual);
     }

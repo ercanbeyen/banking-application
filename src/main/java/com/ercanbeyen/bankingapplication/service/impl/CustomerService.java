@@ -122,12 +122,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         customerRepository.delete(customer);
     }
 
-    public String uploadProfilePhoto(Integer id, MultipartFile file) {
+    public String uploadProfilePhoto(Integer id, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
-        CompletableFuture<File> photo = fileService.storeFile(file);
-        customer.setProfilePhoto(photo.join()); // Profile photo upload
+
+        String fileName = customer.getNationalId() + "_photo";
+        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
+        customer.setProfilePhoto(fileCompletableFuture.join()); // Profile photo upload
+
         customerRepository.save(customer);
 
         return ResponseMessage.FILE_UPLOAD_SUCCESS;

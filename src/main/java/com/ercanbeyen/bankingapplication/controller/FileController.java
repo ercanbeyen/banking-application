@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.dto.response.FileResponse;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.FileService;
+import com.ercanbeyen.bankingapplication.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
@@ -24,8 +25,9 @@ public class FileController {
     private final FileService fileService;
 
     @PostMapping
-    public ResponseEntity<MessageResponse<String>> uploadFile(@RequestParam("file") MultipartFile file) {
-        fileService.storeFile(file);
+    public ResponseEntity<MessageResponse<String>> uploadFile(@RequestParam("file") MultipartFile request) {
+        FileUtil.checkFile(request);
+        fileService.storeFile(request);
         MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_UPLOAD_SUCCESS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

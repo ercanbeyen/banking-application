@@ -1,6 +1,5 @@
 package com.ercanbeyen.bankingapplication.util;
 
-import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
@@ -13,14 +12,32 @@ import java.util.List;
 public class FileUtil {
     private final int FILE_NAME_LENGTH_THRESHOLD = 100;
 
-    public void checkIsFileEmpty(MultipartFile file) {
-        if (file.isEmpty()) {
+    public void checkFile(MultipartFile request) {
+        checkIsFileEmpty(request);
+        checkLengthOfFileName(request);
+    }
+
+    public void checkIsFileEmpty(MultipartFile request) {
+        if (request.isEmpty()) {
             throw new ResourceExpectationFailedException("File should not be empty");
         }
     }
 
-    public void checkLengthOfFileName(MultipartFile file) {
-        String originalFileName = file.getOriginalFilename();
+    public List<String> getPlainContentTypes(List<String> contentTypes) {
+        return contentTypes.stream()
+                .map(FileUtil::getPlainContentType)
+                .toList();
+    }
+
+    public String getPlainContentTypeOfFile(MultipartFile file) {
+        String contentType = file.getContentType();
+        assert contentType != null;
+
+        return getPlainContentType(contentType);
+    }
+
+    private void checkLengthOfFileName(MultipartFile request) {
+        String originalFileName = request.getOriginalFilename();
 
         if (originalFileName == null) {
             throw new ResourceExpectationFailedException("File name should not be empty!");
@@ -29,7 +46,7 @@ public class FileUtil {
         int lengthOfOriginalFileName = originalFileName.length();
         log.info("File original name and its length: {} - {}", originalFileName, lengthOfOriginalFileName);
 
-        String plainContentType = getPlainContentTypeOfFile(file);
+        String plainContentType = getPlainContentTypeOfFile(request);
         log.info("Plain content type: {}", plainContentType);
 
         int lengthOfPlainContentType = plainContentType.length();
@@ -42,25 +59,12 @@ public class FileUtil {
         }
     }
 
-    public List<String> getPlainContentTypes(List<String> contentTypes) {
-        return contentTypes.stream()
-                .map(FileUtil::getPlainContentType)
-                .toList();
-    }
-
-    private String getPlainContentTypeOfFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        assert contentType != null;
-
-        return getPlainContentType(contentType);
-    }
-
     private String getPlainContentType(String contentType) {
         String[] contentTypeSplitArray = contentType.split("/");
         String plainContentType = contentTypeSplitArray[1];
 
         if (plainContentType == null) {
-            throw new ResourceConflictException("Invalid content type");
+            throw new ResourceExpectationFailedException("Invalid content type");
         }
 
         return plainContentType;

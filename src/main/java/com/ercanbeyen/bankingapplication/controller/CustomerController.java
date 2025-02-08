@@ -53,9 +53,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PostMapping("/{id}")
-    public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") Integer id, @RequestParam("file") MultipartFile file) {
-        PhotoUtil.checkPhoto(file);
-        MessageResponse<String> response = new MessageResponse<>(customerService.uploadProfilePhoto(id, file));
+    public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") Integer id, @RequestParam("file") MultipartFile request) {
+        PhotoUtil.checkPhoto(request);
+        MessageResponse<String> response = new MessageResponse<>(customerService.uploadProfilePhoto(id, request));
         return ResponseEntity.ok(response);
     }
 

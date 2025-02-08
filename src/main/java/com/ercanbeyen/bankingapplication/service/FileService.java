@@ -7,7 +7,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.stream.Stream;
 
 public interface FileService {
-    CompletableFuture<File> storeFile(MultipartFile file);
+    void storeFile(MultipartFile request);
+    CompletableFuture<File> storeFile(MultipartFile request, String name);
     File getFile(String id);
     String deleteFile(String id);
     Stream<File> getAllFiles();
