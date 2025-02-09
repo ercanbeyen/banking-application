@@ -24,8 +24,10 @@ import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.BaseService;
+import com.ercanbeyen.bankingapplication.service.ContractService;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
+import com.ercanbeyen.bankingapplication.util.ContractUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
@@ -52,6 +54,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     private final BranchService branchService;
     private final DailyActivityLimitService dailyActivityLimitService;
     private final FeeService feeService;
+    private final ContractService contractService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOption filteringOption) {
@@ -87,8 +90,14 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Customer customer = customerService.findByNationalId(request.getCustomerNationalId());
         Branch branch = branchService.findByName(request.getBranchName());
 
-        if (account.getType() == AccountType.DEPOSIT) {
-            log.info("{} is {}, so update interest ratio and balance after next {}", Entity.ACCOUNT.getValue(), AccountType.DEPOSIT.getValue(), Entity.FEE.getValue());
+        AccountType accountType = account.getType();
+        String contractSubject = ContractUtil.generateContractSubject(accountType.getValue(), Entity.ACCOUNT);
+        contractService.addCustomerToContract(contractSubject, customer);
+
+        String entity = Entity.ACCOUNT.getValue();
+
+        if (accountType == AccountType.DEPOSIT) {
+            log.info("{} is {}, so update interest ratio and balance after next {}", entity, accountType.getValue(), Entity.FEE.getValue());
             account.setInterestRatio(0D);
             account.setBalanceAfterNextFee(0D);
         }
@@ -97,7 +106,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         account.setBranch(branch);
 
         Account savedAccount = accountRepository.save(account);
-        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT.getValue(), savedAccount.getId());
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedAccount.getId());
 
         createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
 

@@ -67,6 +67,13 @@ public class ContractServiceImpl implements ContractService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Contract contract = findContractBySubject(subject);
+
+        if (contractRepository.findBySubjectAndCustomerNationalId(subject, customer.getNationalId()).isPresent()) {
+            log.warn("Customer {} has already been added to {} before", customer.getNationalId(), subject);
+            return;
+        }
+
+        log.info("Customer {} has not added to {} before", customer.getNationalId(), subject);
         contract.getCustomers().add(customer);
         contractRepository.save(contract);
 

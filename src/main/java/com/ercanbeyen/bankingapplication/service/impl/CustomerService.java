@@ -20,6 +20,7 @@ import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
+import com.ercanbeyen.bankingapplication.util.ContractUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -91,7 +92,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
-        contractService.addCustomerToContract("CUSTOMER_REGISTRATION_CONTRACT", customer);
+        String contractSubject = ContractUtil.generateContractSubject(Entity.CUSTOMER);
+        contractService.addCustomerToContract(contractSubject, customer);
 
         return customerMapper.entityToDto(savedCustomer);
     }
