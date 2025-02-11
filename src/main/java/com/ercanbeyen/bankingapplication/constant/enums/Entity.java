@@ -18,7 +18,7 @@ public enum Entity {
     BRANCH("Branch"),
     FEE("Fee"),
     CHARGE("Charge"),
-    CONTRACT("Contract"),
+    AGREEMENT("Agreement"),
     DAILY_ACTIVITY_LIMIT("Daily Activity Limit"),
     CASH_FLOW_CALENDAR("Cash Flow Calendar");
 

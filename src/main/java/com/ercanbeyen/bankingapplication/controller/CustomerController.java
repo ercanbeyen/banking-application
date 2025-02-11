@@ -123,10 +123,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getExpectedTransactions(id, month));
     }
 
-    @GetMapping("/{id}/contracts")
-    public ResponseEntity<MessageResponse<List<String>>> getContractSubjects(@PathVariable("id") Integer id) {
-        List<String> contractSubjects = customerService.getContractSubjects(id);
-        MessageResponse<List<String>> response = new MessageResponse<>(contractSubjects);
+    @GetMapping("/{id}/agreements")
+    public ResponseEntity<MessageResponse<List<String>>> getAgreementSubjects(@PathVariable("id") Integer id) {
+        List<String> agreementSubjects = customerService.getAgreementSubjects(id);
+        MessageResponse<List<String>> response = new MessageResponse<>(agreementSubjects);
         return ResponseEntity.ok(response);
     }
 }

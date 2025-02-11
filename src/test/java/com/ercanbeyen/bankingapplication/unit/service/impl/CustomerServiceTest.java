@@ -17,7 +17,7 @@ import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
-import com.ercanbeyen.bankingapplication.service.ContractService;
+import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
 import com.ercanbeyen.bankingapplication.service.impl.FileServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -54,7 +54,7 @@ class CustomerServiceTest {
     @Mock
     private CashFlowCalendarService cashFlowCalendarService;
     @Mock
-    private ContractService contractService;
+    private AgreementService agreementService;
     private List<Customer> customers;
     private List<CustomerDto> customerDtos;
     private List<CashFlowCalendar> cashFlowCalendars;
@@ -176,8 +176,8 @@ class CustomerServiceTest {
                 .when(customerRepository)
                 .save(any());
         doNothing()
-                .when(contractService)
-                .addCustomerToContract(any(), any());
+                .when(agreementService)
+                .addCustomerToAgreement(any(), any());
         doReturn(expected)
                 .when(customerMapper)
                 .entityToDto(any());
@@ -194,8 +194,8 @@ class CustomerServiceTest {
                 .createCashFlowCalendar();
         verify(customerRepository, times(1))
                 .save(any());
-        verify(contractService, times(1))
-                .addCustomerToContract(any(), any());
+        verify(agreementService, times(1))
+                .addCustomerToAgreement(any(), any());
         verify(customerMapper, times(1))
                 .entityToDto(any());
 

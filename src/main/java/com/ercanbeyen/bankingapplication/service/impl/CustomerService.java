@@ -20,7 +20,7 @@ import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
-import com.ercanbeyen.bankingapplication.util.ContractUtil;
+import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -47,7 +47,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
     private final CashFlowCalendarService cashFlowCalendarService;
-    private final ContractService contractService;
+    private final AgreementService agreementService;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOption filteringOption) {
@@ -92,8 +92,8 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
-        String contractSubject = ContractUtil.generateContractSubject(Entity.CUSTOMER);
-        contractService.addCustomerToContract(contractSubject, customer);
+        String agreementSubject = AgreementUtil.generateSubject(Entity.CUSTOMER);
+        agreementService.addCustomerToAgreement(agreementSubject, customer);
 
         return customerMapper.entityToDto(savedCustomer);
     }
@@ -349,12 +349,12 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .toList();
     }
 
-    public List<String> getContractSubjects(Integer id) {
+    public List<String> getAgreementSubjects(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Customer customer = findById(id);
-        return customer.getContracts()
+        return customer.getAgreements()
                 .stream()
-                .map(Contract::getSubject)
+                .map(Agreement::getSubject)
                 .toList();
     }
 

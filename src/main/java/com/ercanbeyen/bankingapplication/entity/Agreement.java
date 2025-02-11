@@ -10,8 +10,8 @@ import java.util.Set;
 
 @Data
 @Entity
-@Table(name = "contracts")
-public class Contract {
+@Table(name = "agreements")
+public class Agreement {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -22,9 +22,9 @@ public class Contract {
     private File file;
     @ManyToMany
     @JoinTable(
-            name = "contract_customer",
+            name = "agreement_customer",
             joinColumns = @JoinColumn(
-                    name = "contract_subject",
+                    name = "agreement_subject",
                     referencedColumnName = "subject"
             ),
             inverseJoinColumns = @JoinColumn(

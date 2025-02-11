@@ -52,7 +52,7 @@ public non-sealed class Customer extends BaseEntity {
     private File profilePhoto;
     @Getter
     @ManyToMany(mappedBy = "customers")
-    private Set<Contract> contracts = new HashSet<>();
+    private Set<Agreement> agreements = new HashSet<>();
     @Getter
     @SQLRestriction("closed_at IS NULL")
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)

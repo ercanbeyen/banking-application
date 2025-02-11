@@ -2,12 +2,12 @@ package com.ercanbeyen.bankingapplication.integration.controller;
 
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
-import com.ercanbeyen.bankingapplication.entity.Contract;
+import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.File;
-import com.ercanbeyen.bankingapplication.factory.MockContractFactory;
+import com.ercanbeyen.bankingapplication.factory.MockAgreementFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
-import com.ercanbeyen.bankingapplication.repository.ContractRepository;
+import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
 import com.ercanbeyen.bankingapplication.repository.FileRepository;
 import com.google.gson.Gson;
 import io.restassured.RestAssured;
@@ -52,7 +52,7 @@ class CustomerControllerTest {
     @Autowired
     private Gson gson;
     @Autowired
-    private ContractRepository contractRepository;
+    private AgreementRepository agreementRepository;
     @Autowired
     private FileRepository fileRepository;
 
@@ -278,9 +278,9 @@ class CustomerControllerTest {
 
         File savedFile = fileRepository.save(file);
 
-        Contract contract = MockContractFactory.getMockContract();
-        contract.setFile(savedFile);
+        Agreement agreement = MockAgreementFactory.getMockContract();
+        agreement.setFile(savedFile);
 
-        contractRepository.save(contract);
+        agreementRepository.save(agreement);
     }
 }
