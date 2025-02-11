@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.service.AgreementService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/api/v1/agreements")
@@ -14,13 +15,13 @@ public class AgreementController {
     private final AgreementService agreementService;
 
     @PostMapping
-    public ResponseEntity<AgreementDto> createAgreement(@RequestBody AgreementDto request) {
-        return ResponseEntity.ok(agreementService.createAgreement(request));
+    public ResponseEntity<AgreementDto> createAgreement(@RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
+        return ResponseEntity.ok(agreementService.createAgreement(subject, request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestBody AgreementDto request) {
-        return ResponseEntity.ok(agreementService.updateAgreement(id, request));
+    public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
+        return ResponseEntity.ok(agreementService.updateAgreement(id, subject, request));
     }
 
     @GetMapping("/{id}")

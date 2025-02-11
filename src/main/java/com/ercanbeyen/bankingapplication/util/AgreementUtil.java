@@ -7,6 +7,10 @@ import lombok.experimental.UtilityClass;
 public class AgreementUtil {
     private final String SPLITTER = "_";
 
+    public String generateFileName(String subject) {
+        return subject + SPLITTER + Entity.AGREEMENT.getValue();
+    }
+
     public String generateSubject(String prefix, Entity entity) {
         return prefix + SPLITTER + generateSubject(entity);
     }

@@ -12,10 +12,14 @@ import com.ercanbeyen.bankingapplication.mapper.AgreementMapper;
 import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.FileService;
+import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.util.concurrent.CompletableFuture;
 
 @Service
 @RequiredArgsConstructor
@@ -26,14 +30,15 @@ public class AgreementServiceImpl implements AgreementService {
     private final FileService fileService;
 
     @Override
-    public AgreementDto createAgreement(AgreementDto request) {
+    public AgreementDto createAgreement(String subject, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        File file = fileService.getFile(request.fileId());
+        String fileName = AgreementUtil.generateFileName(subject);
+        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
 
         Agreement agreement = new Agreement();
-        agreement.setFile(file);
-        agreement.setSubject(request.subject());
+        agreement.setFile(fileCompletableFuture.join());
+        agreement.setSubject(subject);
 
         Agreement savedAgreement = agreementRepository.save(agreement);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.AGREEMENT.getValue(), savedAgreement.getId());
@@ -42,14 +47,15 @@ public class AgreementServiceImpl implements AgreementService {
     }
 
     @Override
-    public AgreementDto updateAgreement(String id, AgreementDto request) {
+    public AgreementDto updateAgreement(String id, String subject, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Agreement agreement = findById(id);
-        File file = fileService.getFile(request.fileId());
+        String fileName = AgreementUtil.generateFileName(subject);
+        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
 
-        agreement.setFile(file);
-        agreement.setSubject(request.subject());
+        agreement.setFile(fileCompletableFuture.join());
+        agreement.setSubject(subject);
 
         Agreement savedAgreement = agreementRepository.save(agreement);
 
