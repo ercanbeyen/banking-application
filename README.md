@@ -6,7 +6,7 @@
 
 ### Summary
 It is a banking application includes basic banking operations. Abstract crud approach is used throughout the development.<br/>
-There are 15 entities in this project
+There are 16 entities in this project
 
 Entities:
 - Customer
@@ -24,6 +24,7 @@ Entities:
 - Charge
 - Fee
 - Cash Flow Calendar
+- Agreement
 
 ### Requirements
 - Customer's national id, email and phone number must be unique.
@@ -32,6 +33,7 @@ Entities:
 - Customer can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
 - Customer can perform transactions within daily transaction limits and may pay transaction fees for some transactions.
 - Customer can create one-time or regular transfer orders to transfer money at future dates.
+- Customer is obliged to comply with the agreements s/he has approved.
 
 ### Additionals
 - Scheduled tasks run while application is running.
