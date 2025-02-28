@@ -17,12 +17,10 @@ import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
-import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
-import com.ercanbeyen.bankingapplication.service.FileStorageService;
-import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
+import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,10 +43,11 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
     private final TransferOrderMapper transferOrderMapper;
     private final NotificationMapper notificationMapper;
     private final CashFlowCalendarMapper cashFlowCalendarMapper;
-    private final FileStorageService fileStorageService;
+    private final FileService fileService;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
     private final CashFlowCalendarService cashFlowCalendarService;
+    private final AgreementService agreementService;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOption filteringOption) {
@@ -93,6 +92,9 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
+        String agreementSubject = AgreementUtil.generateSubject(Entity.CUSTOMER);
+        agreementService.addCustomerToAgreement(agreementSubject, customer);
+
         return customerMapper.entityToDto(savedCustomer);
     }
 
@@ -122,12 +124,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         customerRepository.delete(customer);
     }
 
-    public String uploadProfilePhoto(Integer id, MultipartFile file) {
+    public String uploadProfilePhoto(Integer id, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
-        CompletableFuture<File> photo = fileStorageService.storeFile(file);
-        customer.setProfilePhoto(photo.join()); // Profile photo upload
+
+        String fileName = customer.getNationalId() + "_photo";
+        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
+        customer.setProfilePhoto(fileCompletableFuture.join()); // Profile photo upload
+
         customerRepository.save(customer);
 
         return ResponseMessage.FILE_UPLOAD_SUCCESS;
@@ -341,6 +346,15 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
 
         return expectedTransactions.stream()
                 .sorted(Comparator.comparing(ExpectedTransaction::date))
+                .toList();
+    }
+
+    public List<String> getAgreementSubjects(Integer id) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        Customer customer = findById(id);
+        return customer.getAgreements()
+                .stream()
+                .map(Agreement::getSubject)
                 .toList();
     }
 

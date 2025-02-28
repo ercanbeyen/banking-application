@@ -53,9 +53,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PostMapping("/{id}")
-    public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") Integer id, @RequestParam("file") MultipartFile file) {
-        PhotoUtil.checkPhoto(file);
-        MessageResponse<String> response = new MessageResponse<>(customerService.uploadProfilePhoto(id, file));
+    public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") Integer id, @RequestParam("file") MultipartFile request) {
+        PhotoUtil.checkPhoto(request);
+        MessageResponse<String> response = new MessageResponse<>(customerService.uploadProfilePhoto(id, request));
         return ResponseEntity.ok(response);
     }
 
@@ -121,5 +121,12 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public ResponseEntity<List<ExpectedTransaction>> getExpectedTransactions(@PathVariable("id") Integer id, @RequestParam(value = "month", defaultValue = "1") Integer month) {
         CashFlowCalendarUtil.checkMonthValueForExpectedTransactions(month);
         return ResponseEntity.ok(customerService.getExpectedTransactions(id, month));
+    }
+
+    @GetMapping("/{id}/agreements")
+    public ResponseEntity<MessageResponse<List<String>>> getAgreementSubjects(@PathVariable("id") Integer id) {
+        List<String> agreementSubjects = customerService.getAgreementSubjects(id);
+        MessageResponse<List<String>> response = new MessageResponse<>(agreementSubjects);
+        return ResponseEntity.ok(response);
     }
 }

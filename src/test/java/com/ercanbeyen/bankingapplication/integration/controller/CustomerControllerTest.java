@@ -2,7 +2,13 @@ package com.ercanbeyen.bankingapplication.integration.controller;
 
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
+import com.ercanbeyen.bankingapplication.entity.Agreement;
+import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.factory.MockAgreementFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
+import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
+import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
+import com.ercanbeyen.bankingapplication.repository.FileRepository;
 import com.google.gson.Gson;
 import io.restassured.RestAssured;
 import io.restassured.builder.MultiPartSpecBuilder;
@@ -23,7 +29,6 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
-import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 
@@ -46,6 +51,10 @@ class CustomerControllerTest {
     private Integer port;
     @Autowired
     private Gson gson;
+    @Autowired
+    private AgreementRepository agreementRepository;
+    @Autowired
+    private FileRepository fileRepository;
 
     private static final String CUSTOMER_COLLECTION_ENDPOINT = "/api/v1/customers";
     public static final String CUSTOMER_RESOURCE_ENDPOINT = CUSTOMER_COLLECTION_ENDPOINT + "/{id}";
@@ -77,6 +86,12 @@ class CustomerControllerTest {
         RestAssured.port = port;
     }
 
+    @BeforeAll
+    static void start() {
+        mySQLContainer.start();
+        cassandraContainer.start();
+    }
+
     @AfterAll
     static void end() {
         mySQLContainer.stop();
@@ -100,6 +115,8 @@ class CustomerControllerTest {
     @Order(2)
     @DisplayName("Happy path test: Create customer case")
     void givenCustomerDto_whenCreateEntity_thenReturnCustomerDto() {
+        generateContract();
+
         CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
         generateCustomer(request);
 
@@ -217,7 +234,7 @@ class CustomerControllerTest {
     }
 
     private static MultiPartSpecification constructMultiPartSpecification(String profilePhotoName, String mediaType) throws IOException {
-        File file = new File(PHOTOS_LOCATION + profilePhotoName);
+        java.io.File file = new java.io.File(PHOTOS_LOCATION + profilePhotoName);
         return new MultiPartSpecBuilder(Files.readAllBytes(file.toPath()))
                 .fileName(file.getName())
                 .controlName("file")
@@ -248,5 +265,22 @@ class CustomerControllerTest {
                 .assertThat()
                 .statusCode(HttpStatus.CREATED.value())
                 .body("nationalId", equalTo(request.getNationalId()));
+    }
+
+    private void generateContract() {
+        File file;
+
+        try {
+            file = MockFileFactory.generateMockFile();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        File savedFile = fileRepository.save(file);
+
+        Agreement agreement = MockAgreementFactory.getMockContract();
+        agreement.setFile(savedFile);
+
+        agreementRepository.save(agreement);
     }
 }

@@ -13,10 +13,9 @@ public class PhotoUtil {
             "image/png", "image/jpg", "image/jpeg"
     );
 
-    public void checkPhoto(MultipartFile file) {
-        FileUtil.checkIsFileEmpty(file);
-        checkContentTypeOfPhoto(file);
-        FileUtil.checkLengthOfFileName(file);
+    public void checkPhoto(MultipartFile request) {
+        FileUtil.checkIsFileEmpty(request);
+        checkContentTypeOfPhoto(request);
     }
 
     public List<String> getPlainContentTypes() {

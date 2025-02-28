@@ -11,7 +11,6 @@ import org.springframework.web.bind.annotation.RestController;
 public class BranchController extends BaseController<BranchDto, BranchFilteringOption> {
     private final BranchService branchService;
 
-
     public BranchController(BranchService branchService) {
         super(branchService);
         this.branchService = branchService;

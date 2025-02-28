@@ -51,6 +51,9 @@ public non-sealed class Customer extends BaseEntity {
     @JoinColumn(name = "profile_photo")
     private File profilePhoto;
     @Getter
+    @ManyToMany(mappedBy = "customers")
+    private Set<Agreement> agreements = new HashSet<>();
+    @Getter
     @SQLRestriction("closed_at IS NULL")
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Account> accounts = new ArrayList<>();
@@ -58,7 +61,6 @@ public non-sealed class Customer extends BaseEntity {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications = new ArrayList<>();
     @Getter
-    //@OneToOne(mappedBy = "customer")
     @OneToOne
     private CashFlowCalendar cashFlowCalendar;
 

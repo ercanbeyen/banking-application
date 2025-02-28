@@ -17,8 +17,9 @@ import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
+import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
-import com.ercanbeyen.bankingapplication.service.impl.FileStorageServiceImpl;
+import com.ercanbeyen.bankingapplication.service.impl.FileServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -49,9 +50,11 @@ class CustomerServiceTest {
     @Mock
     private CustomerMapper customerMapper;
     @Mock
-    private FileStorageServiceImpl fileStorageService;
+    private FileServiceImpl fileService;
     @Mock
     private CashFlowCalendarService cashFlowCalendarService;
+    @Mock
+    private AgreementService agreementService;
     private List<Customer> customers;
     private List<CustomerDto> customerDtos;
     private List<CashFlowCalendar> cashFlowCalendars;
@@ -172,6 +175,9 @@ class CustomerServiceTest {
         doReturn(customer)
                 .when(customerRepository)
                 .save(any());
+        doNothing()
+                .when(agreementService)
+                .addCustomerToAgreement(any(), any());
         doReturn(expected)
                 .when(customerMapper)
                 .entityToDto(any());
@@ -188,6 +194,8 @@ class CustomerServiceTest {
                 .createCashFlowCalendar();
         verify(customerRepository, times(1))
                 .save(any());
+        verify(agreementService, times(1))
+                .addCustomerToAgreement(any(), any());
         verify(customerMapper, times(1))
                 .entityToDto(any());
 
@@ -337,8 +345,8 @@ class CustomerServiceTest {
                 .when(customerRepository)
                 .findById(customers.getFirst().getId());
         doReturn(fileCompletableFuture)
-                .when(fileStorageService)
-                .storeFile(any());
+                .when(fileService)
+                .storeFile(any(), any());
         doReturn(customers.getFirst())
                 .when(customerRepository)
                 .save(any());
@@ -349,8 +357,8 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(fileStorageService, times(1))
-                .storeFile(any());
+        verify(fileService, times(1))
+                .storeFile(any(), any());
 
         assertEquals(expected, actual);
     }
@@ -360,25 +368,24 @@ class CustomerServiceTest {
     void givenMultipartFile_whenUploadFile_thenThrowResourceExpectationFailedException() {
         // given
         String expected = ResponseMessage.FILE_UPLOAD_ERROR;
-        MultipartFile multipartFile = MockFileFactory.generateMockMultipartFile();
-        int id = 20;
+        int id = 1;
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
         doThrow(new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR))
-                .when(fileStorageService)
-                .storeFile(any());
+                .when(fileService)
+                .storeFile(any(), any());
 
         // when
-        RuntimeException exception = assertThrows(ResourceExpectationFailedException.class, () -> customerService.uploadProfilePhoto(id, multipartFile));
+        RuntimeException exception = assertThrows(ResourceExpectationFailedException.class, () -> customerService.uploadProfilePhoto(id, null));
         String actual = exception.getMessage();
 
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(fileStorageService, times(1))
-                .storeFile(any());
+        verify(fileService, times(1))
+                .storeFile(any(), any());
         verifyNoMoreInteractions(customerRepository);
 
         assertEquals(expected, actual);
@@ -424,6 +431,7 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
+        verifyNoMoreInteractions(fileService);
 
         assertEquals(expected, actual);
     }
