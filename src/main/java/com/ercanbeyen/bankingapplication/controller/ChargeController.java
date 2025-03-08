@@ -1,34 +1,48 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.dto.ChargeDto;
-import com.ercanbeyen.bankingapplication.option.ChargeFilteringOption;
-import com.ercanbeyen.bankingapplication.service.impl.ChargeService;
+import com.ercanbeyen.bankingapplication.service.ChargeService;
 import com.ercanbeyen.bankingapplication.util.ChargeUtil;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/charges")
-public class ChargeController extends BaseController<ChargeDto, ChargeFilteringOption> {
+@RequiredArgsConstructor
+public class ChargeController {
     private final ChargeService chargeService;
 
-    public ChargeController(ChargeService chargeService) {
-        super(chargeService);
-        this.chargeService = chargeService;
-    }
-
     @PostMapping
-    @Override
-    public ResponseEntity<ChargeDto> createEntity(@RequestBody @Valid ChargeDto request) {
+    public ResponseEntity<ChargeDto> createCharge(@RequestBody @Valid ChargeDto request) {
         ChargeUtil.checkRequest(request);
-        return ResponseEntity.ok(chargeService.createEntity(request));
+        return ResponseEntity.ok(chargeService.createCharge(request));
     }
 
-    @PutMapping("/{id}")
-    @Override
-    public ResponseEntity<ChargeDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid ChargeDto request) {
+    @PutMapping("/{activityType}")
+    public ResponseEntity<ChargeDto> updateCharge(@PathVariable("activityType") AccountActivityType activityType, @RequestBody @Valid ChargeDto request) {
         ChargeUtil.checkRequest(request);
-        return ResponseEntity.ok(chargeService.updateEntity(id, request));
+        return ResponseEntity.ok(chargeService.updateCharge(activityType, request));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ChargeDto>> getCharges() {
+        return ResponseEntity.ok(chargeService.getCharges());
+    }
+
+    @GetMapping("/{activityType}")
+    public ResponseEntity<ChargeDto> getCharge(@PathVariable("activityType") AccountActivityType activityType) {
+        return ResponseEntity.ok(chargeService.getCharge(activityType));
+    }
+
+    @DeleteMapping("/{activityType}")
+    public ResponseEntity<Void> deleteCharge(@PathVariable("activityType") AccountActivityType activityType) {
+        chargeService.deleteCharge(activityType);
+        return ResponseEntity.noContent()
+                .build();
     }
 }

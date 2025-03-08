@@ -33,7 +33,7 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
-    private final ChargeService chargeService;
+    private final ChargeServiceImpl chargeService;
     private final FeeService feeService;
     private final CashFlowCalendarService cashFlowCalendarService;
 
@@ -42,7 +42,7 @@ public class TransactionService {
         double newBalance;
 
         switch (activityType) {
-            case MONEY_DEPOSIT, FEE ->  {
+            case MONEY_DEPOSIT, FEE -> {
                 newBalance = account.getBalance() + amount;
                 accounts[1] = account; // receiver
             }
@@ -55,8 +55,10 @@ public class TransactionService {
 
         account.setBalance(newBalance);
 
+        String entity = Entity.ACCOUNT.getValue();
+
         if (account.getType() == AccountType.DEPOSIT) {
-            log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
+            log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), entity);
             double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
             double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
 
@@ -76,16 +78,17 @@ public class TransactionService {
         summary.put(SummaryFields.ACCOUNT_IDENTITY, account.getId());
         summary.put(SummaryFields.AMOUNT, requestedAmountInSummary + " " + account.getCurrency());
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
-        summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
+        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
 
         String explanation = switch (activityType) {
-            case MONEY_DEPOSIT -> Entity.ACCOUNT.getValue() + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-            case WITHDRAWAL -> Entity.ACCOUNT.getValue() + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-            case FEE -> amount + " " + account.getCurrency() + " is transferred to " + Entity.ACCOUNT.getValue() + " " + account.getId();
-            case CHARGE -> amount + " " + account.getCurrency() + " is transferred from " + Entity.ACCOUNT.getValue() + " " + account.getId();
+            case MONEY_DEPOSIT -> entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
+            case WITHDRAWAL -> entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
+            case FEE -> amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
+            case CHARGE ->
+                    amount + " " + account.getCurrency() + " is transferred from " + entity + " " + account.getId();
             default -> throw new ResourceConflictException("Unexpected account activity type");
         };
 
@@ -116,13 +119,13 @@ public class TransactionService {
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
         summary.put(SummaryFields.FULL_NAME, senderAccount.getCustomer().getFullName());
-        summary.put(SummaryFields.NATIONAL_IDENTITY,  senderAccount.getCustomer().getNationalId());
-        summary.put("Sender " + SummaryFields.ACCOUNT_IDENTITY,  senderAccount.getId());
-        summary.put("Receiver " + SummaryFields.ACCOUNT_IDENTITY,  receiverAccount.getId());
-        summary.put(SummaryFields.AMOUNT,  requestedAmountInSummary + " " + senderAccount.getCurrency());
+        summary.put(SummaryFields.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
+        summary.put("Sender " + SummaryFields.ACCOUNT_IDENTITY, senderAccount.getId());
+        summary.put("Receiver " + SummaryFields.ACCOUNT_IDENTITY, receiverAccount.getId());
+        summary.put(SummaryFields.AMOUNT, requestedAmountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
-        summary.put(SummaryFields.PAYMENT_TYPE,  request.paymentType());
-        summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
+        summary.put(SummaryFields.PAYMENT_TYPE, request.paymentType());
+        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
         createAccountActivityForCharge(transactionFee, summary, accounts);
@@ -168,14 +171,14 @@ public class TransactionService {
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
         summary.put(SummaryFields.FULL_NAME, sellerAccount.getCustomer().getFullName());
-        summary.put(SummaryFields.NATIONAL_IDENTITY,  sellerAccount.getCustomer().getNationalId());
-        summary.put("Seller " + SummaryFields.ACCOUNT_IDENTITY,  sellerAccount.getId());
-        summary.put("Buyer " + SummaryFields.ACCOUNT_IDENTITY,  buyerAccount.getId());
-        summary.put("Spent " + SummaryFields.AMOUNT,  spentAmountInSummary + " " + sellerAccount.getCurrency());
-        summary.put("Earned " + SummaryFields.AMOUNT,  earnedAmountInSummary + " " + buyerAccount.getCurrency());
-        summary.put(SummaryFields.RATE,  rate);
+        summary.put(SummaryFields.NATIONAL_IDENTITY, sellerAccount.getCustomer().getNationalId());
+        summary.put("Seller " + SummaryFields.ACCOUNT_IDENTITY, sellerAccount.getId());
+        summary.put("Buyer " + SummaryFields.ACCOUNT_IDENTITY, buyerAccount.getId());
+        summary.put("Spent " + SummaryFields.AMOUNT, spentAmountInSummary + " " + sellerAccount.getCurrency());
+        summary.put("Earned " + SummaryFields.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
+        summary.put(SummaryFields.RATE, rate);
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
-        summary.put(SummaryFields.TIME,  LocalDateTime.now().toString());
+        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
@@ -189,10 +192,11 @@ public class TransactionService {
                 yield senderAccount.getCustomer()
                         .getNationalId()
                         .equals(receiverAccount.getCustomer().getNationalId()) ? 0
-                        : chargeService.getAmountByActivityType(activityType);
+                        : chargeService.getCharge(activityType).getAmount();
             }
             case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL -> 0;
-            case AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE -> chargeService.getAmountByActivityType(activityType);
+            case AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE ->
+                    chargeService.getCharge(activityType).getAmount();
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         };
     }

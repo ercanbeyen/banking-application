@@ -545,7 +545,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         Predicate<Customer> phoneNumberPredicate = customer -> customer.getPhoneNumber().equals(phoneNumber);
         Predicate<Customer> emailPredicate = customer -> customer.getEmail().equals(email);
 
-        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateEntity case
+        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateCharge case
             Predicate<Customer> customerInDbPredicate = customer -> !customerInDb.getNationalId().equals(nationalId);
             nationalIdPredicate = customerInDbPredicate.and(nationalIdPredicate);
 
