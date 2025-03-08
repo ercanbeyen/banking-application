@@ -25,6 +25,7 @@
 		<javatuples.version>1.2</javatuples.version>
 		<gson.version>2.10.1</gson.version>
 		<itextpdf.version>5.5.13.4</itextpdf.version>
+		<jedis.version>5.2.0</jedis.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -142,7 +143,15 @@
 			<artifactId>itextpdf</artifactId>
 			<version>${itextpdf.version}</version>
 		</dependency>
-
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-data-redis</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>redis.clients</groupId>
+			<artifactId>jedis</artifactId>
+			<version>${jedis.version}</version>
+		</dependency>
 	</dependencies>
 
 	<build>

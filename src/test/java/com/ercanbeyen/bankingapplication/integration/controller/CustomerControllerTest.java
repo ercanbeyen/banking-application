@@ -24,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.CassandraContainer;
+import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
@@ -46,6 +47,10 @@ class CustomerControllerTest {
     @Container
     @ServiceConnection
     private static final CassandraContainer<?> cassandraContainer = new CassandraContainer<>(DockerImageName.parse("cassandra:latest"));
+    @Container
+    @ServiceConnection
+    private static final GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:latest"))
+            .withExposedPorts(6379);
     private static final String PHOTOS_LOCATION = "C:\\Users\\ercanbeyen\\Photos\\Banking-App\\Source\\Test\\Resources\\";
     @LocalServerPort
     private Integer port;
@@ -79,6 +84,14 @@ class CustomerControllerTest {
         registry.add("spring.data.cassandra.password", cassandraContainer::getPassword);
 
         cassandraContainer.start();
+    }
+
+    @DynamicPropertySource
+    static void registerRedisProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.redis.host", redisContainer::getHost);
+        registry.add("spring.redis.port", redisContainer::getFirstMappedPort);
+
+        redisContainer.start();
     }
 
     @BeforeEach
