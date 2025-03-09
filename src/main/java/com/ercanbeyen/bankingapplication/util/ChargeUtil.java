@@ -13,7 +13,7 @@ public class ChargeUtil {
         Set<AccountActivityType> freeAccountActivities = AccountActivityType.getAccountStatusUpdatingActivities();
         freeAccountActivities.addAll(Set.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL));
 
-        if (freeAccountActivities.contains(request.getActivityType())) {
+        if (freeAccountActivities.contains(request.activityType())) {
             throw new BadRequestException("Account activities " + freeAccountActivities + " are free");
         }
     }

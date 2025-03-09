@@ -9,56 +9,51 @@ import com.ercanbeyen.bankingapplication.entity.DailyActivityLimit;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.DailyActivityLimitMapper;
-import com.ercanbeyen.bankingapplication.option.DailyActivityLimitFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.DailyActivityRepository;
-import com.ercanbeyen.bankingapplication.service.BaseService;
+import com.ercanbeyen.bankingapplication.service.DailyActivityLimitService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
-import java.util.function.Predicate;
 
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class DailyActivityLimitService implements BaseService<DailyActivityLimitDto, DailyActivityLimitFilteringOption> {
+public class DailyActivityLimitServiceImpl implements DailyActivityLimitService {
     private final DailyActivityRepository dailyActivityLimitRepository;
     private final DailyActivityLimitMapper dailyActivityLimitMapper;
 
+    @CacheEvict(value = "dailyActivityLimits", allEntries = true)
     @Override
-    public List<DailyActivityLimitDto> getEntities(DailyActivityLimitFilteringOption filteringOption) {
+    public List<DailyActivityLimitDto> getDailyActivityLimits() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        Predicate<DailyActivityLimit> dailyActivityLimitPredicate = dailyActivityLimit -> {
-            LocalDate createdAt = filteringOption.getCreatedAt();
-            LocalDate updatedAt = filteringOption.getUpdatedAt();
-            boolean createdAtFilter = (Optional.ofNullable(createdAt).isEmpty() || createdAt.isEqual(dailyActivityLimit.getCreatedAt().toLocalDate()));
-            boolean updatedAtFilter = (Optional.ofNullable(updatedAt).isEmpty() || updatedAt.isEqual(dailyActivityLimit.getUpdatedAt().toLocalDate()));
-            return createdAtFilter && updatedAtFilter;
-        };
 
         return dailyActivityLimitRepository.findAll()
                 .stream()
-                .filter(dailyActivityLimitPredicate)
                 .map(dailyActivityLimitMapper::entityToDto)
                 .toList();
     }
 
+    @Cacheable(value = "dailyActivityLimits", key = "#a0")
     @Override
-    public DailyActivityLimitDto getEntity(Integer id) {
+    public DailyActivityLimitDto getDailyActivityLimit(AccountActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        return dailyActivityLimitRepository.findById(id)
-                .map(dailyActivityLimitMapper::entityToDto)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.DAILY_ACTIVITY_LIMIT.getValue())));
+        DailyActivityLimit dailyActivityLimit = findByActivityType(activityType);
+
+        log.info("We are in getDailyActivityLimit --> No caching");
+
+        return dailyActivityLimitMapper.entityToDto(dailyActivityLimit);
     }
 
     @Override
-    public DailyActivityLimitDto createEntity(DailyActivityLimitDto request) {
+    public DailyActivityLimitDto createDailyActivityLimit(DailyActivityLimitDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         checkUniqueness(request, null);
@@ -70,53 +65,42 @@ public class DailyActivityLimitService implements BaseService<DailyActivityLimit
         return dailyActivityLimitMapper.entityToDto(savedDailyActivityLimit);
     }
 
+    @CachePut(value = "dailyActivityLimits", key = "#a0")
     @Override
-    public DailyActivityLimitDto updateEntity(Integer id, DailyActivityLimitDto request) {
+    public DailyActivityLimitDto updateDailyActivityLimit(AccountActivityType activityType, DailyActivityLimitDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        DailyActivityLimit dailyActivityLimit = findById(id);
+        DailyActivityLimit dailyActivityLimit = findByActivityType(activityType);
         checkUniqueness(request, dailyActivityLimit.getActivityType());
 
-        dailyActivityLimit.setActivityType(request.getActivityType());
-        dailyActivityLimit.setAmount(request.getAmount());
+        dailyActivityLimit.setAmount(request.amount());
 
         return dailyActivityLimitMapper.entityToDto(dailyActivityLimitRepository.save(dailyActivityLimit));
     }
 
+    @CacheEvict(value = "dailyActivityLimits", key = "#a0")
+    @Transactional
     @Override
-    public void deleteEntity(Integer id) {
+    public void deleteDailyActivityLimit(AccountActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
 
-        dailyActivityLimitRepository.findById(id)
-                .ifPresentOrElse(dailyActivityLimit -> {
-                    log.info(LogMessage.RESOURCE_FOUND, entity);
-                    dailyActivityLimitRepository.deleteById(id);
-                }, () -> {
-                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
-                });
+        if (!dailyActivityLimitExistsByActivityType(activityType)) {
+            throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
+        }
 
-        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        dailyActivityLimitRepository.deleteByActivityType(activityType);
+
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, activityType);
     }
 
-    public Double getAmountByActivityType(AccountActivityType activityType) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
+    private DailyActivityLimit findByActivityType(AccountActivityType activityType) {
         String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
         DailyActivityLimit dailyActivityLimit = dailyActivityLimitRepository.findByActivityType(activityType)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
-
-        Double amount = dailyActivityLimit.getAmount();
-        log.info("Charge amount of {}: {}", activityType.getValue(), amount);
-
-        return amount;
-    }
-
-    private DailyActivityLimit findById(Integer id) {
-        String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
-        DailyActivityLimit dailyActivityLimit = dailyActivityLimitRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
         log.info(LogMessage.RESOURCE_FOUND, entity);
@@ -127,17 +111,21 @@ public class DailyActivityLimitService implements BaseService<DailyActivityLimit
     private void checkUniqueness(DailyActivityLimitDto request, AccountActivityType previousActivityType) {
         String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
 
-        if (previousActivityType == request.getActivityType()) {
+        if (previousActivityType == request.activityType()) {
             log.warn(LogMessage.NO_ACCOUNT_ACTIVITY_CHANGE, entity);
             return;
         }
 
-        boolean entityExists = dailyActivityLimitRepository.existsByActivityType(request.getActivityType());
+        boolean entityExists = dailyActivityLimitExistsByActivityType(request.activityType());
 
         if (entityExists) {
             throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, entity));
         }
 
         log.info(LogMessage.RESOURCE_UNIQUE, entity);
+    }
+
+    private boolean dailyActivityLimitExistsByActivityType(AccountActivityType activityType) {
+        return dailyActivityLimitRepository.existsByActivityType(activityType);
     }
 }

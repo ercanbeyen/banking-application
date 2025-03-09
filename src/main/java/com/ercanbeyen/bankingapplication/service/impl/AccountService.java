@@ -22,10 +22,7 @@ import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
-import com.ercanbeyen.bankingapplication.service.AccountActivityService;
-import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.service.AgreementService;
-import com.ercanbeyen.bankingapplication.service.NotificationService;
+import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
@@ -441,7 +438,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         dailyActivityAmount += amount;
         log.info("Updated daily activity amount: {}", dailyActivityAmount);
 
-        Double activityLimit = dailyActivityLimitService.getAmountByActivityType(activityType);
+        Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
 
         if (dailyActivityAmount > activityLimit) {
             throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType, activityLimit));

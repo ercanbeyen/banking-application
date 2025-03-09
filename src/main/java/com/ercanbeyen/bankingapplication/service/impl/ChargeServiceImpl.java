@@ -15,6 +15,7 @@ import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,6 +29,8 @@ public class ChargeServiceImpl implements ChargeService {
     private final ChargeRepository chargeRepository;
     private final ChargeMapper chargeMapper;
 
+    @CacheEvict(value = "charges", allEntries = true)
+    @Override
     public List<ChargeDto> getCharges() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -37,6 +40,7 @@ public class ChargeServiceImpl implements ChargeService {
                 .toList();
     }
 
+    @Override
     public ChargeDto createCharge(ChargeDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -49,20 +53,21 @@ public class ChargeServiceImpl implements ChargeService {
         return chargeMapper.entityToDto(savedCharge);
     }
 
-    @CacheEvict(value = "charges", allEntries = true)
+    @CachePut(value = "charges", key = "#a0")
+    @Override
     public ChargeDto updateCharge(AccountActivityType activityType, ChargeDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Charge charge = findByActivityType(activityType);
         checkUniqueness(request, charge.getActivityType());
 
-        charge.setActivityType(request.getActivityType());
-        charge.setAmount(request.getAmount());
+        charge.setAmount(request.amount());
 
         return chargeMapper.entityToDto(chargeRepository.save(charge));
     }
 
     @Cacheable(value = "charges", key = "#a0")
+    @Override
     public ChargeDto getCharge(AccountActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Charge charge = findByActivityType(activityType);
@@ -74,6 +79,7 @@ public class ChargeServiceImpl implements ChargeService {
 
     @CacheEvict(value = "charges", key = "#a0")
     @Transactional
+    @Override
     public void deleteCharge(AccountActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -102,12 +108,12 @@ public class ChargeServiceImpl implements ChargeService {
     private void checkUniqueness(ChargeDto request, AccountActivityType previousActivityType) {
         String entity = Entity.CHARGE.getValue();
 
-        if (previousActivityType == request.getActivityType()) {
+        if (previousActivityType == request.activityType()) {
             log.warn(LogMessage.NO_ACCOUNT_ACTIVITY_CHANGE, entity);
             return;
         }
 
-        boolean entityExists = chargeExistsByActivityType(request.getActivityType());
+        boolean entityExists = chargeExistsByActivityType(request.activityType());
 
         if (entityExists) {
             throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, entity));

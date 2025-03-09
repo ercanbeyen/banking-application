@@ -192,11 +192,11 @@ public class TransactionService {
                 yield senderAccount.getCustomer()
                         .getNationalId()
                         .equals(receiverAccount.getCustomer().getNationalId()) ? 0
-                        : chargeService.getCharge(activityType).getAmount();
+                        : chargeService.getCharge(activityType).amount();
             }
             case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL -> 0;
             case AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE ->
-                    chargeService.getCharge(activityType).getAmount();
+                    chargeService.getCharge(activityType).amount();
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         };
     }
