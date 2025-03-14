@@ -41,19 +41,27 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(accountService.updateEntity(id, request), HttpStatus.OK);
     }
 
-    @PutMapping("/{id}/balance")
-    public ResponseEntity<MessageResponse<String>> updateBalanceAccount(
+    @PutMapping("/deposit/{id}")
+    public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") Integer id,
-            @RequestParam("activityType") AccountActivityType activityType,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        AccountUtil.checkAccountActivityForCurrentAccount(activityType);
-        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfAccount(id, activityType, amount));
+        AccountUtil.checkAccountActivityForCurrentAccount(AccountActivityType.MONEY_DEPOSIT);
+        MessageResponse<String> response = new MessageResponse<>(accountService.depositMoney(id, amount));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PutMapping("/{id}/deposit/monthly")
-    public ResponseEntity<MessageResponse<String>> updateBalanceOfDepositAccountMonthly(@PathVariable("id") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.updateBalanceOfDepositAccountMonthly(id));
+    @PutMapping("/withdrawal/{id}")
+    public ResponseEntity<MessageResponse<String>> withdrawMoney(
+            @PathVariable("id") Integer id,
+            @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
+        AccountUtil.checkAccountActivityForCurrentAccount(AccountActivityType.WITHDRAWAL);
+        MessageResponse<String> response = new MessageResponse<>(accountService.withdrawMoney(id, amount));
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PutMapping("/pay/interest/{id}")
+    public ResponseEntity<MessageResponse<String>> payInterest(@PathVariable("id") Integer id) {
+        MessageResponse<String> response = new MessageResponse<>(accountService.payInterest(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

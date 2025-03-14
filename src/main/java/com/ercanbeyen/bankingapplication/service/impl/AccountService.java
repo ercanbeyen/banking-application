@@ -146,22 +146,71 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.ACCOUNT.getValue(), id);
     }
 
-    public String updateBalanceOfAccount(Integer id, AccountActivityType activityType, Double amount) {
+    public String depositMoney(Integer id, Double amount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        checkBalanceBeforeSingleAccountOperations(account, amount, activityType);
+        AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
+        double transactionFee = transactionService.getTransactionFee(activityType, List.of(account));
+
+        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, amount, transactionFee);
+
+        if (account.getBalance() < transactionFee) {
+            throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
+        }
+
+        log.info(LogMessage.ENOUGH_BALANCE, activityType);
+
         checkDailyAccountActivityLimit(account, amount, activityType);
 
         transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
 
-        NotificationDto notificationDto = constructNotificationForBalanceUpdate(activityType, amount, account);
+        String message = String.format("%s %s has been deposited into your %s %s",
+                amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId());
+
+        NotificationDto notificationDto = new NotificationDto(
+                account.getCustomer().getNationalId(),
+                String.format(message, amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId())
+        );
+
         notificationService.createNotification(notificationDto);
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
-    public String updateBalanceOfDepositAccountMonthly(Integer id) {
+    public String withdrawMoney(Integer id, Double amount) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Account account = findActiveAccountById(id);
+        AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
+        double transactionFee = transactionService.getTransactionFee(activityType, List.of(account));
+
+        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, amount, transactionFee);
+
+        if (account.getBalance() < amount + transactionFee) {
+            throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
+        }
+
+        log.info(LogMessage.ENOUGH_BALANCE, activityType);
+
+        checkDailyAccountActivityLimit(account, amount, activityType);
+
+        transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
+
+        String message = String.format("%s %s has been withdrawn from your %s %s",
+                amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId());
+
+        NotificationDto notificationDto = new NotificationDto(
+                account.getCustomer().getNationalId(),
+                String.format(message, amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId())
+        );
+
+        notificationService.createNotification(notificationDto);
+
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
+    }
+
+    public String payInterest(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -447,19 +496,6 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info("Daily limit of {} is not exceeded", activityType);
     }
 
-    private static NotificationDto constructNotificationForBalanceUpdate(AccountActivityType activityType, Double amount, Account account) {
-        String message = switch (activityType) {
-            case MONEY_DEPOSIT, FEE -> "%s %s has been deposited into your %s %s";
-            case WITHDRAWAL, CHARGE -> "%s %s has been withdrawn from your %s %s";
-            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
-        };
-
-        return new NotificationDto(
-                account.getCustomer().getNationalId(),
-                String.format(message, amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId())
-        );
-    }
-
     private static AccountActivityFilteringOption constructAccountActivityFilteringOption(Integer accountId, AccountActivityType activityType) {
         Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is receiver id
 
@@ -523,21 +559,6 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         );
 
         accountActivityService.createAccountActivity(request);
-    }
-
-    private void checkBalanceBeforeSingleAccountOperations(Account account, Double requestedAmount, AccountActivityType activityType) {
-        Double transactionFee = transactionService.getTransactionFee(activityType, List.of(account));
-        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
-
-        if (activityType == AccountActivityType.MONEY_DEPOSIT || activityType == AccountActivityType.FEE) {
-            if (account.getBalance() < transactionFee) {
-                throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
-            }
-        } else if (account.getBalance() < requestedAmount + transactionFee) { // Withdrawal case
-            throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
-        }
-
-        log.info(LogMessage.ENOUGH_BALANCE, activityType);
     }
 
     private void checkBalanceBeforeMoneyTransferAndExchange(Account chargedAccount, List<Account> relatedAccounts, Double requestedAmount, AccountActivityType activityType) {
