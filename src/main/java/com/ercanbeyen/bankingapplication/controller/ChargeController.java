@@ -3,7 +3,6 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.dto.ChargeDto;
 import com.ercanbeyen.bankingapplication.service.ChargeService;
-import com.ercanbeyen.bankingapplication.util.ChargeUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -19,13 +18,11 @@ public class ChargeController {
 
     @PostMapping
     public ResponseEntity<ChargeDto> createCharge(@RequestBody @Valid ChargeDto request) {
-        ChargeUtil.checkRequest(request);
         return ResponseEntity.ok(chargeService.createCharge(request));
     }
 
     @PutMapping("/{activityType}")
     public ResponseEntity<ChargeDto> updateCharge(@PathVariable("activityType") AccountActivityType activityType, @RequestBody @Valid ChargeDto request) {
-        ChargeUtil.checkRequest(request);
         return ResponseEntity.ok(chargeService.updateCharge(activityType, request));
     }
 

@@ -10,6 +10,7 @@ import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
@@ -24,6 +25,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -37,21 +39,35 @@ public class TransactionService {
     private final FeeService feeService;
     private final CashFlowCalendarService cashFlowCalendarService;
 
-    public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account) {
-        Account[] accounts = new Account[2]; // first account is sender, second account is receiver
-        double newBalance;
+    public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation) {
+        Double transactionFee = getTransactionFee(activityType, List.of(account));
 
-        switch (activityType) {
+        Account[] accounts = new Account[2]; // first account is sender, second account is receiver
+        final double previousBalance = account.getBalance();
+
+        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, amount, transactionFee);
+
+        double newBalance = switch (activityType) {
             case MONEY_DEPOSIT, FEE -> {
-                newBalance = account.getBalance() + amount;
-                accounts[1] = account; // receiver
+                if (previousBalance + amount < transactionFee) {
+                    throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
+                }
+
+                /* Balance update of receiver account */
+                accounts[1] = account;
+                yield previousBalance + amount - transactionFee;
             }
-            case WITHDRAWAL, CHARGE -> {
-                newBalance = account.getBalance() - amount;
-                accounts[0] = account; // sender
+            case WITHDRAWAL -> {
+                if (previousBalance < amount + transactionFee) {
+                    throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
+                }
+
+                /* Balance update of sender account */
+                accounts[0] = account;
+                yield previousBalance - (amount + transactionFee);
             }
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
-        }
+        };
 
         account.setBalance(newBalance);
 
@@ -68,36 +84,28 @@ public class TransactionService {
 
         accountRepository.saveAndFlush(account);
 
-        Double transactionFee = getTransactionFee(activityType, List.of(account));
-        String requestedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
+        String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
         summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());
         summary.put(SummaryFields.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
         summary.put(SummaryFields.ACCOUNT_IDENTITY, account.getId());
-        summary.put(SummaryFields.AMOUNT, requestedAmountInSummary + " " + account.getCurrency());
+        summary.put(SummaryFields.AMOUNT, amountInSummary + " " + account.getCurrency());
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
         summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
 
-        String explanation = switch (activityType) {
-            case MONEY_DEPOSIT -> entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-            case WITHDRAWAL -> entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-            case FEE -> amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-            case CHARGE ->
-                    amount + " " + account.getCurrency() + " is transferred from " + entity + " " + account.getId();
-            default -> throw new ResourceConflictException("Unexpected account activity type");
-        };
-
-        cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
+        cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, cashFlowExplanation);
     }
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
-        double transactionFee = getTransactionFee(activityType, List.of(senderAccount, receiverAccount));
+        List<Account> accountsInMoneyTransfer = List.of(senderAccount, receiverAccount);
+        double transactionFee = getTransactionFee(activityType, accountsInMoneyTransfer);
+        checkBalanceBeforeMoneyTransferAndExchange(chargedAccount, accountsInMoneyTransfer, amount, transactionFee, activityType);
 
         /* Balance update of sender account */
         double newBalance = senderAccount.getBalance() - amount;
@@ -114,7 +122,7 @@ public class TransactionService {
         accountRepository.saveAllAndFlush(List.of(senderAccount, chargedAccount, receiverAccount));
 
         Account[] accounts = {senderAccount, receiverAccount};
-        String requestedAmountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
+        String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
@@ -122,7 +130,7 @@ public class TransactionService {
         summary.put(SummaryFields.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
         summary.put("Sender " + SummaryFields.ACCOUNT_IDENTITY, senderAccount.getId());
         summary.put("Receiver " + SummaryFields.ACCOUNT_IDENTITY, receiverAccount.getId());
-        summary.put(SummaryFields.AMOUNT, requestedAmountInSummary + " " + senderAccount.getCurrency());
+        summary.put(SummaryFields.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryFields.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
         summary.put(SummaryFields.PAYMENT_TYPE, request.paymentType());
         summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
@@ -141,10 +149,14 @@ public class TransactionService {
 
     public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+
+        List<Account> accountsInMoneyExchange = List.of(sellerAccount, buyerAccount);
+        double transactionFee = getTransactionFee(activityType, accountsInMoneyExchange);
+        checkBalanceBeforeMoneyTransferAndExchange(chargedAccount, accountsInMoneyExchange, request.amount(), transactionFee, activityType);
+
         Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
         Double spentAmount = request.amount();
         Double earnedAmount = exchangeService.convertMoneyBetweenCurrencies(sellerAccount.getCurrency(), buyerAccount.getCurrency(), spentAmount);
-        Double transactionFee = getTransactionFee(activityType, List.of(sellerAccount, buyerAccount));
 
         /* Balance update of seller account */
         double newBalance = sellerAccount.getBalance() - spentAmount;
@@ -184,21 +196,16 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, accounts);
     }
 
-    public double getTransactionFee(AccountActivityType activityType, List<Account> accounts) {
-        return switch (activityType) {
-            case AccountActivityType.MONEY_TRANSFER -> {
-                Account senderAccount = accounts.getFirst();
-                Account receiverAccount = accounts.getLast();
-                yield senderAccount.getCustomer()
-                        .getNationalId()
-                        .equals(receiverAccount.getCustomer().getNationalId()) ? 0
-                        : chargeService.getCharge(activityType).amount();
-            }
-            case AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL -> 0;
-            case AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE ->
-                    chargeService.getCharge(activityType).amount();
-            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
-        };
+    private double getTransactionFee(AccountActivityType activityType, List<Account> accounts) {
+        boolean sameCustomerTransferMoneyBetweenAccounts = activityType == AccountActivityType.MONEY_TRANSFER
+                && accounts.getFirst().getCustomer().getNationalId().equals(accounts.getLast().getCustomer().getNationalId());
+
+        if (sameCustomerTransferMoneyBetweenAccounts) {
+            log.warn("There is no transaction fee when transferring money between accounts of the same customer");
+            return 0;
+        }
+
+        return chargeService.getCharge(activityType).amount();
     }
 
     private void createAccountActivityForCharge(Double transactionFee, Map<String, Object> summary, Account[] accounts) {
@@ -213,5 +220,29 @@ public class TransactionService {
     private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
         return accountActivityService.createAccountActivity(accountActivityRequest);
+    }
+
+    private void checkBalanceBeforeMoneyTransferAndExchange(Account chargedAccount, List<Account> relatedAccounts, Double amount, Double transactionFee, AccountActivityType activityType) {
+        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, amount, transactionFee);
+
+        if (Objects.equals(chargedAccount.getId(), relatedAccounts.getFirst().getId())) {
+            log.info("Extra charged account does not exist");
+
+            if (chargedAccount.getBalance() < (amount + transactionFee)) {
+                throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
+            }
+        } else {
+            log.info("Extra charged account exists");
+
+            if (chargedAccount.getBalance() < transactionFee) {
+                throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
+            }
+
+            if (relatedAccounts.getFirst().getBalance() < amount) {
+                throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
+            }
+        }
+
+        log.info(LogMessage.ENOUGH_BALANCE, activityType);
     }
 }
