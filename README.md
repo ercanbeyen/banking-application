@@ -52,6 +52,7 @@ Entities:
 - Spring Batch
 - JUnit 5
 - Rest-assured
+- Redis
 - MySQL
 - Cassandra
 - Docker
@@ -67,6 +68,7 @@ In order to pull images from Dockerhub, you should run the below commands
 ```
 $ docker pull mysql
 $ docker pull cassandra
+$ docker pull redis
 ```
 
 Then, you should run the below commands in order to run the application (Default port is 8080)
