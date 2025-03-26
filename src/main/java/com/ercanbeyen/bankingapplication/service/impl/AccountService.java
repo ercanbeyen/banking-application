@@ -154,7 +154,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         checkDailyAccountActivityLimit(account, amount, activityType);
 
         String cashFlowExplanation = Entity.ACCOUNT.getValue() + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, cashFlowExplanation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
         String message = String.format("%s %s has been deposited into your %s %s",
                 amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId());
@@ -178,7 +178,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         checkDailyAccountActivityLimit(account, amount, activityType);
 
         String cashFlowExplanation = Entity.ACCOUNT.getValue() + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, cashFlowExplanation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
         String message = String.format("%s %s has been withdrawn from your %s %s",
                 amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId());
@@ -207,7 +207,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         AccountActivityType activityType = AccountActivityType.FEE;
 
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + Entity.ACCOUNT.getValue() + " " + account.getId();
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account, cashFlowExplanation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit account has been renewed.", account.getCurrency()));
         notificationService.createNotification(notificationDto);

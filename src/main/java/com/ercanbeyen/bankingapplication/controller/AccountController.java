@@ -45,7 +45,6 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        AccountUtil.checkAccountActivityForCurrentAccount(AccountActivityType.MONEY_DEPOSIT);
         MessageResponse<String> response = new MessageResponse<>(accountService.depositMoney(id, amount));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -54,7 +53,6 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
             @PathVariable("id") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        AccountUtil.checkAccountActivityForCurrentAccount(AccountActivityType.WITHDRAWAL);
         MessageResponse<String> response = new MessageResponse<>(accountService.withdrawMoney(id, amount));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

@@ -26,6 +26,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.DoublePredicate;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -39,42 +40,46 @@ public class TransactionService {
     private final FeeService feeService;
     private final CashFlowCalendarService cashFlowCalendarService;
 
-    public void updateBalanceOfSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation) {
-        Double transactionFee = getTransactionFee(activityType, List.of(account));
-
+    public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation) {
         Account[] accounts = new Account[2]; // first account is sender, second account is receiver
-        final double previousBalance = account.getBalance();
-
+        Double transactionFee = getTransactionFee(activityType, List.of(account));
         log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, amount, transactionFee);
+
+        final double previousBalance = account.getBalance();
+        DoublePredicate validBalancePredicate = balance -> balance >= 0;
 
         double newBalance = switch (activityType) {
             case MONEY_DEPOSIT, FEE -> {
-                if (previousBalance + amount < transactionFee) {
+                double updatedBalance = previousBalance + amount - transactionFee;
+
+                if (!validBalancePredicate.test(updatedBalance)) {
                     throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
                 }
 
                 /* Balance update of receiver account */
                 accounts[1] = account;
-                yield previousBalance + amount - transactionFee;
+                yield updatedBalance;
             }
             case WITHDRAWAL -> {
-                if (previousBalance < amount + transactionFee) {
+                double updatedBalance = previousBalance - (amount + transactionFee);
+
+                if (!validBalancePredicate.test(updatedBalance)) {
                     throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
                 }
 
                 /* Balance update of sender account */
                 accounts[0] = account;
-                yield previousBalance - (amount + transactionFee);
+                yield updatedBalance;
             }
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         };
 
+        log.info(LogMessage.ENOUGH_BALANCE, activityType);
+
         account.setBalance(newBalance);
 
-        String entity = Entity.ACCOUNT.getValue();
-
         if (account.getType() == AccountType.DEPOSIT) {
-            log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), entity);
+            log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
             double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
             double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
 
