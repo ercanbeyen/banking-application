@@ -30,7 +30,7 @@ public class AccountScheduledTask {
     private static final String ID = "id";
 
     @Scheduled(cron = "0 0 9 * * *") // 9:00 everyday
-    public void addMoneyToDepositAccounts() {
+    public void payInterestOnDepositAccounts() {
         final String task = "periodic money deposit to deposit account";
         log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
@@ -69,7 +69,7 @@ public class AccountScheduledTask {
             log.info(LogMessage.BEFORE_REQUEST);
 
             Map<String, Integer> parameters = Map.of(ID, accountId);
-            String url = Entity.ACCOUNT.getCollectionUrl() + "/{" + ID + "}/deposit/monthly";
+            String url = Entity.ACCOUNT.getCollectionUrl() + "/pay/interest/{" + ID + "}";
 
             try {
                 restTemplate.put(url, null, parameters);

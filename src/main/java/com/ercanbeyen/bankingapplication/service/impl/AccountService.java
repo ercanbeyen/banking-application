@@ -15,17 +15,13 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
-import com.ercanbeyen.bankingapplication.service.AccountActivityService;
-import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.service.AgreementService;
-import com.ercanbeyen.bankingapplication.service.NotificationService;
+import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
@@ -149,22 +145,55 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.ACCOUNT.getValue(), id);
     }
 
-    public String updateBalanceOfAccount(Integer id, AccountActivityType activityType, Double amount) {
+    public String depositMoney(Integer id, Double amount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        checkBalanceBeforeSingleAccountOperations(account, amount, activityType);
+        AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
+
         checkDailyAccountActivityLimit(account, amount, activityType);
 
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
+        String cashFlowExplanation = Entity.ACCOUNT.getValue() + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
-        NotificationDto notificationDto = constructNotificationForBalanceUpdate(activityType, amount, account);
+        String message = String.format("%s %s has been deposited into your %s %s",
+                amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId());
+
+        NotificationDto notificationDto = new NotificationDto(
+                account.getCustomer().getNationalId(),
+                String.format(message, amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId())
+        );
+
         notificationService.createNotification(notificationDto);
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
-    public String updateBalanceOfDepositAccountMonthly(Integer id) {
+    public String withdrawMoney(Integer id, Double amount) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Account account = findActiveAccountById(id);
+        AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
+
+        checkDailyAccountActivityLimit(account, amount, activityType);
+
+        String cashFlowExplanation = Entity.ACCOUNT.getValue() + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
+
+        String message = String.format("%s %s has been withdrawn from your %s %s",
+                amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId());
+
+        NotificationDto notificationDto = new NotificationDto(
+                account.getCustomer().getNationalId(),
+                String.format(message, amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId())
+        );
+
+        notificationService.createNotification(notificationDto);
+
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
+    }
+
+    public String payInterest(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -177,7 +206,8 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         Double amount = AccountUtil.calculateInterest(account.getBalance(), account.getDepositPeriod(), account.getInterestRatio());
         AccountActivityType activityType = AccountActivityType.FEE;
 
-        transactionService.updateBalanceOfSingleAccount(activityType, amount, account);
+        String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + Entity.ACCOUNT.getValue() + " " + account.getId();
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit account has been renewed.", account.getCurrency()));
         notificationService.createNotification(notificationDto);
@@ -201,7 +231,6 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(senderAccount));
 
-        checkBalanceBeforeMoneyTransferAndExchange(chargedAccount, List.of(senderAccount, receiverAccount), amount, activityType);
         checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
         transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, receiverAccount, chargedAccount);
@@ -224,13 +253,10 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
-        Double requestedAmount = request.amount();
+
+        checkDailyAccountActivityLimit(sellerAccount, request.amount(), activityType);
 
         Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(sellerAccount, buyerAccount));
-
-        checkBalanceBeforeMoneyTransferAndExchange(chargedAccount, List.of(sellerAccount, buyerAccount), requestedAmount, activityType);
-        checkDailyAccountActivityLimit(sellerAccount, requestedAmount, activityType);
-
         transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, chargedAccount);
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
@@ -441,26 +467,13 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         dailyActivityAmount += amount;
         log.info("Updated daily activity amount: {}", dailyActivityAmount);
 
-        Double activityLimit = dailyActivityLimitService.getAmountByActivityType(activityType);
+        Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
 
         if (dailyActivityAmount > activityLimit) {
             throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType, activityLimit));
         }
 
         log.info("Daily limit of {} is not exceeded", activityType);
-    }
-
-    private static NotificationDto constructNotificationForBalanceUpdate(AccountActivityType activityType, Double amount, Account account) {
-        String message = switch (activityType) {
-            case MONEY_DEPOSIT, FEE -> "%s %s has been deposited into your %s %s";
-            case WITHDRAWAL, CHARGE -> "%s %s has been withdrawn from your %s %s";
-            default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
-        };
-
-        return new NotificationDto(
-                account.getCustomer().getNationalId(),
-                String.format(message, amount, account.getCurrency(), Entity.ACCOUNT.getValue(), account.getId())
-        );
     }
 
     private static AccountActivityFilteringOption constructAccountActivityFilteringOption(Integer accountId, AccountActivityType activityType) {
@@ -526,45 +539,5 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         );
 
         accountActivityService.createAccountActivity(request);
-    }
-
-    private void checkBalanceBeforeSingleAccountOperations(Account account, Double requestedAmount, AccountActivityType activityType) {
-        Double transactionFee = transactionService.getTransactionFee(activityType, List.of(account));
-        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
-
-        if (activityType == AccountActivityType.MONEY_DEPOSIT || activityType == AccountActivityType.FEE) {
-            if (account.getBalance() < transactionFee) {
-                throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
-            }
-        } else if (account.getBalance() < requestedAmount + transactionFee) { // Withdrawal case
-            throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
-        }
-
-        log.info(LogMessage.ENOUGH_BALANCE, activityType);
-    }
-
-    private void checkBalanceBeforeMoneyTransferAndExchange(Account chargedAccount, List<Account> relatedAccounts, Double requestedAmount, AccountActivityType activityType) {
-        Double transactionFee = transactionService.getTransactionFee(activityType, relatedAccounts);
-        log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType, requestedAmount, transactionFee);
-
-        if (Objects.equals(chargedAccount.getId(), relatedAccounts.getFirst().getId())) {
-            log.info("Extra charged account does not exist");
-
-            if (chargedAccount.getBalance() < (requestedAmount + transactionFee)) {
-                throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
-            }
-        } else {
-            log.info("Extra charged account exists");
-
-            if (chargedAccount.getBalance() < transactionFee) {
-                throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
-            }
-
-            if (relatedAccounts.getFirst().getBalance() < requestedAmount) {
-                throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
-            }
-        }
-
-        log.info(LogMessage.ENOUGH_BALANCE, activityType);
     }
 }
