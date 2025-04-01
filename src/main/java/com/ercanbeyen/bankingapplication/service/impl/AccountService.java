@@ -150,6 +150,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account account = findActiveAccountById(id);
         AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
+        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
 
         checkDailyAccountActivityLimit(account, amount, activityType);
 
@@ -174,6 +175,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
 
         Account account = findActiveAccountById(id);
         AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
+        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
 
         checkDailyAccountActivityLimit(account, amount, activityType);
 
@@ -373,6 +375,17 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return account;
     }
 
+    public static void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount) {
+        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
+
+        if (senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
+            log.warn("Same customer is transferring money between accounts");
+            return;
+        }
+
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType(), AccountActivityType.MONEY_TRANSFER);
+    }
+
     private Account findById(Integer id) {
         String entity = Entity.ACCOUNT.getValue();
         Account account = accountRepository.findById(id)
@@ -383,17 +396,6 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return account;
     }
 
-    private static void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount) {
-        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
-
-        if (senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
-            log.warn("Same customer is transferring money between accounts");
-            return;
-        }
-
-        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
-    }
-
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
         ExchangeUtil.checkCurrenciesBeforeMoneyExchange(sellerAccount.getCurrency(), buyerAccount.getCurrency());
 
@@ -401,7 +403,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
             throw new ResourceConflictException(String.format("Money %s between different customers is disallowed", Entity.EXCHANGE.getValue()));
         }
 
-        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType());
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType(), AccountActivityType.MONEY_EXCHANGE);
     }
 
     private Account getChargedAccountInMoneyExchange(Integer id, List<Account> accounts) {

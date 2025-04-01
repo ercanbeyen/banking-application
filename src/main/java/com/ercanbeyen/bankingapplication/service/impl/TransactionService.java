@@ -14,6 +14,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedExce
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
+import com.ercanbeyen.bankingapplication.service.ChargeService;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,7 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
-    private final ChargeServiceImpl chargeService;
+    private final ChargeService chargeService;
     private final FeeService feeService;
     private final CashFlowCalendarService cashFlowCalendarService;
 
@@ -76,17 +77,7 @@ public class TransactionService {
 
         log.info(LogMessage.ENOUGH_BALANCE, activityType);
 
-        account.setBalance(newBalance);
-
-        if (account.getType() == AccountType.DEPOSIT) {
-            log.info("{} {} is needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
-            double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
-            double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
-
-            account.setInterestRatio(interestRatio);
-            account.setBalanceAfterNextFee(balanceAfterNextFee);
-        }
-
+        updateBalance(account, newBalance);
         accountRepository.saveAndFlush(account);
 
         String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
@@ -114,15 +105,15 @@ public class TransactionService {
 
         /* Balance update of sender account */
         double newBalance = senderAccount.getBalance() - amount;
-        senderAccount.setBalance(newBalance);
+        updateBalance(senderAccount, newBalance);
 
         /* Balance update of charged account */
         newBalance = chargedAccount.getBalance() - transactionFee;
-        chargedAccount.setBalance(newBalance);
+        updateBalance(chargedAccount, newBalance);
 
         /* Balance update of receiver account */
         newBalance = receiverAccount.getBalance() + amount;
-        receiverAccount.setBalance(newBalance);
+        updateBalance(receiverAccount, newBalance);
 
         accountRepository.saveAllAndFlush(List.of(senderAccount, chargedAccount, receiverAccount));
 
@@ -165,15 +156,15 @@ public class TransactionService {
 
         /* Balance update of seller account */
         double newBalance = sellerAccount.getBalance() - spentAmount;
-        sellerAccount.setBalance(newBalance);
+        updateBalance(sellerAccount, newBalance);
 
         /* Balance update of charged account */
         newBalance = chargedAccount.getBalance() - transactionFee;
-        chargedAccount.setBalance(newBalance);
+        updateBalance(chargedAccount, newBalance);
 
         /* Balance update of receiver account */
         newBalance = buyerAccount.getBalance() + earnedAmount;
-        buyerAccount.setBalance(newBalance);
+        updateBalance(buyerAccount, newBalance);
 
         accountRepository.saveAllAndFlush(List.of(sellerAccount, chargedAccount, buyerAccount));
 
@@ -199,6 +190,20 @@ public class TransactionService {
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
+    }
+
+    private void updateBalance(Account account, double newBalance) {
+        if (account.getType() == AccountType.DEPOSIT) {
+            log.info("{} {} needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
+            double interestRatio = feeService.getInterestRatio(account.getCurrency(), account.getDepositPeriod(), newBalance);
+            double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(newBalance, account.getDepositPeriod(), interestRatio);
+
+            account.setInterestRatio(interestRatio);
+            account.setBalanceAfterNextFee(balanceAfterNextFee);
+        }
+
+        account.setBalance(newBalance);
+        log.info("Account balance is updated");
     }
 
     private double getTransactionFee(AccountActivityType activityType, List<Account> accounts) {

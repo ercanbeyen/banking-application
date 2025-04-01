@@ -13,7 +13,6 @@ import com.ercanbeyen.bankingapplication.mapper.TransferOrderMapper;
 import com.ercanbeyen.bankingapplication.option.TransferOrderOption;
 import com.ercanbeyen.bankingapplication.repository.TransferOrderRepository;
 import com.ercanbeyen.bankingapplication.service.BaseService;
-import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -132,8 +131,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         Account senderAccount = accountService.findActiveAccountById(request.getSenderAccountId());
         Account receiverAccount = accountService.findActiveAccountById(request.getRegularTransferDto().receiverAccountId());
 
-        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType());
-        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
+        AccountService.checkAccountsBeforeMoneyTransfer(senderAccount, receiverAccount);
 
         Account chargedAccount = accountService.getChargedAccount(request.getChargedAccountId(), List.of(senderAccount));
 

@@ -15,7 +15,6 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -66,12 +65,12 @@ public class AccountUtil {
         }
     }
 
-    public void checkAccountActivityForCurrentAccount(AccountActivityType activityType) {
-        List<AccountActivityType> accountActivityTypes = List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL, AccountActivityType.FEE, AccountActivityType.CHARGE);
-
-        if (!accountActivityTypes.contains(activityType)) {
-            throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
+    public void checkAccountActivityAndAccountTypeMatch(AccountType givenAccountType, AccountType expectedAccountType, AccountActivityType activityType) {
+        if (givenAccountType != expectedAccountType) {
+            throw new ResourceConflictException(activityType.getValue() + " can only be done from " + expectedAccountType.getValue() + " Accounts");
         }
+
+        log.info("Account Type {} can apply account activity {}", givenAccountType, activityType);
     }
 
     public double calculateInterest(Double balance, Integer depositPeriod, Double interestRatio) {
@@ -114,21 +113,17 @@ public class AccountUtil {
         }
     }
 
-    public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to) {
-        AccountType accountType = AccountType.CURRENT;
+    public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to, AccountActivityType activityType) {
+        AccountType expectedAccountType = AccountType.CURRENT;
 
-        if (from != accountType || to != accountType) {
-            throw new ResourceConflictException(String.format("Both accounts must be %s", accountType.getValue()));
-        }
+        checkAccountActivityAndAccountTypeMatch(from, expectedAccountType, activityType);
+        checkAccountActivityAndAccountTypeMatch(to, expectedAccountType, activityType);
 
-        log.info("Both accounts are {}", accountType.getValue());
+        log.info("Both accounts are {}", expectedAccountType.getValue());
     }
 
     private void checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(AccountType accountType, Integer depositPeriod) {
-        if (accountType != AccountType.DEPOSIT) {
-            throw new ResourceConflictException("Fees are for deposit accounts");
-        }
-
+        checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, AccountActivityType.FEE);
         FeeUtil.checkValidityOfDepositPeriod(depositPeriod);
     }
 
