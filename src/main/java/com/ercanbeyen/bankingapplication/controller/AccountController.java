@@ -7,7 +7,7 @@ import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
-import com.ercanbeyen.bankingapplication.service.impl.AccountService;
+import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
@@ -77,13 +77,13 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PatchMapping("/{id}/block")
+    @PatchMapping("/block/{id}")
     public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("block") Boolean status) {
         MessageResponse<String> response = new MessageResponse<>(accountService.updateBlockStatus(id, status));
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/{id}/close")
+    @PatchMapping("/close/{id}")
     public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") Integer id) {
         MessageResponse<String> response = new MessageResponse<>(accountService.closeAccount(id));
         return ResponseEntity.ok(response);

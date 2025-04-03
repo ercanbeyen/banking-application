@@ -9,6 +9,7 @@ import com.ercanbeyen.bankingapplication.entity.Notification;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.NotificationMapper;
 import com.ercanbeyen.bankingapplication.repository.NotificationRepository;
+import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;

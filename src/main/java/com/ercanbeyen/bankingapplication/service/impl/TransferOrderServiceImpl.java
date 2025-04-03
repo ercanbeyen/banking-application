@@ -12,7 +12,8 @@ import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.TransferOrderMapper;
 import com.ercanbeyen.bankingapplication.option.TransferOrderOption;
 import com.ercanbeyen.bankingapplication.repository.TransferOrderRepository;
-import com.ercanbeyen.bankingapplication.service.BaseService;
+import com.ercanbeyen.bankingapplication.service.AccountService;
+import com.ercanbeyen.bankingapplication.service.TransferOrderService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -24,7 +25,7 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class TransferOrderService implements BaseService<TransferOrderDto, TransferOrderOption> {
+public class TransferOrderServiceImpl implements TransferOrderService {
     private final TransferOrderRepository transferOrderRepository;
     private final TransferOrderMapper transferOrderMapper;
     private final AccountService accountService;
@@ -131,7 +132,7 @@ public class TransferOrderService implements BaseService<TransferOrderDto, Trans
         Account senderAccount = accountService.findActiveAccountById(request.getSenderAccountId());
         Account receiverAccount = accountService.findActiveAccountById(request.getRegularTransferDto().receiverAccountId());
 
-        AccountService.checkAccountsBeforeMoneyTransfer(senderAccount, receiverAccount);
+        accountService.checkAccountsBeforeMoneyTransfer(senderAccount, receiverAccount);
 
         Account chargedAccount = accountService.getChargedAccount(request.getChargedAccountId(), List.of(senderAccount));
 

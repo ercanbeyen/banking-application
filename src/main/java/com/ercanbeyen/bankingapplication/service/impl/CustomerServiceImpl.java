@@ -36,7 +36,7 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class CustomerService implements BaseService<CustomerDto, CustomerFilteringOption> {
+public class CustomerServiceImpl implements CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
@@ -124,6 +124,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         customerRepository.delete(customer);
     }
 
+    @Override
     public String uploadProfilePhoto(Integer id, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -138,6 +139,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return ResponseMessage.FILE_UPLOAD_SUCCESS;
     }
 
+    @Override
     public File downloadProfilePhoto(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Customer customer = findById(id);
@@ -145,6 +147,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .orElseThrow(() -> new ResourceNotFoundException(ResponseMessage.NOT_FOUND));
     }
 
+    @Override
     public String deleteProfilePhoto(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -155,6 +158,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return ResponseMessage.FILE_DELETE_SUCCESS;
     }
 
+    @Override
     public CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -178,6 +182,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return new CustomerStatusResponse(earning, spending, netStatus);
     }
 
+    @Override
     public List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -201,6 +206,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return accountDtos;
     }
 
+    @Override
     public List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringOption filteringOption) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -225,6 +231,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .toList();
     }
 
+    @Override
     public List<NotificationDto> getNotifications(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -237,6 +244,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return notificationDtos;
     }
 
+    @Override
     public List<TransferOrderDto> getTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -268,6 +276,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return transferOrderDtos;
     }
 
+    @Override
     public CashFlowCalendarDto getCashFlowCalendar(Integer id, Integer year, Integer month) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -296,6 +305,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
         return cashFlowCalendarMapper.entityToDto(cashFlowCalendar);
     }
 
+    @Override
     public List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -349,6 +359,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
                 .toList();
     }
 
+    @Override
     public List<String> getAgreementSubjects(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Customer customer = findById(id);
@@ -362,6 +373,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
      * @param nationalId is national identity which is unique for each customer
      * @return customer corresponds to the given nationalId
      */
+    @Override
     public Customer findByNationalId(String nationalId) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -379,6 +391,7 @@ public class CustomerService implements BaseService<CustomerDto, CustomerFilteri
      * @param nationalId is national identity which is unique for each customer
      * @return status for customer existence corresponds to nationalId
      */
+    @Override
     public boolean existsByNationalId(String nationalId) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return customerRepository.existsByNationalId(nationalId);

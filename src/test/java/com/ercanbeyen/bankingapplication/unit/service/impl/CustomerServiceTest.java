@@ -18,8 +18,8 @@ import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
-import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
-import com.ercanbeyen.bankingapplication.service.impl.FileServiceImpl;
+import com.ercanbeyen.bankingapplication.service.FileService;
+import com.ercanbeyen.bankingapplication.service.impl.CustomerServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -44,13 +44,13 @@ import static org.mockito.Mockito.*;
 class CustomerServiceTest {
     public static final String TESTED_CLASS = "Customer Service";
     @InjectMocks
-    private CustomerService customerService;
+    private CustomerServiceImpl customerService;
     @Mock
     private CustomerRepository customerRepository;
     @Mock
     private CustomerMapper customerMapper;
     @Mock
-    private FileServiceImpl fileService;
+    private FileService fileService;
     @Mock
     private CashFlowCalendarService cashFlowCalendarService;
     @Mock

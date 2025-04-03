@@ -13,7 +13,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchMapper;
 import com.ercanbeyen.bankingapplication.option.BranchFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.BranchRepository;
-import com.ercanbeyen.bankingapplication.service.BaseService;
+import com.ercanbeyen.bankingapplication.service.BranchService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,7 +27,7 @@ import java.util.function.Predicate;
 @Service
 @Slf4j
 @RequiredArgsConstructor
-public class BranchService implements BaseService<BranchDto, BranchFilteringOption> {
+public class BranchServiceImpl implements BranchService {
     private final BranchRepository branchRepository;
     private final BranchMapper branchMapper;
 
@@ -108,6 +108,7 @@ public class BranchService implements BaseService<BranchDto, BranchFilteringOpti
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
+    @Override
     public Branch findByName(String name) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 

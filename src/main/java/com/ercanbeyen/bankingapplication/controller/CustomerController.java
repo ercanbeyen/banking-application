@@ -10,7 +10,7 @@ import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
-import com.ercanbeyen.bankingapplication.service.impl.CustomerService;
+import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import com.ercanbeyen.bankingapplication.util.PhotoUtil;

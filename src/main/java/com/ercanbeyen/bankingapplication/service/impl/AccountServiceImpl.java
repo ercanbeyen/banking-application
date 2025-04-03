@@ -39,11 +39,11 @@ import java.util.function.Predicate;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class AccountService implements BaseService<AccountDto, AccountFilteringOption> {
+public class AccountServiceImpl implements AccountService {
     private static final Currency CHARGE_CURRENCY = Currency.getChargeCurrency();
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
-    private final CustomerService customerService;
+    private final CustomerServiceImpl customerService;
     private final TransactionService transactionService;
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
@@ -145,6 +145,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.ACCOUNT.getValue(), id);
     }
 
+    @Override
     public String depositMoney(Integer id, Double amount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -170,6 +171,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
+    @Override
     public String withdrawMoney(Integer id, Double amount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -195,6 +197,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
+    @Override
     public String payInterest(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -219,6 +222,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format(ResponseMessage.SUCCESS, response);
     }
 
+    @Override
     public String transferMoney(MoneyTransferRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -246,6 +250,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
+    @Override
     public String exchangeMoney(MoneyExchangeRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -265,6 +270,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     }
 
     @Transactional
+    @Override
     public String updateBlockStatus(Integer id, boolean status) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -290,6 +296,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
     }
 
     @Transactional
+    @Override
     public String closeAccount(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -309,6 +316,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
+    @Override
     public String getTotalActiveAccounts(AccountType type, Currency currency, City city) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -323,11 +331,13 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return String.format("Total %s %s accounts is %d", type, currency, count);
     }
 
+    @Override
     public List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return accountRepository.getCustomersHaveMaximumBalanceByTypeAndCurrency(type, currency);
     }
 
+    @Override
     public Account getChargedAccount(Integer extraChargedAccountId, List<Account> relatedAccounts) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -343,6 +353,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return chargedAccount;
     }
 
+    @Override
     public Account findChargedAccountById(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -363,6 +374,7 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return account;
     }
 
+    @Override
     public Account findActiveAccountById(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -375,7 +387,8 @@ public class AccountService implements BaseService<AccountDto, AccountFilteringO
         return account;
     }
 
-    public static void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount) {
+    @Override
+    public void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount) {
         AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
 
         if (senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
