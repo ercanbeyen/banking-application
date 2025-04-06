@@ -41,11 +41,17 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     public List<AccountActivityDto> getAccountActivities(AccountActivityFilteringOption filteringOption) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Predicate<AccountActivity> accountActivityPredicate = accountActivity -> (checkAccountActivity(filteringOption, accountActivity))
-                && (filteringOption.senderAccountId() == null || filteringOption.senderAccountId().equals(accountActivity.getSenderAccount().getId()))
-                && (filteringOption.receiverAccountId() == null || filteringOption.receiverAccountId().equals(accountActivity.getReceiverAccount().getId()))
-                && (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount())
-                && (filteringOption.createdAt() == null || (filteringOption.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
+        Predicate<AccountActivity> accountActivityPredicate = accountActivity -> {
+            boolean accountActivityCheck = checkAccountActivity(filteringOption, accountActivity);
+            boolean senderAccountIdFilter = filteringOption.senderAccountId() == null
+                    || (accountActivity.getSenderAccount() != null && filteringOption.senderAccountId().equals(accountActivity.getSenderAccount().getId()));
+            boolean receiverAccountIdFilter = filteringOption.receiverAccountId() == null
+                    || (accountActivity.getReceiverAccount() != null && filteringOption.receiverAccountId().equals(accountActivity.getReceiverAccount().getId()));
+            boolean minimumAmountFilter = (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount());
+            boolean createdAtFilter = (filteringOption.createdAt() == null || (filteringOption.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
+            
+            return accountActivityCheck && senderAccountIdFilter && receiverAccountIdFilter && minimumAmountFilter && createdAtFilter;
+        };
 
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
 
