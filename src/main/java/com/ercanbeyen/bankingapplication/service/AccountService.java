@@ -3,7 +3,9 @@ package com.ercanbeyen.bankingapplication.service;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
@@ -26,4 +28,5 @@ public interface AccountService extends BaseService<AccountDto, AccountFiltering
     Account findChargedAccountById(Integer id);
     Account findActiveAccountById(Integer id);
     void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount);
+    List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringRequest request);
 }

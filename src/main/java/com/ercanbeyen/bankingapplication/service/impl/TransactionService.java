@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
-import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
+import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
@@ -81,13 +81,13 @@ public class TransactionService {
         String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
-        summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
-        summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());
-        summary.put(SummaryFields.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
-        summary.put(SummaryFields.ACCOUNT_IDENTITY, account.getId());
-        summary.put(SummaryFields.AMOUNT, amountInSummary + " " + account.getCurrency());
-        summary.put(SummaryFields.TRANSACTION_FEE, transactionFee);
-        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.ACCOUNT_ACTIVITY, activityType.getValue());
+        summary.put(SummaryField.FULL_NAME, account.getCustomer().getFullName());
+        summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
+        summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
+        summary.put(SummaryField.AMOUNT, amountInSummary + " " + account.getCurrency());
+        summary.put(SummaryField.TRANSACTION_FEE, transactionFee);
+        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);
@@ -120,14 +120,14 @@ public class TransactionService {
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put(SummaryFields.FULL_NAME, senderAccount.getCustomer().getFullName());
-        summary.put(SummaryFields.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
-        summary.put("Sender " + SummaryFields.ACCOUNT_IDENTITY, senderAccount.getId());
-        summary.put("Receiver " + SummaryFields.ACCOUNT_IDENTITY, receiverAccount.getId());
-        summary.put(SummaryFields.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
-        summary.put(SummaryFields.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
-        summary.put(SummaryFields.PAYMENT_TYPE, request.paymentType());
-        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.FULL_NAME, senderAccount.getCustomer().getFullName());
+        summary.put(SummaryField.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
+        summary.put("Sender " + SummaryField.ACCOUNT_IDENTITY, senderAccount.getId());
+        summary.put("Receiver " + SummaryField.ACCOUNT_IDENTITY, receiverAccount.getId());
+        summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
+        summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
+        summary.put(SummaryField.PAYMENT_TYPE, request.paymentType());
+        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
         createAccountActivityForCharge(transactionFee, summary, accounts);
@@ -176,15 +176,15 @@ public class TransactionService {
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put(SummaryFields.FULL_NAME, sellerAccount.getCustomer().getFullName());
-        summary.put(SummaryFields.NATIONAL_IDENTITY, sellerAccount.getCustomer().getNationalId());
-        summary.put("Seller " + SummaryFields.ACCOUNT_IDENTITY, sellerAccount.getId());
-        summary.put("Buyer " + SummaryFields.ACCOUNT_IDENTITY, buyerAccount.getId());
-        summary.put("Spent " + SummaryFields.AMOUNT, spentAmountInSummary + " " + sellerAccount.getCurrency());
-        summary.put("Earned " + SummaryFields.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
-        summary.put(SummaryFields.RATE, rate);
-        summary.put(SummaryFields.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
-        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.FULL_NAME, sellerAccount.getCustomer().getFullName());
+        summary.put(SummaryField.NATIONAL_IDENTITY, sellerAccount.getCustomer().getNationalId());
+        summary.put("Seller " + SummaryField.ACCOUNT_IDENTITY, sellerAccount.getId());
+        summary.put("Buyer " + SummaryField.ACCOUNT_IDENTITY, buyerAccount.getId());
+        summary.put("Spent " + SummaryField.AMOUNT, spentAmountInSummary + " " + sellerAccount.getCurrency());
+        summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
+        summary.put(SummaryField.RATE, rate);
+        summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
+        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, accounts);

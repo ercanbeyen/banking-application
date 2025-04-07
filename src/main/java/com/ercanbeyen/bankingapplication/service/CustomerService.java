@@ -7,7 +7,6 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,7 +20,6 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     String deleteProfilePhoto(Integer id);
     CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency);
     List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption);
-    List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringOption filteringOption);
     List<NotificationDto> getNotifications(Integer id);
     List<TransferOrderDto> getTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType);
     CashFlowCalendarDto getCashFlowCalendar(Integer id, Integer year, Integer month);

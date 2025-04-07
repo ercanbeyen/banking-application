@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
-import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
+import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.PdfPCell;
@@ -20,7 +20,7 @@ import java.util.stream.Stream;
 @Slf4j
 @UtilityClass
 public class AccountActivityUtil {
-    private static final List<String> customerCredentials = List.of(SummaryFields.FULL_NAME, SummaryFields.NATIONAL_IDENTITY);
+    private static final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
     public ByteArrayOutputStream generatePdfStream(Map<String, Object> summary) throws DocumentException, IOException {
         Document document = new Document();
@@ -83,7 +83,7 @@ public class AccountActivityUtil {
         String value = entry.getValue().toString();
         StringBuilder valueBuilder = new StringBuilder();
 
-        if (key.equals(SummaryFields.FULL_NAME)) {
+        if (key.equals(SummaryField.FULL_NAME)) {
             int spaceIndex = value.indexOf(' ');
             String name = value.substring(0, spaceIndex);
             String surname = value.substring(spaceIndex + 1);
@@ -92,7 +92,7 @@ public class AccountActivityUtil {
                     .append(" ")
                     .append(maskWordInFullName(surname));
 
-        } else if (key.equals(SummaryFields.NATIONAL_IDENTITY)) {
+        } else if (key.equals(SummaryField.NATIONAL_IDENTITY)) {
             int length = value.length();
             valueBuilder.append(value, 0, 3)
                     .append("*".repeat(length - 5))

@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.constant.query;
 
-public class SummaryFields {
+public class SummaryField {
     public static final String FULL_NAME = "Full Name";
     public static final String NATIONAL_IDENTITY = "National Identity";
     public static final String ACCOUNT_IDENTITY = "Account Identity";
@@ -12,6 +12,7 @@ public class SummaryFields {
     public static final String BRANCH = "Branch";
     public static final String RATE = "Rate";
     public static final String TRANSACTION_FEE = "Transaction Fee";
+    public static final String ACCOUNT_ID = "Account Id";
 
-    private SummaryFields() {}
+    private SummaryField() {}
 }

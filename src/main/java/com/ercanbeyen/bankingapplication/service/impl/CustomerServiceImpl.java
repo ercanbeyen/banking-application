@@ -207,31 +207,6 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringOption filteringOption) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        Customer customer = findById(id);
-        List<AccountActivityDto> accountActivityDtos = new ArrayList<>();
-
-        List<Integer> accountIds = customer.getAccounts()
-                .stream()
-                .map(Account::getId)
-                .toList();
-
-        /* Get all account activities of each account */
-        accountIds.forEach(accountId -> {
-            getAccountActivities(accountId, BalanceActivity.DECREASE, filteringOption, accountActivityDtos);
-            getAccountActivities(accountId, BalanceActivity.INCREASE, filteringOption, accountActivityDtos);
-        });
-
-        Comparator<AccountActivityDto> transactionDtoComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
-
-        return accountActivityDtos.stream()
-                .sorted(transactionDtoComparator)
-                .toList();
-    }
-
-    @Override
     public List<NotificationDto> getNotifications(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -526,27 +501,6 @@ public class CustomerServiceImpl implements CustomerService {
                 .stream()
                 .map(accountActivityDto -> exchangeService.convertMoneyBetweenCurrencies(account.getCurrency(), toCurrency, accountActivityDto.amount()))
                 .reduce(0D, Double::sum);
-    }
-
-    private void getAccountActivities(Integer accountId, BalanceActivity balanceActivity, AccountActivityFilteringOption filteringOption, List<AccountActivityDto> accountActivityDtos) {
-        Integer[] accountIds = new Integer[2]; // first value is sender account id, second value is receiver account id
-
-        if (balanceActivity == BalanceActivity.DECREASE) {
-            accountIds[0] = accountId;
-        } else {
-            accountIds[1] = accountId;
-        }
-
-        AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                filteringOption.activityTypes(),
-                accountIds[0],
-                accountIds[1],
-                filteringOption.minimumAmount(),
-                filteringOption.createdAt()
-        );
-
-        List<AccountActivityDto> currentAccountActivityDtos = accountActivityService.getAccountActivities(accountActivityFilteringOption);
-        accountActivityDtos.addAll(currentAccountActivityDtos);
     }
 
     private void checkUniqueness(Customer customerInDb, CustomerDto request) {

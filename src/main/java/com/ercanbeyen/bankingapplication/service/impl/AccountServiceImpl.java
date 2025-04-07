@@ -4,11 +4,12 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
-import com.ercanbeyen.bankingapplication.constant.query.SummaryFields;
+import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
+import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
@@ -35,6 +36,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -399,6 +401,63 @@ public class AccountServiceImpl implements AccountService {
         AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType(), AccountActivityType.MONEY_TRANSFER);
     }
 
+    @Override
+    public List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringRequest request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Account account = findActiveAccountById(id);
+        Comparator<AccountActivityDto> accountActivityComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
+        BalanceActivity balanceActivity = request.balanceActivity();
+
+        if (balanceActivity == null) {
+            AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
+                    request.activityTypes(), null, null, request.minimumAmount(), request.createdAt());
+
+            return accountActivityService.getAccountActivities(accountActivityFilteringOption)
+                    .stream()
+                    .sorted(accountActivityComparator)
+                    .toList();
+        }
+
+        Set<AccountActivityDto> accountActivityDtos = switch (balanceActivity) {
+            case DECREASE -> {
+                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
+                        request.activityTypes(), id, null, request.minimumAmount(), request.createdAt());
+                yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
+            }
+            case INCREASE -> {
+                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
+                        request.activityTypes(), null, id, request.minimumAmount(), request.createdAt());
+                yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
+            }
+            case STABLE -> {
+                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
+                        request.activityTypes(), null, null, request.minimumAmount(), request.createdAt());
+                yield accountActivityService.getAccountActivities(accountActivityFilteringOption)
+                        .stream()
+                        .filter(accountActivityDto -> {
+                            Map<String, Object> summary = accountActivityDto.summary();
+                            String accountActivity = (String) summary.get(SummaryField.ACCOUNT_ACTIVITY);
+
+                            boolean accountIdExists = summary.containsKey(SummaryField.ACCOUNT_ID)
+                                    && summary.get(SummaryField.ACCOUNT_ID) == id;
+
+                            boolean accountActivityMatches = AccountActivityType.getAccountStatusUpdatingActivities()
+                                    .stream()
+                                    .map(AccountActivityType::getValue)
+                                    .anyMatch(accountActivityType -> accountActivityType.equals(accountActivity));
+
+                            return accountIdExists && accountActivityMatches;
+                        })
+                        .collect(Collectors.toSet());
+            }
+        };
+
+        return accountActivityDtos.stream()
+                .sorted(accountActivityComparator)
+                .toList();
+    }
+
     private Account findById(Integer id) {
         String entity = Entity.ACCOUNT.getValue();
         Account account = accountRepository.findById(id)
@@ -537,12 +596,13 @@ public class AccountServiceImpl implements AccountService {
 
     private void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
         Map<String, Object> summary = new HashMap<>();
-        summary.put(SummaryFields.ACCOUNT_ACTIVITY, activityType.getValue());
-        summary.put(SummaryFields.FULL_NAME, account.getCustomer().getFullName());
-        summary.put(SummaryFields.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
-        summary.put(SummaryFields.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
-        summary.put(SummaryFields.BRANCH, account.getBranch().getName());
-        summary.put(SummaryFields.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.ACCOUNT_ACTIVITY, activityType.getValue());
+        summary.put(SummaryField.ACCOUNT_ID, account.getId());
+        summary.put(SummaryField.FULL_NAME, account.getCustomer().getFullName());
+        summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
+        summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
+        summary.put(SummaryField.BRANCH, account.getBranch().getName());
+        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
         AccountActivityRequest request = new AccountActivityRequest(
                 activityType,

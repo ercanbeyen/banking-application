@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.query.Queries;
+import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -24,6 +24,6 @@ public class DailyActivityLimit {
     private Double amount;
     @UpdateTimestamp
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "modified_at", columnDefinition = Queries.GET_NOW_TIMESTAMP)
+    @Column(name = "modified_at", columnDefinition = Query.GET_NOW_TIMESTAMP)
     private LocalDateTime modifiedAt;
 }
