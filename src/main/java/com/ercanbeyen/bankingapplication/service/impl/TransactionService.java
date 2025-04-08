@@ -90,7 +90,7 @@ public class TransactionService {
         summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
-        createAccountActivityForCharge(transactionFee, summary, accounts);
+        createAccountActivityForCharge(transactionFee, summary, account);
 
         cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, cashFlowExplanation);
     }
@@ -124,13 +124,14 @@ public class TransactionService {
         summary.put(SummaryField.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
         summary.put("Sender " + SummaryField.ACCOUNT_IDENTITY, senderAccount.getId());
         summary.put("Receiver " + SummaryField.ACCOUNT_IDENTITY, receiverAccount.getId());
+        putChargedAccountInformationIntoSummary(senderAccount, chargedAccount, summary);
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
         summary.put(SummaryField.PAYMENT_TYPE, request.paymentType());
         summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
-        createAccountActivityForCharge(transactionFee, summary, accounts);
+        createAccountActivityForCharge(transactionFee, summary, chargedAccount);
 
         if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue();
@@ -180,6 +181,7 @@ public class TransactionService {
         summary.put(SummaryField.NATIONAL_IDENTITY, sellerAccount.getCustomer().getNationalId());
         summary.put("Seller " + SummaryField.ACCOUNT_IDENTITY, sellerAccount.getId());
         summary.put("Buyer " + SummaryField.ACCOUNT_IDENTITY, buyerAccount.getId());
+        putChargedAccountInformationIntoSummary(sellerAccount, chargedAccount, summary);
         summary.put("Spent " + SummaryField.AMOUNT, spentAmountInSummary + " " + sellerAccount.getCurrency());
         summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
         summary.put(SummaryField.RATE, rate);
@@ -187,7 +189,7 @@ public class TransactionService {
         summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
-        createAccountActivityForCharge(transactionFee, summary, accounts);
+        createAccountActivityForCharge(transactionFee, summary, chargedAccount);
     }
 
     private void updateBalance(Account account, double newBalance) {
@@ -216,11 +218,14 @@ public class TransactionService {
         return chargeService.getCharge(activityType).amount();
     }
 
-    private void createAccountActivityForCharge(Double transactionFee, Map<String, Object> summary, Account[] accounts) {
+    private void createAccountActivityForCharge(Double transactionFee, Map<String, Object> summary, Account chargedAccount) {
         if (transactionFee == 0) {
             log.warn("There is no transaction fee");
             return;
         }
+
+        Account[] accounts = new Account[2];
+        accounts[0] = chargedAccount;
 
         createAccountActivity(AccountActivityType.CHARGE, transactionFee, summary, accounts, null);
     }
@@ -252,5 +257,14 @@ public class TransactionService {
         }
 
         log.info(LogMessage.ENOUGH_BALANCE, activityType);
+    }
+
+    private static void putChargedAccountInformationIntoSummary(Account relatedAccount, Account chargedAccount, Map<String, Object> summary) {
+        if (!chargedAccount.getId().equals(relatedAccount.getId())) {
+            log.info("There is a separate charged account, so add it into summary");
+            summary.put("Charged " + SummaryField.ACCOUNT_ID, chargedAccount.getId());
+        } else {
+            log.warn("Charge and related accounts are same, so no need to add it into summary");
+        }
     }
 }
