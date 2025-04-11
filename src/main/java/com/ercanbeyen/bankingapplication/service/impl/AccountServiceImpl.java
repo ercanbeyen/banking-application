@@ -544,10 +544,10 @@ public class AccountServiceImpl implements AccountService {
         Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
 
         if (dailyActivityAmount > activityLimit) {
-            throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType, activityLimit));
+            throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType.getValue(), activityLimit));
         }
 
-        log.info("Daily limit of {} is not exceeded", activityType);
+        log.info("Daily limit of {} is not exceeded", activityType.getValue());
     }
 
     private static AccountActivityFilteringOption constructAccountActivityFilteringOption(Integer accountId, AccountActivityType activityType) {

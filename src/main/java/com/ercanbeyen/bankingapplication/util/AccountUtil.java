@@ -22,7 +22,6 @@ import java.util.function.Predicate;
 @Slf4j
 @UtilityClass
 public class AccountUtil {
-    private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
         if (Optional.ofNullable(accountDto.getIsBlocked()).isPresent() || Optional.ofNullable(accountDto.getClosedAt()).isPresent()) {
@@ -70,22 +69,13 @@ public class AccountUtil {
             throw new ResourceConflictException(activityType.getValue() + " can only be done from " + expectedAccountType.getValue() + " Accounts");
         }
 
-        log.info("Account Type {} can apply account activity {}", givenAccountType, activityType);
+        log.info("Account Type {} can apply account activity {}", givenAccountType.getValue(), activityType.getValue());
     }
 
     public double calculateInterest(Double balance, Integer depositPeriod, Double interestRatio) {
         checkValidityOfBalanceAndInterestRatio(balance, interestRatio);
-
-        if (balance == LOWEST_THRESHOLD) {
-            return LOWEST_THRESHOLD;
-        } else if (interestRatio == LOWEST_THRESHOLD) {
-            return balance;
-        }
-
         double interest = (balance / 100) * (interestRatio / 12) * depositPeriod;
-
         log.info("Interest after calculation with balance ({}), interest ratio ({}) and deposit period ({}): {}", balance, interestRatio, depositPeriod, interest);
-
         return interest;
     }
 
@@ -93,7 +83,6 @@ public class AccountUtil {
         double interest = AccountUtil.calculateInterest(balance, depositPeriod, interestRatio);
         double balanceAfterNextFee = balance + interest;
         log.info("Balance after fee: {}", balanceAfterNextFee);
-
         return balanceAfterNextFee;
     }
 
@@ -128,11 +117,11 @@ public class AccountUtil {
     }
 
     private void checkValidityOfBalanceAndInterestRatio(Double balance, Double interestRatio) {
-        boolean isBalanceValid = balance >= LOWEST_THRESHOLD;
-        boolean isInterestRatioValid = interestRatio >= LOWEST_THRESHOLD;
+        boolean isBalanceValid = balance >= 0;
+        boolean isInterestRatioValid = interestRatio >= 0;
 
         if (!isBalanceValid || !isInterestRatioValid) {
-            throw new BadRequestException(String.format("Balance and interest ratio must be greater than or equal to %s", LOWEST_THRESHOLD));
+            throw new BadRequestException(String.format("Balance and interest ratio must be greater than or equal to %s", 0));
         }
     }
 
