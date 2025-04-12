@@ -195,59 +195,68 @@ public class TransactionService {
         createAccountActivityForCharge(transactionFee, summary, chargedAccount);
     }
 
-    private void updateBalance(Account account, double balance) {
-        if (account.getType() == AccountType.DEPOSIT) {
-            log.info("{} {} needs to update its interest ratio, before balance update", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
-            double interestRatio = getInterestRatio(account, balance);
-            double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(balance, account.getDepositPeriod(), interestRatio);
+    public void updateDepositAccountFields(Account account, double balance, int depositPeriod) {
+        double interestRatio = getInterestRatio(account.getCurrency(), balance, depositPeriod);
+        double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(balance, depositPeriod, interestRatio);
 
-            account.setInterestRatio(interestRatio);
-            account.setBalanceAfterNextFee(balanceAfterNextFee);
+        account.setInterestRatio(interestRatio);
+        account.setDepositPeriod(depositPeriod);
+        account.setBalanceAfterNextFee(balanceAfterNextFee);
+
+        log.info("{} {} related fields are updated", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
+    }
+
+    private void updateBalance(Account account, double balance) {
+        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT)) {
+            log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
+            updateDepositAccountFields(account, balance, account.getDepositPeriod());
         }
 
         account.setBalance(balance);
         log.info("Account balance is updated");
     }
 
-    private double getInterestRatio(Account account, double balance) {
+    private double getInterestRatio(Currency currency, double balance, int depositPeriod) {
         double interestRatio = 0;
-        int depositPeriod = account.getDepositPeriod();
 
         /* Match interest ratio for the given currency, balance and deposit period */
         try {
-            interestRatio = feeService.getInterestRatio(account.getCurrency(), depositPeriod, balance);
+            interestRatio = feeService.getInterestRatio(currency, depositPeriod, balance);
         } catch (ResourceNotFoundException exception) {
             FeeFilteringOption filteringOption = new FeeFilteringOption();
-            filteringOption.setCurrency(account.getCurrency());
+            filteringOption.setCurrency(currency);
             filteringOption.setDepositPeriod(depositPeriod);
+
+            String entity = Entity.FEE.getValue();
+            String exceptionMessage = "No %s amount in the " + entity.toLowerCase();
 
             /* Less than Minimum Fee Amount */
             double minimumAmount = feeService.getEntities(filteringOption)
                     .stream()
                     .mapToDouble(FeeDto::getMinimumAmount)
                     .min()
-                    .orElseThrow(() -> new ResourceNotFoundException("No minimum amount in the fee"));
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(exceptionMessage, "minimum")));
 
             if (balance < minimumAmount) {
-                log.info("Balance is less than the minimum fee amount for deposit period {}. Therefore, interest ratio is {}", depositPeriod, interestRatio);
+                log.info("Balance is less than the minimum {} amount for deposit period {}. Therefore, interest ratio is {}", entity.toLowerCase(), depositPeriod, interestRatio);
                 return interestRatio;
             }
 
             /* Greater than Maximum Fee Amount */
-                double maximumAmount = feeService.getEntities(filteringOption)
-                        .stream()
-                        .mapToDouble(FeeDto::getMaximumAmount)
-                        .max()
-                        .orElseThrow(() -> new ResourceNotFoundException("No maximum amount in the fee"));
+            double maximumAmount = feeService.getEntities(filteringOption)
+                    .stream()
+                    .mapToDouble(FeeDto::getMaximumAmount)
+                    .max()
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(exceptionMessage, "maximum")));
 
-                if (balance > maximumAmount) {
-                    log.info("Balance is greater than or equal to the maximum amount for deposit period {}. Therefore, interest ratio of the maximum fee amount", depositPeriod);
-                    return feeService.getInterestRatio(account.getCurrency(), depositPeriod, maximumAmount);
-                }
+            if (balance > maximumAmount) {
+                log.info("Balance is greater than or equal to the maximum amount for deposit period {}. Therefore, interest ratio of the maximum {} amount", depositPeriod, entity.toLowerCase());
+                return feeService.getInterestRatio(currency, depositPeriod, maximumAmount);
+            }
 
             /* Unmatched Fee Amount Case */
-                log.error("Unexpected condition! There is unmatched fee amounts. Amount: {} & Deposit period {}", balance, depositPeriod);
-                throw new ResourceNotFoundException("Fee amount is not found for " + balance);
+            log.error("Unexpected condition! There are unmatched {} amounts. Amount: {} & Deposit period {}", entity.toLowerCase(), balance, depositPeriod);
+            throw new ResourceNotFoundException(entity + " amount is not found for " + balance);
         }
 
         return interestRatio;
@@ -284,15 +293,16 @@ public class TransactionService {
 
     private void checkBalanceBeforeMoneyTransferAndExchange(Account chargedAccount, List<Account> relatedAccounts, Double amount, Double transactionFee, AccountActivityType activityType) {
         log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType.getValue(), amount, transactionFee);
+        String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
         if (Objects.equals(chargedAccount.getId(), relatedAccounts.getFirst().getId())) {
-            log.info("Extra charged account does not exist");
+            log.info("Extra charged {} does not exist", entity);
 
             if (chargedAccount.getBalance() < (amount + transactionFee)) {
                 throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
             }
         } else {
-            log.info("Extra charged account exists");
+            log.info("Extra charged {} exists", entity);
 
             if (chargedAccount.getBalance() < transactionFee) {
                 throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
@@ -307,12 +317,14 @@ public class TransactionService {
     }
 
     private static void putChargedAccountInformationIntoSummary(Account relatedAccount, Account chargedAccount, Map<String, Object> summary) {
+        String entity = Entity.ACCOUNT.getValue().toLowerCase();
+
         if (chargedAccount.getId().equals(relatedAccount.getId())) {
-            log.warn("Charge and related accounts are same, so no need to add it into summary");
+            log.warn("Charge and related {}s are same, so no need to add it into summary", entity);
             return;
         }
 
-        log.info("There is a separate charged account, so add it into summary");
+        log.info("There is a separate charged {}, so add it into summary", entity);
         summary.put("Charged " + SummaryField.ACCOUNT_ID, chargedAccount.getId());
     }
 }

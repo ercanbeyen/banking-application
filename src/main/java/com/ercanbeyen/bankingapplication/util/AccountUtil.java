@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.util;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
@@ -17,6 +18,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 @Slf4j
@@ -65,7 +67,7 @@ public class AccountUtil {
     }
 
     public void checkAccountActivityAndAccountTypeMatch(AccountType givenAccountType, AccountType expectedAccountType, AccountActivityType activityType) {
-        if (givenAccountType != expectedAccountType) {
+        if (!checkAccountTypeMatch.test(givenAccountType, expectedAccountType)) {
             throw new ResourceConflictException(activityType.getValue() + " can only be done from " + expectedAccountType.getValue() + " Accounts");
         }
 
@@ -111,6 +113,8 @@ public class AccountUtil {
         log.info("Both accounts are {}", expectedAccountType.getValue());
     }
 
+    public final BiPredicate<AccountType, AccountType> checkAccountTypeMatch = (givenAccountType, expectedAccountType) -> givenAccountType == expectedAccountType;
+
     private void checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(AccountType accountType, Integer depositPeriod) {
         checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, AccountActivityType.FEE);
         FeeUtil.checkValidityOfDepositPeriod(depositPeriod);
@@ -144,10 +148,10 @@ public class AccountUtil {
         String message = "have interest and deposit period values";
 
         if ((accountType == AccountType.DEPOSIT) && (isInterestNull || isDepositPeriodNull)) {
-            String exceptionMessage = accountType + " must " + message;
+            String exceptionMessage = accountType.getValue() + " must " + message;
             throw new ResourceExpectationFailedException(exceptionMessage);
         } else if ((accountType == AccountType.CURRENT) && (!isInterestNull || !isDepositPeriodNull)) {
-            String exceptionMessage = accountType + " account does not " + message;
+            String exceptionMessage = accountType + " " + Entity.ACCOUNT.getValue().toLowerCase() + " does not " + message;
             throw new ResourceExpectationFailedException(exceptionMessage);
         }
     }
