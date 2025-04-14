@@ -94,15 +94,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.ACCOUNT_ACTIVITY.getValue() + " request"));
         }
 
-        AccountActivity accountActivity = new AccountActivity(
-                request.activityType(),
-                request.senderAccount(),
-                request.receiverAccount(),
-                request.amount(),
-                request.summary(),
-                request.explanation()
-        );
-
+        AccountActivity accountActivity = new AccountActivity(request.activityType(), request.senderAccount(), request.receiverAccount(), request.amount(), request.summary(), request.explanation());
         AccountActivity savedAccountActivity = accountActivityRepository.save(accountActivity);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT_ACTIVITY.getValue(), savedAccountActivity.getId());
 

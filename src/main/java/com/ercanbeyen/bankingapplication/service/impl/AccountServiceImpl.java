@@ -119,7 +119,7 @@ public class AccountServiceImpl implements AccountService {
         Branch branch = branchService.findByName(request.getBranchName());
         account.setBranch(branch);
 
-        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(request.getDepositPeriod(), account.getDepositPeriod())) {
+        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(account.getDepositPeriod(), request.getDepositPeriod())) {
             log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
             transactionService.updateDepositAccountFields(account, account.getBalance(), request.getDepositPeriod());
         }
@@ -155,13 +155,8 @@ public class AccountServiceImpl implements AccountService {
         String cashFlowExplanation = entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
         transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
-        String message = String.format("%s %s has been deposited into your %s %s",
-                amount, account.getCurrency(), entity, account.getId());
-
-        NotificationDto notificationDto = new NotificationDto(
-                account.getCustomer().getNationalId(),
-                String.format(message, amount, account.getCurrency(), entity, account.getId())
-        );
+        String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
+        NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
 
         notificationService.createNotification(notificationDto);
 
@@ -182,14 +177,8 @@ public class AccountServiceImpl implements AccountService {
         String cashFlowExplanation = entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
         transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
-        String message = String.format("%s %s has been withdrawn from your %s %s",
-                amount, account.getCurrency(), entity.toLowerCase(), account.getId());
-
-        NotificationDto notificationDto = new NotificationDto(
-                account.getCustomer().getNationalId(),
-                String.format(message, amount, account.getCurrency(), entity, account.getId())
-        );
-
+        String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
+        NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
         notificationService.createNotification(notificationDto);
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
@@ -240,13 +229,15 @@ public class AccountServiceImpl implements AccountService {
 
         transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, receiverAccount, chargedAccount);
 
-        String entity = Entity.ACCOUNT.getValue().toLowerCase();
+        if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
+            String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
-        NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made from your %s.", amount, currency, entity));
-        NotificationDto receiverNotificationDto = new NotificationDto(receiverAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made to your %s.", amount, currency, entity));
+            NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made from your %s.", amount, currency, entity));
+            NotificationDto receiverNotificationDto = new NotificationDto(receiverAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made to your %s.", amount, currency, entity));
 
-        notificationService.createNotification(senderNotificationDto);
-        notificationService.createNotification(receiverNotificationDto);
+            notificationService.createNotification(senderNotificationDto);
+            notificationService.createNotification(receiverNotificationDto);
+        }
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
@@ -282,17 +273,15 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(account);
 
         String entity = Entity.ACCOUNT.getValue();
-        String logMessage = status ? "{} {} is blocked"
-                : "Blockage of {} {} is removed";
 
+        String logMessage = status ? "{} {} is blocked" : "Blockage of {} {} is removed";
         logMessage += " at {}";
         log.info(logMessage, entity, id, LocalDateTime.now());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
         createAccountActivityForAccountStatusUpdate(account, activityType);
 
-        String message = status ? activityType.getValue()
-                : entity + " blockage removal";
+        String message = status ? activityType.getValue() : entity + " blockage removal";
 
         return String.format(ResponseMessage.SUCCESS, message);
     }
@@ -323,12 +312,7 @@ public class AccountServiceImpl implements AccountService {
     public String getTotalActiveAccounts(AccountType type, Currency currency, City city) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        int count = accountRepository.getTotalAccountsByCityAndTypeAndCurrency(
-                city.name(),
-                type.name(),
-                currency.name()
-        );
-
+        int count = accountRepository.getTotalAccountsByCityAndTypeAndCurrency(city.name(), type.name(), currency.name());
         log.info("Total count: {}", count);
 
         return String.format("Total %s %s accounts is %d", type.getValue(), currency, count);
@@ -510,9 +494,7 @@ public class AccountServiceImpl implements AccountService {
                 throw new ResourceConflictException(String.format("Charged %s's currency should be %s", entity, CHARGE_CURRENCY));
             }
 
-            chargedAccount = accounts.getFirst().getCurrency() == CHARGE_CURRENCY
-                    ? accounts.getFirst()
-                    : accounts.getLast();
+            chargedAccount = accounts.getFirst().getCurrency() == CHARGE_CURRENCY ? accounts.getFirst() : accounts.getLast();
         }
 
         return chargedAccount;
@@ -575,13 +557,7 @@ public class AccountServiceImpl implements AccountService {
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
-        return new AccountActivityFilteringOption(
-                List.of(activityType),
-                accountIds[0],
-                accountIds[1],
-                null,
-                LocalDate.now()
-        );
+        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, LocalDate.now());
     }
 
     private static void checkAccountBlocked(Account account) {
@@ -619,15 +595,7 @@ public class AccountServiceImpl implements AccountService {
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
         summary.put(SummaryField.TIME, LocalDateTime.now().toString());
 
-        AccountActivityRequest request = new AccountActivityRequest(
-                activityType,
-                null,
-                null,
-                0D,
-                summary,
-                null
-        );
-
+        AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null);
         accountActivityService.createAccountActivity(request);
     }
 }
