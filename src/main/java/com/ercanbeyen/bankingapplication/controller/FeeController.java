@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.FeeDto;
 import com.ercanbeyen.bankingapplication.option.FeeFilteringOption;
-import com.ercanbeyen.bankingapplication.service.impl.FeeService;
+import com.ercanbeyen.bankingapplication.service.FeeService;
 import com.ercanbeyen.bankingapplication.util.FeeUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

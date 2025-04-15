@@ -11,5 +11,4 @@ public interface ChargeService {
     List<ChargeDto> getCharges();
     ChargeDto getCharge(AccountActivityType activityType);
     void deleteCharge(AccountActivityType activityType);
-
 }

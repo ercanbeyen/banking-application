@@ -11,7 +11,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.FeeMapper;
 import com.ercanbeyen.bankingapplication.option.FeeFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.FeeRepository;
-import com.ercanbeyen.bankingapplication.service.BaseService;
+import com.ercanbeyen.bankingapplication.service.FeeService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ import java.util.function.Predicate;
 @Slf4j
 @RequiredArgsConstructor
 @Service
-public class FeeService implements BaseService<FeeDto, FeeFilteringOption> {
+public class FeeServiceImpl implements FeeService {
     private final FeeRepository feeRepository;
     private final FeeMapper feeMapper;
 
@@ -101,6 +101,7 @@ public class FeeService implements BaseService<FeeDto, FeeFilteringOption> {
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
+    @Override
     public double getInterestRatio(Currency currency, int depositPeriod, double balance) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 

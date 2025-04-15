@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.BranchDto;
 import com.ercanbeyen.bankingapplication.option.BranchFilteringOption;
-import com.ercanbeyen.bankingapplication.service.impl.BranchService;
+import com.ercanbeyen.bankingapplication.service.BranchService;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 

@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.util;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
@@ -15,15 +16,14 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 @Slf4j
 @UtilityClass
 public class AccountUtil {
-    private final double LOWEST_THRESHOLD = 0;
 
     public void checkRequest(AccountDto accountDto) {
         if (Optional.ofNullable(accountDto.getIsBlocked()).isPresent() || Optional.ofNullable(accountDto.getClosedAt()).isPresent()) {
@@ -66,27 +66,18 @@ public class AccountUtil {
         }
     }
 
-    public void checkAccountActivityForCurrentAccount(AccountActivityType activityType) {
-        List<AccountActivityType> accountActivityTypes = List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.WITHDRAWAL, AccountActivityType.FEE, AccountActivityType.CHARGE);
-
-        if (!accountActivityTypes.contains(activityType)) {
-            throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
+    public void checkAccountActivityAndAccountTypeMatch(AccountType givenAccountType, AccountType expectedAccountType, AccountActivityType activityType) {
+        if (!checkAccountTypeMatch.test(givenAccountType, expectedAccountType)) {
+            throw new ResourceConflictException(activityType.getValue() + " can only be done from " + expectedAccountType.getValue() + " Accounts");
         }
+
+        log.info("Account Type {} can apply account activity {}", givenAccountType.getValue(), activityType.getValue());
     }
 
     public double calculateInterest(Double balance, Integer depositPeriod, Double interestRatio) {
         checkValidityOfBalanceAndInterestRatio(balance, interestRatio);
-
-        if (balance == LOWEST_THRESHOLD) {
-            return LOWEST_THRESHOLD;
-        } else if (interestRatio == LOWEST_THRESHOLD) {
-            return balance;
-        }
-
         double interest = (balance / 100) * (interestRatio / 12) * depositPeriod;
-
         log.info("Interest after calculation with balance ({}), interest ratio ({}) and deposit period ({}): {}", balance, interestRatio, depositPeriod, interest);
-
         return interest;
     }
 
@@ -94,7 +85,6 @@ public class AccountUtil {
         double interest = AccountUtil.calculateInterest(balance, depositPeriod, interestRatio);
         double balanceAfterNextFee = balance + interest;
         log.info("Balance after fee: {}", balanceAfterNextFee);
-
         return balanceAfterNextFee;
     }
 
@@ -114,30 +104,28 @@ public class AccountUtil {
         }
     }
 
-    public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to) {
-        AccountType accountType = AccountType.CURRENT;
+    public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to, AccountActivityType activityType) {
+        AccountType expectedAccountType = AccountType.CURRENT;
 
-        if (from != accountType || to != accountType) {
-            throw new ResourceConflictException(String.format("Both accounts must be %s", accountType.getValue()));
-        }
+        checkAccountActivityAndAccountTypeMatch(from, expectedAccountType, activityType);
+        checkAccountActivityAndAccountTypeMatch(to, expectedAccountType, activityType);
 
-        log.info("Both accounts are {}", accountType.getValue());
+        log.info("Both accounts are {}", expectedAccountType.getValue());
     }
 
-    private void checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(AccountType accountType, Integer depositPeriod) {
-        if (accountType != AccountType.DEPOSIT) {
-            throw new ResourceConflictException("Fees are for deposit accounts");
-        }
+    public final BiPredicate<AccountType, AccountType> checkAccountTypeMatch = (givenAccountType, expectedAccountType) -> givenAccountType == expectedAccountType;
 
+    private void checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(AccountType accountType, Integer depositPeriod) {
+        checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, AccountActivityType.FEE);
         FeeUtil.checkValidityOfDepositPeriod(depositPeriod);
     }
 
     private void checkValidityOfBalanceAndInterestRatio(Double balance, Double interestRatio) {
-        boolean isBalanceValid = balance >= LOWEST_THRESHOLD;
-        boolean isInterestRatioValid = interestRatio >= LOWEST_THRESHOLD;
+        boolean isBalanceValid = balance >= 0;
+        boolean isInterestRatioValid = interestRatio >= 0;
 
         if (!isBalanceValid || !isInterestRatioValid) {
-            throw new BadRequestException(String.format("Balance and interest ratio must be greater than or equal to %s", LOWEST_THRESHOLD));
+            throw new BadRequestException(String.format("Balance and interest ratio must be greater than or equal to %s", 0));
         }
     }
 
@@ -160,10 +148,10 @@ public class AccountUtil {
         String message = "have interest and deposit period values";
 
         if ((accountType == AccountType.DEPOSIT) && (isInterestNull || isDepositPeriodNull)) {
-            String exceptionMessage = accountType + " must " + message;
+            String exceptionMessage = accountType.getValue() + " must " + message;
             throw new ResourceExpectationFailedException(exceptionMessage);
         } else if ((accountType == AccountType.CURRENT) && (!isInterestNull || !isDepositPeriodNull)) {
-            String exceptionMessage = accountType + " account does not " + message;
+            String exceptionMessage = accountType + " " + Entity.ACCOUNT.getValue().toLowerCase() + " does not " + message;
             throw new ResourceExpectationFailedException(exceptionMessage);
         }
     }

@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.ExchangeDto;
 import com.ercanbeyen.bankingapplication.entity.Exchange;
+import com.ercanbeyen.bankingapplication.service.ExchangeService;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -13,7 +14,6 @@ import com.ercanbeyen.bankingapplication.mapper.ExchangeMapper;
 import com.ercanbeyen.bankingapplication.option.ExchangeFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.ExchangeRepository;
 import com.ercanbeyen.bankingapplication.view.repository.ExchangeViewRepository;
-import com.ercanbeyen.bankingapplication.service.BaseService;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
@@ -28,7 +28,7 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 @Slf4j
-public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteringOption> {
+public class ExchangeServiceImpl implements ExchangeService {
     private final ExchangeRepository exchangeRepository;
     private final ExchangeViewRepository exchangeViewRepository;
     private final ExchangeMapper exchangeMapper;
@@ -101,6 +101,7 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
     }
 
+    @Override
     public Double convertMoneyBetweenCurrencies(Currency fromCurrency, Currency toCurrency, Double amount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return convertMoneyBetweenCurrenciesWithBankRates(
@@ -110,11 +111,13 @@ public class ExchangeService implements BaseService<ExchangeDto, ExchangeFilteri
         );
     }
 
+    @Override
     public List<ExchangeView> getExchangeViews() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return exchangeViewRepository.findAll();
     }
 
+    @Override
     public Double getBankExchangeRate(Currency fromCurrency, Currency toCurrency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Pair<Double, Double> exchangeRate = getExchangeRate(fromCurrency, toCurrency);

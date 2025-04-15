@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.constant.query.Queries;
+import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
@@ -35,6 +35,6 @@ public class Agreement {
     private Set<Customer> customers;
     @CreationTimestamp
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Queries.GET_NOW_TIMESTAMP)
+    @Column(name = "created_at", columnDefinition = Query.GET_NOW_TIMESTAMP)
     LocalDateTime createdAt;
 }

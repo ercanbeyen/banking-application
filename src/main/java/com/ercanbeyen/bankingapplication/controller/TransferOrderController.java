@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
 import com.ercanbeyen.bankingapplication.option.TransferOrderOption;
-import com.ercanbeyen.bankingapplication.service.impl.TransferOrderService;
+import com.ercanbeyen.bankingapplication.service.TransferOrderService;
 import com.ercanbeyen.bankingapplication.util.TransferOrderUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;

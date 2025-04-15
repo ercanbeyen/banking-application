@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 
-import com.ercanbeyen.bankingapplication.constant.query.Queries;
+import com.ercanbeyen.bankingapplication.constant.query.Query;
 import com.ercanbeyen.bankingapplication.listener.BaseEntityListener;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -19,10 +19,10 @@ public abstract sealed class BaseEntity permits Account, Branch, Customer, Excha
     private Integer id;
     @CreationTimestamp
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Queries.GET_NOW_TIMESTAMP)
+    @Column(name = "created_at", columnDefinition = Query.GET_NOW_TIMESTAMP)
     private LocalDateTime createdAt;
     @UpdateTimestamp
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_at", columnDefinition = Queries.GET_NOW_TIMESTAMP)
+    @Column(name = "updated_at", columnDefinition = Query.GET_NOW_TIMESTAMP)
     private LocalDateTime updatedAt;
 }
