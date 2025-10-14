@@ -52,7 +52,7 @@ public class NotificationServiceImpl implements NotificationService {
         String entity = Entity.NOTIFICATION.getValue();
 
         notificationRepository.findById(id)
-                .ifPresentOrElse(notification -> {
+                .ifPresentOrElse(_ -> {
                     log.info(LogMessage.RESOURCE_FOUND, entity);
                     notificationRepository.deleteById(id);
                 }, () -> {

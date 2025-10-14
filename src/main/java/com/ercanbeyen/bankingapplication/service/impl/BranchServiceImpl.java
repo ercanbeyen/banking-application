@@ -97,7 +97,7 @@ public class BranchServiceImpl implements BranchService {
         String entity = Entity.BRANCH.getValue();
 
         branchRepository.findById(id)
-                .ifPresentOrElse(branch -> {
+                .ifPresentOrElse(_ -> {
                     log.info(LogMessage.RESOURCE_FOUND, entity);
                     branchRepository.deleteById(id);
                 }, () -> {

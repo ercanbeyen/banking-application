@@ -74,8 +74,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public CustomerDto getEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Customer customer = findById(id);
-        return customerMapper.entityToDto(customer);
+        return customerMapper.entityToDto(findById(id));
     }
 
     @Transactional
@@ -120,8 +119,17 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public void deleteEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Customer customer = findById(id);
-        customerRepository.delete(customer);
+
+        String entity = Entity.CUSTOMER.getValue();
+
+        customerRepository.findById(id)
+                .ifPresentOrElse(_ -> {
+                    log.info(LogMessage.RESOURCE_FOUND, entity);
+                    customerRepository.deleteById(id);
+                }, () -> {
+                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
+                });
     }
 
     @Override
@@ -142,8 +150,8 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public File downloadProfilePhoto(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Customer customer = findById(id);
-        return customer.getProfilePhoto()
+        return findById(id)
+                .getProfilePhoto()
                 .orElseThrow(() -> new ResourceNotFoundException(ResponseMessage.NOT_FOUND));
     }
 
@@ -337,8 +345,8 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public List<String> getAgreementSubjects(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Customer customer = findById(id);
-        return customer.getAgreements()
+        return findById(id)
+                .getAgreements()
                 .stream()
                 .map(Agreement::getSubject)
                 .toList();
@@ -513,13 +521,13 @@ public class CustomerServiceImpl implements CustomerService {
         Predicate<Customer> emailPredicate = customer -> customer.getEmail().equals(email);
 
         if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateCharge case
-            Predicate<Customer> customerInDbPredicate = customer -> !customerInDb.getNationalId().equals(nationalId);
+            Predicate<Customer> customerInDbPredicate = _ -> !customerInDb.getNationalId().equals(nationalId);
             nationalIdPredicate = customerInDbPredicate.and(nationalIdPredicate);
 
-            customerInDbPredicate = customer -> !customerInDb.getPhoneNumber().equals(phoneNumber);
+            customerInDbPredicate = _ -> !customerInDb.getPhoneNumber().equals(phoneNumber);
             phoneNumberPredicate = customerInDbPredicate.and(phoneNumberPredicate);
 
-            customerInDbPredicate = customer -> !customerInDb.getEmail().equals(email);
+            customerInDbPredicate = _ -> !customerInDb.getEmail().equals(email);
             emailPredicate = customerInDbPredicate.and(emailPredicate);
         }
 

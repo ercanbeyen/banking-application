@@ -90,7 +90,7 @@ public class ExchangeServiceImpl implements ExchangeService {
         String entity = Entity.EXCHANGE.getValue();
 
         exchangeRepository.findById(id)
-                .ifPresentOrElse(exchange -> {
+                .ifPresentOrElse(_ -> {
                     log.info(LogMessage.RESOURCE_FOUND, entity);
                     exchangeRepository.deleteById(id);
                 }, () -> {

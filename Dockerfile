@@ -1,4 +1,4 @@
-FROM openjdk:21
+FROM openjdk:25
 VOLUME /tmp
 WORKDIR /app
 COPY target/banking-application-0.0.1-SNAPSHOT.jar banking-application.jar

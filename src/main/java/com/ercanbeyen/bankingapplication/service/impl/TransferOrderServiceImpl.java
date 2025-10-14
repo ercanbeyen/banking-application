@@ -94,8 +94,18 @@ public class TransferOrderServiceImpl implements TransferOrderService {
     @Override
     public void deleteEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        TransferOrder transferOrder = findById(id);
-        transferOrderRepository.delete(transferOrder);
+
+        String entity = Entity.TRANSFER_ORDER.getValue();
+
+        transferOrderRepository.findById(id)
+                .ifPresentOrElse(_ -> {
+                    log.info(LogMessage.RESOURCE_FOUND, entity);
+                    transferOrderRepository.deleteById(id);
+                }, () -> {
+                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
+                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
+                });
+
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.TRANSFER_ORDER.getValue(), id);
     }
 

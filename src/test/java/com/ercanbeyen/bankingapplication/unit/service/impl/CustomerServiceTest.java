@@ -297,7 +297,7 @@ class CustomerServiceTest {
                 .findById(anyInt());
         doNothing()
                 .when(customerRepository)
-                .delete(any());
+                .deleteById(any());
 
         // when
         customerService.deleteEntity(customer.getId());
@@ -306,7 +306,7 @@ class CustomerServiceTest {
         verify(customerRepository, times(1))
                 .findById(anyInt());
         verify(customerRepository, times(1))
-                .delete(any());
+                .deleteById(any());
     }
 
     @Test
