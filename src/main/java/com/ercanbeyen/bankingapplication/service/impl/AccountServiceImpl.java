@@ -130,15 +130,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public void deleteEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        if (!accountRepository.existsById(id)) {
-            throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.ACCOUNT.getValue()));
-        }
-
-        log.info(LogMessage.RESOURCE_FOUND, Entity.ACCOUNT.getValue());
-
-        accountRepository.deleteById(id);
-        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.ACCOUNT.getValue(), id);
+        log.warn(LogMessage.UNUSABLE_METHOD);
     }
 
     @Override

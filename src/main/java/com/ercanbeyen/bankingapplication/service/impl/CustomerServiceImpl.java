@@ -119,17 +119,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public void deleteEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        String entity = Entity.CUSTOMER.getValue();
-
-        customerRepository.findById(id)
-                .ifPresentOrElse(_ -> {
-                    log.info(LogMessage.RESOURCE_FOUND, entity);
-                    customerRepository.deleteById(id);
-                }, () -> {
-                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
-                });
+        log.warn(LogMessage.UNUSABLE_METHOD);
     }
 
     @Override

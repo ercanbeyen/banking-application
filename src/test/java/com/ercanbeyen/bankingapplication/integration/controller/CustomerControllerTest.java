@@ -202,18 +202,6 @@ class CustomerControllerTest {
 
     @Test
     @Order(7)
-    @DisplayName("Happy path test: Delete customer case")
-    void givenId_whenDeleteEntity_thenReturnMessage() {
-        given()
-                .when()
-                .delete(CUSTOMER_RESOURCE_ENDPOINT, 1)
-                .then()
-                .assertThat()
-                .statusCode(HttpStatus.NO_CONTENT.value());
-    }
-
-    @Test
-    @Order(8)
     @DisplayName("Happy path test: Upload valid profile photo case")
     void givenIdAndMultipartFile_whenUploadProfilePhoto_thenSuccessReturnMessage() throws IOException {
         MultiPartSpecification multiPartSpecification = constructMultiPartSpecification("valid_profilePhoto.png", MediaType.IMAGE_PNG_VALUE);
@@ -231,7 +219,7 @@ class CustomerControllerTest {
     }
 
     @Test
-    @Order(9)
+    @Order(8)
     @DisplayName("Exception path test: Upload invalid profile photo case")
     void givenIdAndMultipartFile_whenUploadProfilePhoto_thenReturnFailMessage() throws IOException {
         MultiPartSpecification multiPartSpecification = constructMultiPartSpecification("invalid_profilePhoto.txt", MediaType.TEXT_PLAIN_VALUE);
@@ -258,7 +246,7 @@ class CustomerControllerTest {
     }
 
     @Test
-    @Order(10)
+    @Order(9)
     @DisplayName("Happy path test: Download profile photo case")
     void givenId_whenDownloadProfilePhoto_thenReturnFile() {
         given()

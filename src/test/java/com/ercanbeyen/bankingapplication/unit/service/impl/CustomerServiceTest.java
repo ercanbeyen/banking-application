@@ -287,51 +287,6 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Delete customer case")
-    void givenExistingId_whenDeleteEntity_thenReturnNothing() {
-        // given
-        Customer customer = customers.getFirst();
-
-        doReturn(Optional.of(customer))
-                .when(customerRepository)
-                .findById(anyInt());
-        doNothing()
-                .when(customerRepository)
-                .deleteById(any());
-
-        // when
-        customerService.deleteEntity(customer.getId());
-
-        // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verify(customerRepository, times(1))
-                .deleteById(any());
-    }
-
-    @Test
-    @DisplayName("Exception path test: Delete customer case")
-    void givenNotExistingId_whenDeleteEntity_thenThrowResourceNotFoundException() {
-        // given
-        String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
-
-        doReturn(Optional.empty())
-                .when(customerRepository)
-                .findById(anyInt());
-
-        // when
-        RuntimeException exception = assertThrows(ResourceNotFoundException.class, () -> customerService.deleteEntity(20));
-        String actual = exception.getMessage();
-
-        // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verifyNoMoreInteractions(customerRepository, customerMapper);
-
-        assertEquals(expected, actual);
-    }
-
-    @Test
     @Timeout(value = 5) // The default time unit is seconds
     @DisplayName("Happy path test: Upload photo case")
     void givenMultipartFile_whenUploadPhoto_thenReturnMessage() throws IOException {

@@ -95,15 +95,13 @@ public class BranchServiceImpl implements BranchService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.BRANCH.getValue();
+        Branch branch = findById(id);
 
-        branchRepository.findById(id)
-                .ifPresentOrElse(_ -> {
-                    log.info(LogMessage.RESOURCE_FOUND, entity);
-                    branchRepository.deleteById(id);
-                }, () -> {
-                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
-                });
+        if (!branch.getAccounts().isEmpty()) {
+            throw new ResourceConflictException("Some accounts are linked to this branch. To delete this branch, please first unlink the relevant accounts from this branch.");
+        }
+
+        branchRepository.delete(branch);
 
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
     }
