@@ -14,7 +14,6 @@ public enum Entity {
     TRANSFER_ORDER("Transfer Order"),
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
-    ADDRESS("Address"),
     BRANCH("Branch"),
     FEE("Fee"),
     CHARGE("Charge"),

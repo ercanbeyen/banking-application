@@ -370,7 +370,6 @@ class CustomerServiceTest {
 
     @Test
     @DisplayName("Exception path test: Download profile photo")
-    @Disabled(value = "This test is not increasing any coverage data")
     void givenId_whenDownloadProfilePhoto_thenThrowResourceNotFoundException() {
         // given
         String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());

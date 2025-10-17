@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
+import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
@@ -120,6 +121,52 @@ public class CustomerServiceImpl implements CustomerService {
     public void deleteEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         log.warn(LogMessage.UNUSABLE_METHOD);
+    }
+
+    @Override
+    public String addRegisteredRecipient(Integer id, RegisteredRecipient request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Customer customer = findById(id);
+
+        boolean ownAccountRegistered = customer.getAccounts()
+                .stream()
+                .anyMatch(account -> account.getId().equals(request.getAccountId()));
+
+        if (ownAccountRegistered) {
+            throw new ResourceConflictException("Recipient cannot be the same customer");
+        }
+
+        boolean accountAlreadyRegistered = customer.getRegisteredRecipients()
+                .stream()
+                .anyMatch(registeredRecipient -> registeredRecipient.getAccountId().equals(request.getAccountId()));
+
+        if (accountAlreadyRegistered) {
+            throw new ResourceConflictException("Recipient with the relevant account is already registered");
+        }
+
+        customer.getRegisteredRecipients().add(request);
+        customerRepository.save(customer);
+
+        return "Recipient is successfully added";
+    }
+
+    @Override
+    public String removeRegisteredRecipient(Integer id, Integer recipientAccountId) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Customer customer = findById(id);
+
+        RegisteredRecipient registeredRecipient = customer.getRegisteredRecipients()
+                .stream()
+                .filter(registeredRecipientInCustomer -> registeredRecipientInCustomer.getAccountId().equals(recipientAccountId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Registered recipient is not found"));
+
+        customer.getRegisteredRecipients().remove(registeredRecipient);
+        customerRepository.save(customer);
+
+        return "Recipient is successfully removed";
     }
 
     @Override
@@ -340,6 +387,12 @@ public class CustomerServiceImpl implements CustomerService {
                 .stream()
                 .map(Agreement::getSubject)
                 .toList();
+    }
+
+    @Override
+    public List<RegisteredRecipient> getRegisteredRecipients(Integer id) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return findById(id).getRegisteredRecipients();
     }
 
     /**

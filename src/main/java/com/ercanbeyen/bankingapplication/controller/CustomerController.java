@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
+import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
@@ -49,6 +50,16 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public ResponseEntity<CustomerDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid CustomerDto request) {
         CustomerUtil.checkRequest(request);
         return ResponseEntity.ok(customerService.updateEntity(id, request));
+    }
+
+    @PatchMapping("/{id}/registered-recipients")
+    public ResponseEntity<String> addRegisteredRecipient(@PathVariable("id") Integer id, @RequestBody @Valid RegisteredRecipient request) {
+        return ResponseEntity.ok(customerService.addRegisteredRecipient(id, request));
+    }
+
+    @DeleteMapping("/{id}/registered-recipients/{accountId}")
+    public ResponseEntity<String> removeRegisteredRecipient(@PathVariable("id") Integer id, @PathVariable("accountId") Integer accountId) {
+        return ResponseEntity.ok(customerService.removeRegisteredRecipient(id, accountId));
     }
 
     @PostMapping("/{id}")
@@ -122,5 +133,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         List<String> agreementSubjects = customerService.getAgreementSubjects(id);
         MessageResponse<List<String>> response = new MessageResponse<>(agreementSubjects);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/registered-recipients")
+    public ResponseEntity<List<RegisteredRecipient>> addRegisteredRecipient(@PathVariable("id") Integer id) {
+        return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
     }
 }
