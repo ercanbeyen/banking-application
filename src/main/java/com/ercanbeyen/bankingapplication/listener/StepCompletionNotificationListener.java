@@ -20,7 +20,9 @@ public class StepCompletionNotificationListener implements StepListener {
 
     @AfterStep
     public ExitStatus afterStep(StepExecution stepExecution){
-        log.info(LogMessage.Batch.STEP_STATUS, stepExecution.getStepName(), "ended", stepExecution.getEndTime());
-        return (stepExecution.getExitStatus() == ExitStatus.COMPLETED) ? ExitStatus.COMPLETED : ExitStatus.FAILED;
+        log.info(LogMessage.Batch.STEP_STATUS, stepExecution.getStepName(), "completed", stepExecution.getEndTime());
+        return (stepExecution.getExitStatus() == ExitStatus.COMPLETED)
+                ? ExitStatus.COMPLETED
+                : ExitStatus.FAILED;
     }
 }

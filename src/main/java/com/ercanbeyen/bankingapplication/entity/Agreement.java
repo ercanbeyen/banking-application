@@ -35,6 +35,6 @@ public class Agreement {
     private Set<Customer> customers;
     @CreationTimestamp
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Query.GET_NOW_TIMESTAMP)
+    @Column(name = "created_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     LocalDateTime createdAt;
 }

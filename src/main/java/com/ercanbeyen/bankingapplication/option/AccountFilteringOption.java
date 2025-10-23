@@ -1,11 +1,11 @@
 package com.ercanbeyen.bankingapplication.option;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Getter
-@Setter
+@EqualsAndHashCode(callSuper = true)
+@Data
 public non-sealed class AccountFilteringOption extends BaseFilteringOption {
     private AccountType type;
     private Boolean isBlocked;

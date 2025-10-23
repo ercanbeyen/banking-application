@@ -1,13 +1,12 @@
 package com.ercanbeyen.bankingapplication.constant.enums;
 
 public enum Currency {
-    TL,
+    TRY,
     USD,
     EUR,
-    GBP,
-    ALT;
+    GBP;
 
     public static Currency getChargeCurrency() {
-        return TL;
+        return TRY;
     }
 }

@@ -6,5 +6,4 @@ import com.ercanbeyen.bankingapplication.option.BranchFilteringOption;
 
 public interface BranchService extends BaseService<BranchDto, BranchFilteringOption> {
     Branch findByName(String name);
-
 }

@@ -71,9 +71,6 @@ public class ChargeServiceImpl implements ChargeService {
     public ChargeDto getCharge(AccountActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Charge charge = findByActivityType(activityType);
-
-        log.info("We are in getCharge --> No caching");
-
         return chargeMapper.entityToDto(charge);
     }
 

@@ -4,10 +4,10 @@ import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-@Entity
-@Table(name = "files")
 @Data
 @NoArgsConstructor
+@Entity
+@Table(name = "files")
 public class File {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

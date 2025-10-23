@@ -3,10 +3,12 @@ package com.ercanbeyen.bankingapplication.entity;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.util.List;
 import java.util.Optional;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
 @Table(name = "branches", indexes = {

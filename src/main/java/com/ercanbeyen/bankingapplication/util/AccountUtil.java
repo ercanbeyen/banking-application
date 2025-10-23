@@ -39,8 +39,8 @@ public class AccountUtil {
     }
 
     public void checkMoneyTransferRequest(MoneyTransferRequest request) {
-        if (Objects.equals(request.senderAccountId(), request.receiverAccountId())) {
-            throw new BadRequestException("Identity of sender and receiver accounts should not be equal");
+        if (Objects.equals(request.senderAccountId(), request.recipientAccountId())) {
+            throw new BadRequestException("Identity of sender and recipient accounts should not be equal");
         }
 
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;

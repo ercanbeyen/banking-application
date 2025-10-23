@@ -24,7 +24,7 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency);
     List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption);
     List<NotificationDto> getNotifications(Integer id);
-    List<TransferOrderDto> getTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType);
+    List<MoneyTransferOrderDto> getMoneyTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType);
     CashFlowCalendarDto getCashFlowCalendar(Integer id, Integer year, Integer month);
     List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month);
     List<String> getAgreementSubjects(Integer id);

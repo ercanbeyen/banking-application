@@ -126,7 +126,7 @@ public class SurveyServiceImpl implements SurveyService {
         String entity = Entity.SURVEY.getValue();
 
         surveyRepository.findById(key)
-                .ifPresentOrElse(survey -> {
+                .ifPresentOrElse(_ -> {
                     log.info(LogMessage.RESOURCE_FOUND, entity);
                     surveyRepository.deleteById(key);
                 }, () -> {

@@ -14,7 +14,7 @@ import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import com.ercanbeyen.bankingapplication.util.PhotoUtil;
-import com.ercanbeyen.bankingapplication.util.TransferOrderUtil;
+import com.ercanbeyen.bankingapplication.util.MoneyTransferOrderUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.validator.constraints.Range;
@@ -102,15 +102,15 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getNotifications(id));
     }
 
-    @GetMapping("/{id}/transfer-orders")
-    public ResponseEntity<List<TransferOrderDto>> getTransferOrders(
+    @GetMapping("/{id}/money-transfer-orders")
+    public ResponseEntity<List<MoneyTransferOrderDto>> getMoneyTransferOrders(
             @PathVariable("id") Integer id,
             @RequestParam("from") LocalDate fromDate,
             @RequestParam("to") LocalDate toDate,
             @RequestParam(value = "currency", required = false) Currency currency,
             @RequestParam(value = "payment-type", required = false) PaymentType paymentType) {
-        TransferOrderUtil.checkDatesBeforeFiltering(fromDate, toDate);
-        return ResponseEntity.ok(customerService.getTransferOrders(id, fromDate, toDate, currency, paymentType));
+        MoneyTransferOrderUtil.checkDatesBeforeFiltering(fromDate, toDate);
+        return ResponseEntity.ok(customerService.getMoneyTransferOrders(id, fromDate, toDate, currency, paymentType));
     }
 
     @GetMapping("/{id}/cash-flow-calendar")

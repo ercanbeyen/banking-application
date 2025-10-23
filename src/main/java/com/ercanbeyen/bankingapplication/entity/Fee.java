@@ -4,11 +4,11 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Getter
-@Setter
+@EqualsAndHashCode(callSuper = true)
+@Data
 @Entity
 @Table(name = "fees")
 public non-sealed class Fee extends BaseEntity {

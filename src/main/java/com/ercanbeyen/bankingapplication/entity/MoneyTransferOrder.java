@@ -1,15 +1,17 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.embeddable.RegularTransfer;
+import com.ercanbeyen.bankingapplication.embeddable.RegularMoneyTransfer;
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 
 import java.time.LocalDate;
 
+@EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
-@Table(name = "transfer_orders")
-public non-sealed class TransferOrder extends BaseEntity {
+@Table(name = "money_transfer_orders")
+public non-sealed class MoneyTransferOrder extends BaseEntity {
     private Integer id;
     @ManyToOne
     private Account senderAccount;
@@ -17,5 +19,5 @@ public non-sealed class TransferOrder extends BaseEntity {
     private Account chargedAccount;
     private LocalDate transferDate;
     @Embedded
-    private RegularTransfer regularTransfer;
+    private RegularMoneyTransfer regularMoneyTransfer;
 }

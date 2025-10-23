@@ -38,7 +38,7 @@ public non-sealed class Account extends BaseEntity {
     private boolean isBlocked;
     private LocalDateTime closedAt;
     @OneToMany(mappedBy = "senderAccount", cascade = CascadeType.ALL)
-    private List<TransferOrder> transferOrders = new ArrayList<>();
+    private List<MoneyTransferOrder> moneyTransferOrders = new ArrayList<>();
     /* Deposit Account fields */
     private Double interestRatio;
     private Integer depositPeriod;

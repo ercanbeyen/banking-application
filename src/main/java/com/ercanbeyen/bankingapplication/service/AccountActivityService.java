@@ -16,7 +16,7 @@ public interface AccountActivityService {
     Set<AccountActivityDto> getAccountActivitiesOfParticularAccounts(AccountActivityFilteringOption option, Currency currency);
     AccountActivityDto getAccountActivity(String id);
     AccountActivity createAccountActivity(AccountActivityRequest request);
-    List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer receiverAccountId);
+    List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer recipientAccountId);
     ByteArrayOutputStream createReceiptStream(String id);
     boolean existsByIdAndCustomerNationalId(String id, String customerNationalId);
 }

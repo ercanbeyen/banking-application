@@ -207,28 +207,28 @@ public class AccountServiceImpl implements AccountService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account senderAccount = findActiveAccountById(request.senderAccountId());
-        Account receiverAccount = findActiveAccountById(request.receiverAccountId());
+        Account recipientAccount = findActiveAccountById(request.recipientAccountId());
 
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
         Double amount = request.amount();
         Currency currency = senderAccount.getCurrency();
 
-        checkAccountsBeforeMoneyTransfer(senderAccount, receiverAccount);
+        checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
         Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(senderAccount));
 
         checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
-        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, receiverAccount, chargedAccount);
+        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, chargedAccount);
 
-        if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
+        if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
             NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made from your %s.", amount, currency, entity));
-            NotificationDto receiverNotificationDto = new NotificationDto(receiverAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made to your %s.", amount, currency, entity));
+            NotificationDto recipientNotificationDto = new NotificationDto(recipientAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made to your %s.", amount, currency, entity));
 
             notificationService.createNotification(senderNotificationDto);
-            notificationService.createNotification(receiverNotificationDto);
+            notificationService.createNotification(recipientNotificationDto);
         }
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
@@ -244,7 +244,6 @@ public class AccountServiceImpl implements AccountService {
         checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
-
         checkDailyAccountActivityLimit(sellerAccount, request.amount(), activityType);
 
         Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(sellerAccount, buyerAccount));
@@ -369,17 +368,17 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount) {
-        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), receiverAccount.getCurrency());
+    public void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account recipientAccount) {
+        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), recipientAccount.getCurrency());
 
-        if (senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
+        if (senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String accountEntity = Entity.ACCOUNT.getValue().toLowerCase();
             String customerEntity = Entity.CUSTOMER.getValue().toLowerCase();
 
             log.warn("Same {} is transferring money between {}s", customerEntity, accountEntity);
             AccountType expectedAccountType = AccountType.CURRENT;
 
-            if (!AccountUtil.checkAccountTypeMatch.test(senderAccount.getType(), expectedAccountType) && !AccountUtil.checkAccountTypeMatch.test(receiverAccount.getType(), expectedAccountType)) {
+            if (!AccountUtil.checkAccountTypeMatch.test(senderAccount.getType(), expectedAccountType) && !AccountUtil.checkAccountTypeMatch.test(recipientAccount.getType(), expectedAccountType)) {
                 log.error("There should be at least 1 {} {} in money transfer between {}s of the same {}", accountEntity, expectedAccountType.getValue().toLowerCase(), accountEntity, customerEntity);
                 throw new ResourceConflictException(AccountType.DEPOSIT.getValue() + " " + accountEntity + "s cannot transfer money between themselves");
             }
@@ -387,7 +386,7 @@ public class AccountServiceImpl implements AccountService {
             return;
         }
 
-        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), receiverAccount.getType(), AccountActivityType.MONEY_TRANSFER);
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), recipientAccount.getType(), AccountActivityType.MONEY_TRANSFER);
     }
 
     @Override
@@ -540,7 +539,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     private static AccountActivityFilteringOption constructAccountActivityFilteringOption(Integer accountId, AccountActivityType activityType) {
-        Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is receiver id
+        Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is recipient id
 
         switch (activityType) {
             case AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER,

@@ -22,7 +22,6 @@ public class NewsController {
             @RequestParam(name = "type") NewsType type,
             @RequestParam(name = "page", defaultValue = "0") int pageNumber,
             @RequestParam(name = "size", defaultValue = "10") int pageSize) {
-        List<NewsDto> newsDtoList = newsService.getNews(type, pageNumber, pageSize);
-        return ResponseEntity.ok(newsDtoList);
+        return ResponseEntity.ok(newsService.getNews(type, pageNumber, pageSize));
     }
 }

@@ -14,9 +14,9 @@ import java.time.LocalDateTime;
 @Entity(name = "account_activity_views")
 @Immutable
 @Subselect("""
-           SELECT t.id, t.type, a.currency, t.amount, t.sender_account_id, t.receiver_account_id, t.created_at
+           SELECT t.id, t.type, a.currency, t.amount, t.sender_account_id, t.recipient_account_id, t.created_at
            FROM (account_activities t
-                 INNER JOIN accounts a ON (t.sender_account_id = a.id OR t.receiver_account_id = a.id))
+                 INNER JOIN accounts a ON (t.sender_account_id = a.id OR t.recipient_account_id = a.id))
            GROUP BY t.id, a.currency
            ORDER BY t.created_at DESC, t.amount DESC
            """
@@ -35,8 +35,8 @@ public class AccountActivityView {
     private Double amount;
     @Column(name = "sender_account_id")
     private Integer senderAccountId;
-    @Column(name = "receiver_account_id")
-    private Integer receiverAccountId;
+    @Column(name = "recipient_account_id")
+    private Integer recipientAccountId;
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 }

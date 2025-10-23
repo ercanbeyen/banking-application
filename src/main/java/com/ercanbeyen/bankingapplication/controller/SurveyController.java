@@ -60,8 +60,7 @@ public class SurveyController {
             @RequestParam("type") SurveyType surveyType,
             @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt) {
         surveyService.deleteSurvey(customerNationalId, accountActivityId, createdAt, surveyType);
-        return ResponseEntity.noContent()
-                .build();
+        return ResponseEntity.noContent().build();
     }
 
     @PatchMapping("/customers/{customer-national-id}/account-activities/{account-activity-id}")

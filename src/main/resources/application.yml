@@ -17,7 +17,7 @@ spring:
       max-request-size: 2MB
   batch:
     job:
-      enabled: false # change the value to true to immediately enable batch processing on startup
+      enabled: true # change the value to true to immediately enable batch processing on startup
     jdbc:
       initialize-schema: always
 management:

@@ -8,6 +8,6 @@ import org.mapstruct.Mapping;
 @Mapper(componentModel = "spring")
 public interface AccountActivityMapper {
     @Mapping(target = "senderAccountId", source = "senderAccount.id")
-    @Mapping(target = "receiverAccountId", source = "receiverAccount.id")
+    @Mapping(target = "recipientAccountId", source = "recipientAccount.id")
     AccountActivityDto entityToDto(AccountActivity accountActivity);
 }
