@@ -42,10 +42,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleMethodValidationException(HandlerMethodValidationException exception) {
         Map<String, String> errors = new HashMap<>();
 
-        exception.getAllValidationResults()
-                .forEach(validationResult -> {
-                    String parameter = validationResult.getMethodParameter().getParameter().getName();
-                    for (MessageSourceResolvable messageSourceResolvable : validationResult.getResolvableErrors()) {
+        exception.getParameterValidationResults()
+                .forEach(parameterValidationResult -> {
+                    String parameter = parameterValidationResult.getMethodParameter().getParameter().getName();
+                    for (MessageSourceResolvable messageSourceResolvable : parameterValidationResult.getResolvableErrors()) {
                         String message = messageSourceResolvable.getDefaultMessage();
                         errors.put(parameter, message);
                     }

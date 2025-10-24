@@ -30,8 +30,7 @@ public final class LogMessage {
     public static final String UNUSABLE_METHOD = "Unusable method";
 
     public static class Batch {
-        public static final String JOB_STATUS = "!!! Job {}! Time to verify the results";
-        public static final String STEP_STATUS = "Step {} is {} time {}";
+        public static final String STEP_STATUS = "!!! Step {} is {} at {}";
 
         private Batch() {}
     }

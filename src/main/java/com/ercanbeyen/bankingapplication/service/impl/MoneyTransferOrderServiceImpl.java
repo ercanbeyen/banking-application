@@ -62,7 +62,7 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
     public MoneyTransferOrderDto createEntity(MoneyTransferOrderDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        MoneyTransferOrder moneyTransferOrder = constructTransferOrder(request);
+        MoneyTransferOrder moneyTransferOrder = constructMoneyTransferOrder(request);
         MoneyTransferOrder savedMoneyTransferOrder = moneyTransferOrderRepository.save(moneyTransferOrder);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.MONEY_TRANSFER_ORDER.getValue(), savedMoneyTransferOrder.getId());
 
@@ -109,7 +109,7 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.MONEY_TRANSFER_ORDER.getValue(), id);
     }
 
-    private MoneyTransferOrder constructTransferOrder(MoneyTransferOrderDto request) {
+    private MoneyTransferOrder constructMoneyTransferOrder(MoneyTransferOrderDto request) {
         List<Account> accounts = getAccountsFromRegularTransferDto(request);
         RegularMoneyTransfer regularMoneyTransfer = constructRegularTransfer(request, accounts);
         MoneyTransferOrder moneyTransferOrder = new MoneyTransferOrder();
