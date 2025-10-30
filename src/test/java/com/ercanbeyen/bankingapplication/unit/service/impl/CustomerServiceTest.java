@@ -20,6 +20,7 @@ import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerServiceImpl;
+import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -403,6 +404,26 @@ class CustomerServiceTest {
 
         // when
         String actual = customerService.deleteProfilePhoto(id);
+
+        // then
+        verify(customerRepository, times(1)).findById(id);
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    @DisplayName("Happy path test: Get agreement subjects")
+    void givenId_whenGetAgreementSubjects_thenReturnList() {
+        // given
+        List<String> expected = List.of(AgreementUtil.generateSubject(Entity.CUSTOMER));
+        int id = customers.getFirst().getId();
+
+        doReturn(Optional.of(customers.getFirst()))
+                .when(customerRepository)
+                .findById(anyInt());
+
+        // when
+        List<String> actual = customerService.getAgreementSubjects(id);
 
         // then
         verify(customerRepository, times(1)).findById(id);
