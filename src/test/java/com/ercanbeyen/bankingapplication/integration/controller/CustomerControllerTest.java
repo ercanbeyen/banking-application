@@ -49,8 +49,7 @@ class CustomerControllerTest {
     private static final CassandraContainer<?> cassandraContainer = new CassandraContainer<>(DockerImageName.parse("cassandra:latest"));
     @Container
     @ServiceConnection
-    private static final GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:latest"))
-            .withExposedPorts(6379);
+    private static final GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:latest")).withExposedPorts(6379);
     private static final String PHOTOS_LOCATION = "C:\\Users\\ercanbeyen\\Photos\\Banking-App\\Source\\Test\\Resources\\";
     @LocalServerPort
     private Integer port;
@@ -128,15 +127,18 @@ class CustomerControllerTest {
     @Order(2)
     @DisplayName("Happy path test: Create customer case")
     void givenCustomerDto_whenCreateEntity_thenReturnCustomerDto() {
-        generateContract();
+        generateAgreement();
 
         CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
+        request.setId(null);
         generateCustomer(request);
 
         request = MockCustomerFactory.generateMockCustomerDtos().get(1);
+        request.setId(null);
         generateCustomer(request);
 
         request = MockCustomerFactory.generateMockCustomerDtos().getLast();
+        request.setId(null);
         generateCustomer(request);
     }
 
@@ -200,18 +202,6 @@ class CustomerControllerTest {
 
     @Test
     @Order(7)
-    @DisplayName("Happy path test: Delete customer case")
-    void givenId_whenDeleteEntity_thenReturnMessage() {
-        given()
-                .when()
-                .delete(CUSTOMER_RESOURCE_ENDPOINT, 1)
-                .then()
-                .assertThat()
-                .statusCode(HttpStatus.NO_CONTENT.value());
-    }
-
-    @Test
-    @Order(8)
     @DisplayName("Happy path test: Upload valid profile photo case")
     void givenIdAndMultipartFile_whenUploadProfilePhoto_thenSuccessReturnMessage() throws IOException {
         MultiPartSpecification multiPartSpecification = constructMultiPartSpecification("valid_profilePhoto.png", MediaType.IMAGE_PNG_VALUE);
@@ -229,7 +219,7 @@ class CustomerControllerTest {
     }
 
     @Test
-    @Order(9)
+    @Order(8)
     @DisplayName("Exception path test: Upload invalid profile photo case")
     void givenIdAndMultipartFile_whenUploadProfilePhoto_thenReturnFailMessage() throws IOException {
         MultiPartSpecification multiPartSpecification = constructMultiPartSpecification("invalid_profilePhoto.txt", MediaType.TEXT_PLAIN_VALUE);
@@ -256,7 +246,7 @@ class CustomerControllerTest {
     }
 
     @Test
-    @Order(10)
+    @Order(9)
     @DisplayName("Happy path test: Download profile photo case")
     void givenId_whenDownloadProfilePhoto_thenReturnFile() {
         given()
@@ -280,7 +270,7 @@ class CustomerControllerTest {
                 .body("nationalId", equalTo(request.getNationalId()));
     }
 
-    private void generateContract() {
+    private void generateAgreement() {
         File file;
 
         try {
@@ -291,7 +281,7 @@ class CustomerControllerTest {
 
         File savedFile = fileRepository.save(file);
 
-        Agreement agreement = MockAgreementFactory.getMockContract();
+        Agreement agreement = MockAgreementFactory.getMockAgreement();
         agreement.setFile(savedFile);
 
         agreementRepository.save(agreement);

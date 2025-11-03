@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
-import com.ercanbeyen.bankingapplication.dto.TransferOrderDto;
+import com.ercanbeyen.bankingapplication.dto.MoneyTransferOrderDto;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
 
@@ -8,9 +8,9 @@ import java.time.LocalDate;
 import java.util.function.Predicate;
 
 @UtilityClass
-public class TransferOrderUtil {
+public class MoneyTransferOrderUtil {
 
-    public void checkTransferDate(LocalDate request) {
+    public void checkMoneyTransferDate(LocalDate request) {
         LocalDate today = LocalDate.now();
 
         if (!request.isAfter(today)) {
@@ -24,26 +24,26 @@ public class TransferOrderUtil {
         }
     }
 
-    public Predicate<TransferOrderDto> getTransferOrderDtoPredicate() {
+    public Predicate<MoneyTransferOrderDto> getMoneyTransferOrderDtoPredicate() {
         /*
-            Transfer Date check flow:
+            Money Transfer Date check flow:
             1) Increase transfer date adding by period until reaches to today date
             2) If next transfer date comes then it returns true, else it returns false
          */
-        return transferOrderDto -> {
-            LocalDate nextTransferDate = transferOrderDto.getCreatedAt().toLocalDate();
+        return moneyTransferOrderDto -> {
+            LocalDate nextMoneyTransferDate = moneyTransferOrderDto.getCreatedAt().toLocalDate();
             LocalDate todayDate = LocalDate.now();
 
             do {
-                nextTransferDate = switch (transferOrderDto.getRegularTransferDto().paymentPeriod()) {
+                nextMoneyTransferDate = switch (moneyTransferOrderDto.getRegularMoneyTransferDto().paymentPeriod()) {
                     case ONE_TIME -> todayDate;
-                    case DAILY -> nextTransferDate.plusDays(1);
-                    case WEEKLY -> nextTransferDate.plusWeeks(1);
-                    case MONTHLY -> nextTransferDate.plusMonths(1);
+                    case DAILY -> nextMoneyTransferDate.plusDays(1);
+                    case WEEKLY -> nextMoneyTransferDate.plusWeeks(1);
+                    case MONTHLY -> nextMoneyTransferDate.plusMonths(1);
                 };
-            } while (nextTransferDate.isBefore(todayDate));
+            } while (nextMoneyTransferDate.isBefore(todayDate));
 
-            return todayDate.isEqual(nextTransferDate);
+            return todayDate.isEqual(nextMoneyTransferDate);
         };
     }
 }

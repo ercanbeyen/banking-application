@@ -45,12 +45,12 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             boolean accountActivityCheck = checkAccountActivity(filteringOption, accountActivity);
             boolean senderAccountIdFilter = filteringOption.senderAccountId() == null
                     || (accountActivity.getSenderAccount() != null && filteringOption.senderAccountId().equals(accountActivity.getSenderAccount().getId()));
-            boolean receiverAccountIdFilter = filteringOption.receiverAccountId() == null
-                    || (accountActivity.getReceiverAccount() != null && filteringOption.receiverAccountId().equals(accountActivity.getReceiverAccount().getId()));
+            boolean recipientAccountIdFilter = filteringOption.recipientAccountId() == null
+                    || (accountActivity.getRecipientAccount() != null && filteringOption.recipientAccountId().equals(accountActivity.getRecipientAccount().getId()));
             boolean minimumAmountFilter = (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount());
             boolean createdAtFilter = (filteringOption.createdAt() == null || (filteringOption.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
             
-            return accountActivityCheck && senderAccountIdFilter && receiverAccountIdFilter && minimumAmountFilter && createdAtFilter;
+            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter && createdAtFilter;
         };
 
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
@@ -94,7 +94,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.ACCOUNT_ACTIVITY.getValue() + " request"));
         }
 
-        AccountActivity accountActivity = new AccountActivity(request.activityType(), request.senderAccount(), request.receiverAccount(), request.amount(), request.summary(), request.explanation());
+        AccountActivity accountActivity = new AccountActivity(request.activityType(), request.senderAccount(), request.recipientAccount(), request.amount(), request.summary(), request.explanation());
         AccountActivity savedAccountActivity = accountActivityRepository.save(accountActivity);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT_ACTIVITY.getValue(), savedAccountActivity.getId());
 
@@ -102,9 +102,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     }
 
     @Override
-    public List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer receiverAccountId) {
+    public List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer recipientAccountId) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return accountActivityViewRepository.findBySenderAccountIdAndReceiverAccountId(senderAccountId, receiverAccountId);
+        return accountActivityViewRepository.findBySenderAccountIdAndRecipientAccountId(senderAccountId, recipientAccountId);
     }
 
     @Override
@@ -146,13 +146,13 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .equals(customerNationalId);
 
         if (accountActivity.getType() == AccountActivityType.MONEY_DEPOSIT || accountActivity.getType() == AccountActivityType.FEE) {
-            accountActivityExists = accountPredicate.test(accountActivity.getReceiverAccount());
+            accountActivityExists = accountPredicate.test(accountActivity.getRecipientAccount());
         } else if (accountActivity.getType() == AccountActivityType.WITHDRAWAL || accountActivity.getType() == AccountActivityType.CHARGE) {
             accountActivityExists = accountPredicate.test(accountActivity.getSenderAccount());
         } else if (accountActivity.getType() == AccountActivityType.MONEY_TRANSFER || accountActivity.getType() == AccountActivityType.MONEY_EXCHANGE) {
-            boolean receiverAccountIsCustomer = accountPredicate.test(accountActivity.getReceiverAccount());
+            boolean recipientAccountIsCustomer = accountPredicate.test(accountActivity.getRecipientAccount());
             boolean senderAccountIsCustomer = accountPredicate.test(accountActivity.getSenderAccount());
-            accountActivityExists = receiverAccountIsCustomer || senderAccountIsCustomer;
+            accountActivityExists = recipientAccountIsCustomer || senderAccountIsCustomer;
         } else {
             log.error("{} {} is improper for this method", Entity.ACCOUNT_ACTIVITY.getValue(), accountActivity.getType());
             throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
@@ -173,19 +173,19 @@ public class AccountActivityServiceImpl implements AccountActivityService {
 
     private List<AccountActivity> getAccountActivitiesOfSpecificEvent(AccountActivityFilteringOption filteringOption, Currency currency) {
         boolean senderAccountPresents = Optional.ofNullable(filteringOption.senderAccountId()).isPresent();
-        boolean receiverAccountPresents = Optional.ofNullable(filteringOption.receiverAccountId()).isPresent();
+        boolean recipientAccountPresents = Optional.ofNullable(filteringOption.recipientAccountId()).isPresent();
         List<AccountActivity> accountActivities;
         Predicate<AccountActivity> accountActivityPredicate;
 
-        if (senderAccountPresents && receiverAccountPresents) {
-            accountActivities = accountActivityRepository.findBySenderAccountIdOrReceiverAccountId(filteringOption.senderAccountId(), filteringOption.receiverAccountId());
+        if (senderAccountPresents && recipientAccountPresents) {
+            accountActivities = accountActivityRepository.findBySenderAccountIdOrRecipientAccountId(filteringOption.senderAccountId(), filteringOption.recipientAccountId());
             accountActivityPredicate = accountActivity -> accountActivity.getSenderAccount().getCurrency() == currency;
         } else if (senderAccountPresents) {
             accountActivities = accountActivityRepository.findBySenderAccountId(filteringOption.senderAccountId());
             accountActivityPredicate = accountActivity -> accountActivity.getSenderAccount().getCurrency() == currency;
-        } else if (receiverAccountPresents) {
-            accountActivities = accountActivityRepository.findByReceiverAccountId(filteringOption.receiverAccountId());
-            accountActivityPredicate = accountActivity -> accountActivity.getReceiverAccount().getCurrency() == currency;
+        } else if (recipientAccountPresents) {
+            accountActivities = accountActivityRepository.findByRecipientAccountId(filteringOption.recipientAccountId());
+            accountActivityPredicate = accountActivity -> accountActivity.getRecipientAccount().getCurrency() == currency;
         } else {
             throw new ResourceConflictException("Both accounts cannot be null");
         }

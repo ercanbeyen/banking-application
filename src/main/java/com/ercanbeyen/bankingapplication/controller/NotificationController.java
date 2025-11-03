@@ -29,7 +29,6 @@ public class NotificationController {
     @DeleteMapping
     public ResponseEntity<Void> deleteNotifications(@RequestParam("from") String nationalId) {
         notificationService.deleteNotifications(nationalId);
-        return ResponseEntity.noContent()
-                .build();
+        return ResponseEntity.noContent().build();
     }
 }

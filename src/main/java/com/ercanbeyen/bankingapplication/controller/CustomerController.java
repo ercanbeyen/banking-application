@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
+import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
@@ -13,7 +14,7 @@ import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import com.ercanbeyen.bankingapplication.util.PhotoUtil;
-import com.ercanbeyen.bankingapplication.util.TransferOrderUtil;
+import com.ercanbeyen.bankingapplication.util.MoneyTransferOrderUtil;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.validator.constraints.Range;
@@ -49,6 +50,16 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public ResponseEntity<CustomerDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid CustomerDto request) {
         CustomerUtil.checkRequest(request);
         return ResponseEntity.ok(customerService.updateEntity(id, request));
+    }
+
+    @PatchMapping("/{id}/registered-recipients")
+    public ResponseEntity<String> addRegisteredRecipient(@PathVariable("id") Integer id, @RequestBody @Valid RegisteredRecipient request) {
+        return ResponseEntity.ok(customerService.addRegisteredRecipient(id, request));
+    }
+
+    @DeleteMapping("/{id}/registered-recipients/{accountId}")
+    public ResponseEntity<String> removeRegisteredRecipient(@PathVariable("id") Integer id, @PathVariable("accountId") Integer accountId) {
+        return ResponseEntity.ok(customerService.removeRegisteredRecipient(id, accountId));
     }
 
     @PostMapping("/{id}")
@@ -91,15 +102,15 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getNotifications(id));
     }
 
-    @GetMapping("/{id}/transfer-orders")
-    public ResponseEntity<List<TransferOrderDto>> getTransferOrders(
+    @GetMapping("/{id}/money-transfer-orders")
+    public ResponseEntity<List<MoneyTransferOrderDto>> getMoneyTransferOrders(
             @PathVariable("id") Integer id,
             @RequestParam("from") LocalDate fromDate,
             @RequestParam("to") LocalDate toDate,
             @RequestParam(value = "currency", required = false) Currency currency,
             @RequestParam(value = "payment-type", required = false) PaymentType paymentType) {
-        TransferOrderUtil.checkDatesBeforeFiltering(fromDate, toDate);
-        return ResponseEntity.ok(customerService.getTransferOrders(id, fromDate, toDate, currency, paymentType));
+        MoneyTransferOrderUtil.checkDatesBeforeFiltering(fromDate, toDate);
+        return ResponseEntity.ok(customerService.getMoneyTransferOrders(id, fromDate, toDate, currency, paymentType));
     }
 
     @GetMapping("/{id}/cash-flow-calendar")
@@ -122,5 +133,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         List<String> agreementSubjects = customerService.getAgreementSubjects(id);
         MessageResponse<List<String>> response = new MessageResponse<>(agreementSubjects);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{id}/registered-recipients")
+    public ResponseEntity<List<RegisteredRecipient>> addRegisteredRecipient(@PathVariable("id") Integer id) {
+        return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
     }
 }

@@ -9,7 +9,7 @@ public record AccountActivityDto(
         String id,
         AccountActivityType type,
         Integer senderAccountId,
-        Integer receiverAccountId,
+        Integer recipientAccountId,
         Double amount,
         LocalDateTime createdAt,
         Map<String, Object> summary,

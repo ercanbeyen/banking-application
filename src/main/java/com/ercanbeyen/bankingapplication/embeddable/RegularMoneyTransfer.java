@@ -12,10 +12,10 @@ import lombok.NoArgsConstructor;
 @Embeddable
 @AllArgsConstructor
 @NoArgsConstructor
-public class RegularTransfer {
+public class RegularMoneyTransfer {
     @ManyToOne
-    @JoinColumn(name = "receiver_account_id", referencedColumnName = "id")
-    Account receiverAccount;
+    @JoinColumn(name = "recipient_account_id", referencedColumnName = "id")
+    Account recipientAccount;
     @Enumerated(EnumType.STRING)
     PaymentPeriod paymentPeriod;
     Double amount;

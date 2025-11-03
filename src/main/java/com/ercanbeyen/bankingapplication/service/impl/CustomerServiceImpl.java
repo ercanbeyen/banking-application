@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
+import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
@@ -40,7 +41,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CustomerRepository customerRepository;
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
-    private final TransferOrderMapper transferOrderMapper;
+    private final MoneyTransferOrderMapper moneyTransferOrderMapper;
     private final NotificationMapper notificationMapper;
     private final CashFlowCalendarMapper cashFlowCalendarMapper;
     private final FileService fileService;
@@ -74,8 +75,7 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public CustomerDto getEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Customer customer = findById(id);
-        return customerMapper.entityToDto(customer);
+        return customerMapper.entityToDto(findById(id));
     }
 
     @Transactional
@@ -120,8 +120,53 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public void deleteEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        log.warn(LogMessage.UNUSABLE_METHOD);
+    }
+
+    @Override
+    public String addRegisteredRecipient(Integer id, RegisteredRecipient request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         Customer customer = findById(id);
-        customerRepository.delete(customer);
+
+        boolean ownAccountRegistered = customer.getAccounts()
+                .stream()
+                .anyMatch(account -> account.getId().equals(request.getAccountId()));
+
+        if (ownAccountRegistered) {
+            throw new ResourceConflictException("Recipient cannot be the same customer");
+        }
+
+        boolean accountAlreadyRegistered = customer.getRegisteredRecipients()
+                .stream()
+                .anyMatch(registeredRecipient -> registeredRecipient.getAccountId().equals(request.getAccountId()));
+
+        if (accountAlreadyRegistered) {
+            throw new ResourceConflictException("Recipient with the relevant account is already registered");
+        }
+
+        customer.getRegisteredRecipients().add(request);
+        customerRepository.save(customer);
+
+        return "Recipient is successfully added";
+    }
+
+    @Override
+    public String removeRegisteredRecipient(Integer id, Integer recipientAccountId) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Customer customer = findById(id);
+
+        RegisteredRecipient registeredRecipient = customer.getRegisteredRecipients()
+                .stream()
+                .filter(registeredRecipientInCustomer -> registeredRecipientInCustomer.getAccountId().equals(recipientAccountId))
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Registered recipient is not found"));
+
+        customer.getRegisteredRecipients().remove(registeredRecipient);
+        customerRepository.save(customer);
+
+        return "Recipient is successfully removed";
     }
 
     @Override
@@ -142,8 +187,9 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public File downloadProfilePhoto(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Customer customer = findById(id);
-        return customer.getProfilePhoto()
+
+        return findById(id)
+                .getProfilePhoto()
                 .orElseThrow(() -> new ResourceNotFoundException(ResponseMessage.NOT_FOUND));
     }
 
@@ -220,35 +266,35 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public List<TransferOrderDto> getTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType) {
+    public List<MoneyTransferOrderDto> getMoneyTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(customerId);
-        List<TransferOrderDto> transferOrderDtos = new ArrayList<>();
+        List<MoneyTransferOrderDto> moneyTransferOrderDtos = new ArrayList<>();
 
-        Predicate<TransferOrder> transferOrderPredicate = transferOrder -> {
+        Predicate<MoneyTransferOrder> transferOrderPredicate = transferOrder -> {
             LocalDate transferDate = transferOrder.getTransferDate();
             boolean checkTransferDate = transferDate.isAfter(fromDate.minusDays(1))
                     && transferDate.isBefore(toDate.plusDays(1));
             boolean checkCurrency = (Optional.ofNullable(currency).isEmpty()
                     || currency == transferOrder.getSenderAccount().getCurrency());
             boolean checkPaymentType = (Optional.ofNullable(paymentType).isEmpty()
-                    || paymentType == transferOrder.getRegularTransfer().getPaymentType());
+                    || paymentType == transferOrder.getRegularMoneyTransfer().getPaymentType());
 
             return checkTransferDate && checkCurrency && checkPaymentType;
         };
 
         for (Account account : customer.getAccounts()) {
-            List<TransferOrderDto> transferOrderDtosOfAccount = account.getTransferOrders()
+            List<MoneyTransferOrderDto> moneyTransferOrderDtosOfAccount = account.getMoneyTransferOrders()
                     .stream()
                     .filter(transferOrderPredicate)
-                    .map(transferOrderMapper::entityToDto)
+                    .map(moneyTransferOrderMapper::entityToDto)
                     .toList();
 
-            transferOrderDtos.addAll(transferOrderDtosOfAccount);
+            moneyTransferOrderDtos.addAll(moneyTransferOrderDtosOfAccount);
         }
 
-        return transferOrderDtos;
+        return moneyTransferOrderDtos;
     }
 
     @Override
@@ -305,15 +351,15 @@ public class CustomerServiceImpl implements CustomerService {
                 continue;
             }
 
-            for (TransferOrder transferOrder : account.getTransferOrders()) {
+            for (MoneyTransferOrder moneyTransferOrder : account.getMoneyTransferOrders()) {
                 log.info("Only expected money transfers are going to be processed for {} {}", accountType, entity);
-                LocalDate nextPaymentDate = transferOrder.getTransferDate();
+                LocalDate nextPaymentDate = moneyTransferOrder.getTransferDate();
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
-                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.MONEY_TRANSFER, transferOrder.getRegularTransfer().getAmount(), nextPaymentDate);
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.MONEY_TRANSFER, moneyTransferOrder.getRegularMoneyTransfer().getAmount(), nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
 
-                    PaymentPeriod paymentPeriod = transferOrder.getRegularTransfer().getPaymentPeriod();
+                    PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
                     nextPaymentDate = switch (paymentPeriod) {
                         case ONE_TIME -> nextPaymentDate;
                         case DAILY -> nextPaymentDate.plusDays(1);
@@ -337,11 +383,17 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public List<String> getAgreementSubjects(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Customer customer = findById(id);
-        return customer.getAgreements()
+        return findById(id)
+                .getAgreements()
                 .stream()
                 .map(Agreement::getSubject)
                 .toList();
+    }
+
+    @Override
+    public List<RegisteredRecipient> getRegisteredRecipients(Integer id) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return findById(id).getRegisteredRecipients();
     }
 
     /**
@@ -391,21 +443,21 @@ public class CustomerServiceImpl implements CustomerService {
                 log.info(LogMessage.ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED, Entity.FEE.getValue(), accountType.getValue(), entity);
                 addFutureCashFlowsForFees(cashFlows, account, year, month);
             } else { // Account type is current
-                log.info(LogMessage.ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED, Entity.TRANSFER_ORDER.getValue(), accountType.getValue(), entity);
-                addFutureCashFlowsForTransferOrders(cashFlows, account, year, month);
+                log.info(LogMessage.ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED, Entity.MONEY_TRANSFER_ORDER.getValue(), accountType.getValue(), entity);
+                addFutureCashFlowsForMoneyTransferOrders(cashFlows, account, year, month);
             }
         }
 
         cashFlows.sort(Comparator.comparing(CashFlow::getDate));
     }
 
-    private static void addFutureCashFlowsForTransferOrders(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
-        for (TransferOrder transferOrder : account.getTransferOrders()) {
-            LocalDate paymentDate = transferOrder.getTransferDate();
+    private static void addFutureCashFlowsForMoneyTransferOrders(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
+        for (MoneyTransferOrder moneyTransferOrder : account.getMoneyTransferOrders()) {
+            LocalDate paymentDate = moneyTransferOrder.getTransferDate();
             LocalDate counterDate = LocalDate.now();
-            PaymentPeriod paymentPeriod = transferOrder.getRegularTransfer().getPaymentPeriod();
+            PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
             AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
-            Double amount = transferOrder.getRegularTransfer().getAmount();
+            Double amount = moneyTransferOrder.getRegularMoneyTransfer().getAmount();
             String entity = Entity.ACCOUNT.getValue();
 
             if (paymentPeriod == PaymentPeriod.ONE_TIME && doesDateMatchesWithYearAndMonth(paymentDate, year, month)) { // One Time Transfer Order Case
@@ -513,13 +565,13 @@ public class CustomerServiceImpl implements CustomerService {
         Predicate<Customer> emailPredicate = customer -> customer.getEmail().equals(email);
 
         if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateCharge case
-            Predicate<Customer> customerInDbPredicate = customer -> !customerInDb.getNationalId().equals(nationalId);
+            Predicate<Customer> customerInDbPredicate = _ -> !customerInDb.getNationalId().equals(nationalId);
             nationalIdPredicate = customerInDbPredicate.and(nationalIdPredicate);
 
-            customerInDbPredicate = customer -> !customerInDb.getPhoneNumber().equals(phoneNumber);
+            customerInDbPredicate = _ -> !customerInDb.getPhoneNumber().equals(phoneNumber);
             phoneNumberPredicate = customerInDbPredicate.and(phoneNumberPredicate);
 
-            customerInDbPredicate = customer -> !customerInDb.getEmail().equals(email);
+            customerInDbPredicate = _ -> !customerInDb.getEmail().equals(email);
             emailPredicate = customerInDbPredicate.and(emailPredicate);
         }
 

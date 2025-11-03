@@ -8,8 +8,9 @@ import java.util.Map;
 public record AccountActivityRequest(
         AccountActivityType activityType,
         Account senderAccount,
-        Account receiverAccount,
+        Account recipientAccount,
         Double amount,
         Map<String, Object> summary,
         String explanation) {
+
 }

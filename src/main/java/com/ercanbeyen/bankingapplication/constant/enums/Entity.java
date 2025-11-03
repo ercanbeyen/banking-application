@@ -11,10 +11,9 @@ public enum Entity {
     FILE("File"),
     NOTIFICATION("Notification"),
     ACCOUNT_ACTIVITY("Account Activity"),
-    TRANSFER_ORDER("Transfer Order"),
+    MONEY_TRANSFER_ORDER("Money Transfer Order"),
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
-    ADDRESS("Address"),
     BRANCH("Branch"),
     FEE("Fee"),
     CHARGE("Charge"),
@@ -31,7 +30,7 @@ public enum Entity {
 
     private String getResource() {
         return switch (this) {
-            case TRANSFER_ORDER -> "transfer-order";
+            case MONEY_TRANSFER_ORDER -> "money-transfer-order";
             case ACCOUNT_ACTIVITY -> "account-activitie";
             case BRANCH -> "branche";
             default -> value.toLowerCase();

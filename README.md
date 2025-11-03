@@ -45,7 +45,7 @@ Entities:
 
 ### Tech Stack
 ---
-- Java 21
+- Java 25
 - Spring Boot
 - Spring Data JPA
 - Spring Data Cassandra

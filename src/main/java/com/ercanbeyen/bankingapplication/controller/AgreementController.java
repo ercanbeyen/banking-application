@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/v1/agreements")
 @RequiredArgsConstructor
@@ -22,6 +24,11 @@ public class AgreementController {
     @PutMapping("/{id}")
     public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
         return ResponseEntity.ok(agreementService.updateAgreement(id, subject, request));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<AgreementDto>> getAgreements() {
+        return ResponseEntity.ok(agreementService.getAgreements());
     }
 
     @GetMapping("/{id}")

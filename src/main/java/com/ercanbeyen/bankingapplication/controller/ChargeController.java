@@ -39,7 +39,6 @@ public class ChargeController {
     @DeleteMapping("/{activityType}")
     public ResponseEntity<Void> deleteCharge(@PathVariable("activityType") AccountActivityType activityType) {
         chargeService.deleteCharge(activityType);
-        return ResponseEntity.noContent()
-                .build();
+        return ResponseEntity.noContent().build();
     }
 }

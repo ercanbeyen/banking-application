@@ -93,7 +93,7 @@ public class FeeServiceImpl implements FeeService {
         String entity = Entity.FEE.getValue();
 
         feeRepository.findById(id)
-                .ifPresentOrElse(fee -> feeRepository.deleteById(id), () -> {
+                .ifPresentOrElse(_ -> feeRepository.deleteById(id), () -> {
                     log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
                     throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
                 });

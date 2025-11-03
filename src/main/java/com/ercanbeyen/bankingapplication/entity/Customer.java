@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Gender;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
+import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -47,6 +48,16 @@ public non-sealed class Customer extends BaseEntity {
             )
     )
     private List<Address> addresses;
+    @Getter
+    @ElementCollection
+    @CollectionTable(
+            name = "customer_registered_recipients",
+            joinColumns = @JoinColumn(
+                    name = "customer_national_id",
+                    referencedColumnName = "national_id"
+            )
+    )
+    private List<RegisteredRecipient> registeredRecipients;
     @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinColumn(name = "profile_photo")
     private File profilePhoto;
@@ -61,7 +72,7 @@ public non-sealed class Customer extends BaseEntity {
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Notification> notifications = new ArrayList<>();
     @Getter
-    @OneToOne
+    @OneToOne(cascade = CascadeType.REMOVE)
     private CashFlowCalendar cashFlowCalendar;
 
     @Transient

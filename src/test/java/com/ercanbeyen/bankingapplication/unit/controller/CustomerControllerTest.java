@@ -131,23 +131,6 @@ class CustomerControllerTest {
         assertEquals(email, responseEntity.getBody().getEmail());
     }
 
-    @Test
-    @DisplayName("Happy path test: Delete customer case")
-    void givenExistingId_whenDeleteEntity_thenReturnNothing() {
-        // given
-        doNothing()
-                .when(customerService)
-                .deleteEntity(anyInt());
-
-        // when
-        ResponseEntity<Void> responseEntity = customerController.deleteEntity(1);
-
-        // then
-        verify(customerService, times(1)).deleteEntity(anyInt());
-
-        assertEquals(HttpStatus.NO_CONTENT, responseEntity.getStatusCode());
-    }
-
     private CustomerDto getUpdateMockCustomerDtoRequest(String email) {
         CustomerDto request = customerDtos.getFirst();
         request.setEmail(email);

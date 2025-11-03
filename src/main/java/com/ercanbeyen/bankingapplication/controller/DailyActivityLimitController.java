@@ -39,7 +39,6 @@ public class DailyActivityLimitController {
     @DeleteMapping("/{activityType}")
     public ResponseEntity<Void> deleteDailyActivityLimit(@PathVariable("activityType") AccountActivityType activityType) {
         dailyActivityLimitService.deleteDailyActivityLimit(activityType);
-        return ResponseEntity.noContent()
-                .build();
+        return ResponseEntity.noContent().build();
     }
 }

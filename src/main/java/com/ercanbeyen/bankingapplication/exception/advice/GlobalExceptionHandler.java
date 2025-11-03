@@ -4,7 +4,7 @@ import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.dto.response.ExceptionResponse;
+import com.ercanbeyen.bankingapplication.dto.response.ErrorResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
@@ -42,10 +42,10 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, String>> handleMethodValidationException(HandlerMethodValidationException exception) {
         Map<String, String> errors = new HashMap<>();
 
-        exception.getAllValidationResults()
-                .forEach(validationResult -> {
-                    String parameter = validationResult.getMethodParameter().getParameter().getName();
-                    for (MessageSourceResolvable messageSourceResolvable : validationResult.getResolvableErrors()) {
+        exception.getParameterValidationResults()
+                .forEach(parameterValidationResult -> {
+                    String parameter = parameterValidationResult.getMethodParameter().getParameter().getName();
+                    for (MessageSourceResolvable messageSourceResolvable : parameterValidationResult.getResolvableErrors()) {
                         String message = messageSourceResolvable.getDefaultMessage();
                         errors.put(parameter, message);
                     }
@@ -55,34 +55,34 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ExceptionResponse> handleBadRequestException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleBadRequestException(Exception exception) {
         return constructResponse(exception, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
-    public ResponseEntity<ExceptionResponse> handleResourceNotFoundException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleResourceNotFoundException(Exception exception) {
         return constructResponse(exception, HttpStatus.NOT_FOUND);
     }
 
     @ExceptionHandler(ResourceConflictException.class)
-    public ResponseEntity<ExceptionResponse> handleResourceConflictException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleResourceConflictException(Exception exception) {
         return constructResponse(exception, HttpStatus.CONFLICT);
     }
 
     @ExceptionHandler({MaxUploadSizeExceededException.class, ResourceExpectationFailedException.class})
-    public ResponseEntity<ExceptionResponse> handleResourceExpectationFailedException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleResourceExpectationFailedException(Exception exception) {
         return constructResponse(exception, HttpStatus.EXPECTATION_FAILED);
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ExceptionResponse> handleGeneralException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleGeneralException(Exception exception) {
         log.error("Exception message: {}", exception.getMessage());
         Exception modifiedException = new Exception("While operation is processing, error was occurred in the server");
         return constructResponse(modifiedException, HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
-    private ResponseEntity<ExceptionResponse> constructResponse(Exception exception, HttpStatus httpStatus) {
-        ExceptionResponse response = new ExceptionResponse(httpStatus.value(), exception.getMessage(), LocalDateTime.now());
+    private ResponseEntity<ErrorResponse> constructResponse(Exception exception, HttpStatus httpStatus) {
+        ErrorResponse response = new ErrorResponse(httpStatus.value(), exception.getMessage(), LocalDateTime.now());
         return new ResponseEntity<>(response, httpStatus);
     }
 }

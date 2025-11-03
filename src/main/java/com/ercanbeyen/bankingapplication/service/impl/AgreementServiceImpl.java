@@ -19,6 +19,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -63,6 +64,16 @@ public class AgreementServiceImpl implements AgreementService {
     }
 
     @Override
+    public List<AgreementDto> getAgreements() {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        return agreementRepository.findAll()
+                .stream()
+                .map(agreementMapper::entityToDto)
+                .toList();
+    }
+
+    @Override
     public AgreementDto getAgreement(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Agreement agreement = findById(id);
@@ -94,7 +105,7 @@ public class AgreementServiceImpl implements AgreementService {
         String entity = Entity.AGREEMENT.getValue();
 
         agreementRepository.findById(id)
-                .ifPresentOrElse(agreement -> {
+                .ifPresentOrElse(_ -> {
                     log.info(LogMessage.RESOURCE_FOUND, entity);
                     agreementRepository.deleteById(id);
                 }, () -> {

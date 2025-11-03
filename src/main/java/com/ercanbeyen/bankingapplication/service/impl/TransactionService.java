@@ -43,7 +43,7 @@ public class TransactionService {
     private final CashFlowCalendarService cashFlowCalendarService;
 
     public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation) {
-        Account[] accounts = new Account[2]; // first account is sender, second account is receiver
+        Account[] accounts = new Account[2]; // first account is sender, second account is recipient
         Double transactionFee = getTransactionFee(activityType, List.of(account));
         log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType.getValue(), amount, transactionFee);
 
@@ -58,7 +58,7 @@ public class TransactionService {
                     throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
                 }
 
-                /* Balance update of receiver account */
+                /* Balance update of recipient account */
                 accounts[1] = account;
                 yield updatedBalance;
             }
@@ -98,9 +98,9 @@ public class TransactionService {
         cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, cashFlowExplanation);
     }
 
-    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account receiverAccount, Account chargedAccount) {
+    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account chargedAccount) {
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
-        List<Account> accountsInMoneyTransfer = List.of(senderAccount, receiverAccount);
+        List<Account> accountsInMoneyTransfer = List.of(senderAccount, recipientAccount);
         double transactionFee = getTransactionFee(activityType, accountsInMoneyTransfer);
         checkBalanceBeforeMoneyTransferAndExchange(chargedAccount, accountsInMoneyTransfer, amount, transactionFee, activityType);
 
@@ -112,13 +112,13 @@ public class TransactionService {
         newBalance = chargedAccount.getBalance() - transactionFee;
         updateBalance(chargedAccount, newBalance);
 
-        /* Balance update of receiver account */
-        newBalance = receiverAccount.getBalance() + amount;
-        updateBalance(receiverAccount, newBalance);
+        /* Balance update of recipient account */
+        newBalance = recipientAccount.getBalance() + amount;
+        updateBalance(recipientAccount, newBalance);
 
-        accountRepository.saveAllAndFlush(List.of(senderAccount, chargedAccount, receiverAccount));
+        accountRepository.saveAllAndFlush(List.of(senderAccount, chargedAccount, recipientAccount));
 
-        Account[] accounts = {senderAccount, receiverAccount};
+        Account[] accounts = {senderAccount, recipientAccount};
         String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
 
         Map<String, Object> summary = new HashMap<>();
@@ -126,7 +126,7 @@ public class TransactionService {
         summary.put(SummaryField.FULL_NAME, senderAccount.getCustomer().getFullName());
         summary.put(SummaryField.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
         summary.put("Sender " + SummaryField.ACCOUNT_IDENTITY, senderAccount.getId());
-        summary.put("Receiver " + SummaryField.ACCOUNT_IDENTITY, receiverAccount.getId());
+        summary.put("Recipient " + SummaryField.ACCOUNT_IDENTITY, recipientAccount.getId());
         putChargedAccountInformationIntoSummary(senderAccount, chargedAccount, summary);
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
@@ -136,12 +136,12 @@ public class TransactionService {
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
         createAccountActivityForCharge(transactionFee, summary, chargedAccount);
 
-        if (!senderAccount.getCustomer().getNationalId().equals(receiverAccount.getCustomer().getNationalId())) {
+        if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue();
             String explanation = entity + " " + senderAccount.getId() + " sent " + amount + " " + senderAccount.getCurrency();
             cashFlowCalendarService.createCashFlow(senderAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
-            explanation = entity + " " + receiverAccount.getId() + " received " + amount + receiverAccount.getCurrency();
-            cashFlowCalendarService.createCashFlow(receiverAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
+            explanation = entity + " " + recipientAccount.getId() + " received " + amount + recipientAccount.getCurrency();
+            cashFlowCalendarService.createCashFlow(recipientAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
         }
     }
 
@@ -164,7 +164,7 @@ public class TransactionService {
         newBalance = chargedAccount.getBalance() - transactionFee;
         updateBalance(chargedAccount, newBalance);
 
-        /* Balance update of receiver account */
+        /* Balance update of recipient account */
         newBalance = buyerAccount.getBalance() + earnedAmount;
         updateBalance(buyerAccount, newBalance);
 

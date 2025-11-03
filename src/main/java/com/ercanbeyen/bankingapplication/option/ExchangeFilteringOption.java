@@ -1,11 +1,11 @@
 package com.ercanbeyen.bankingapplication.option;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
 
-@Getter
-@Setter
+@EqualsAndHashCode(callSuper = true)
+@Data
 public final class ExchangeFilteringOption extends BaseFilteringOption {
     private Currency targetCurrency;
     private Currency sourceCurrency;

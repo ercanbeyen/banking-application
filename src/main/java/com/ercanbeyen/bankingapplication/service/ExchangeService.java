@@ -11,5 +11,4 @@ public interface ExchangeService extends BaseService<ExchangeDto, ExchangeFilter
     Double convertMoneyBetweenCurrencies(Currency fromCurrency, Currency toCurrency, Double amount);
     List<ExchangeView> getExchangeViews();
     Double getBankExchangeRate(Currency fromCurrency, Currency toCurrency);
-
 }

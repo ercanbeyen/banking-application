@@ -8,7 +8,7 @@ import org.springframework.stereotype.Repository;
 import java.util.Optional;
 
 @Repository
-public interface DailyActivityRepository extends JpaRepository<DailyActivityLimit, String> {
+public interface DailyActivityLimitRepository extends JpaRepository<DailyActivityLimit, String> {
     Optional<DailyActivityLimit> findByActivityType(AccountActivityType activityType);
     boolean existsByActivityType(AccountActivityType activityType);
     void deleteByActivityType(AccountActivityType activityType);

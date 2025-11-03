@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.job.processor;
 
 import com.ercanbeyen.bankingapplication.entity.BankNews;
 import com.ercanbeyen.bankingapplication.entity.NewsReport;
+import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;
 import org.springframework.stereotype.Component;
@@ -11,7 +12,7 @@ import org.springframework.stereotype.Component;
 public class BankNewsProcessor implements ItemProcessor<NewsReport, BankNews> {
 
     @Override
-    public BankNews process(NewsReport newsReport) throws Exception {
+    public BankNews process(@NonNull NewsReport newsReport) throws Exception {
         log.info("Processing bank news...{}", newsReport);
         BankNews bankNews = new BankNews();
         bankNews.setTitle(newsReport.getTitle());

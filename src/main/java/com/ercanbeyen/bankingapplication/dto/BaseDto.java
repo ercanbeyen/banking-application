@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 @Data
 @MappedSuperclass
 public sealed class BaseDto implements Serializable
-        permits AccountDto, BranchDto, CustomerDto, ExchangeDto, NewsDto, TransferOrderDto, FeeDto {
+        permits AccountDto, BranchDto, CustomerDto, ExchangeDto, NewsDto, MoneyTransferOrderDto, FeeDto {
     private Integer id;
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime createdAt;

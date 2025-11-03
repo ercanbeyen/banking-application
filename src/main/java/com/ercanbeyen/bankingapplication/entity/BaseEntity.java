@@ -13,16 +13,16 @@ import java.time.LocalDateTime;
 @EntityListeners(BaseEntityListener.class)
 @Data
 @MappedSuperclass
-public abstract sealed class BaseEntity permits Account, Branch, Customer, Exchange, Fee, News, NewsReport, TransferOrder {
+public abstract sealed class BaseEntity permits Account, Branch, Customer, Exchange, Fee, News, NewsReport, MoneyTransferOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     @CreationTimestamp
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Query.GET_NOW_TIMESTAMP)
+    @Column(name = "created_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     private LocalDateTime createdAt;
     @UpdateTimestamp
     @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_at", columnDefinition = Query.GET_NOW_TIMESTAMP)
+    @Column(name = "updated_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     private LocalDateTime updatedAt;
 }

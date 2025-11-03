@@ -8,5 +8,5 @@ import java.util.List;
 
 @Repository
 public interface AccountActivityViewRepository extends JpaRepository<AccountActivityView, String> {
-    List<AccountActivityView> findBySenderAccountIdAndReceiverAccountId(Integer senderAccountId, Integer receiverAccountId);
+    List<AccountActivityView> findBySenderAccountIdAndRecipientAccountId(Integer senderAccountId, Integer recipientAccountId);
 }

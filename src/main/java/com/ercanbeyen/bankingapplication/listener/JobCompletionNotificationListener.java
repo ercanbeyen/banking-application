@@ -1,27 +1,31 @@
 package com.ercanbeyen.bankingapplication.listener;
 
-import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
-import org.springframework.batch.core.listener.JobExecutionListenerSupport;
+import org.springframework.batch.core.JobExecutionListener;
 import org.springframework.stereotype.Component;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Component
-public class JobCompletionNotificationListener extends JobExecutionListenerSupport {
-
+public class JobCompletionNotificationListener implements JobExecutionListener {
     @Override
-    public void afterJob(JobExecution jobExecution) {
-        if (jobExecution.getStatus() == BatchStatus.COMPLETED) {
-            log.info(LogMessage.Batch.JOB_STATUS, "FINISHED");
-        }
+    public void beforeJob(JobExecution jobExecution) {
+        checkJobStatus(jobExecution.getStatus(), BatchStatus.STARTED, jobExecution.getJobId(), jobExecution.getStartTime());
     }
 
     @Override
-    public void beforeJob(JobExecution jobExecution) {
-        if (jobExecution.getStatus() == BatchStatus.STARTING) {
-            log.info(LogMessage.Batch.JOB_STATUS, "STARTED");
+    public void afterJob(JobExecution jobExecution) {
+        checkJobStatus(jobExecution.getStatus(), BatchStatus.COMPLETED, jobExecution.getJobId(), jobExecution.getEndTime());
+    }
+
+    private static void checkJobStatus(BatchStatus actualStatus, BatchStatus expectedStatus, Long jobId, LocalDateTime localDateTime) {
+        if (actualStatus == expectedStatus) {
+            log.info("!!! Job {} {} at {}", jobId, expectedStatus, localDateTime);
+        } else {
+            log.error("Actual status is different than the expected status. Expected & Actual: {} {}", expectedStatus, actualStatus);
         }
     }
 }

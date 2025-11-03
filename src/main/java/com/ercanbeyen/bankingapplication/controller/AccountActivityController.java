@@ -22,22 +22,19 @@ public class AccountActivityController {
 
     @GetMapping
     public ResponseEntity<List<AccountActivityDto>> getAccountActivities(AccountActivityFilteringOption filteringOption) {
-        List<AccountActivityDto> accountActivityDtos = accountActivityService.getAccountActivities(filteringOption);
-        return ResponseEntity.ok(accountActivityDtos);
+        return ResponseEntity.ok(accountActivityService.getAccountActivities(filteringOption));
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<AccountActivityDto> getAccountActivity(@PathVariable("id") String id) {
-        AccountActivityDto accountActivityDto = accountActivityService.getAccountActivity(id);
-        return ResponseEntity.ok(accountActivityDto);
+        return ResponseEntity.ok(accountActivityService.getAccountActivity(id));
     }
 
     @GetMapping("/views")
     public ResponseEntity<List<AccountActivityView>> getAccountActivityViews(
             @RequestParam(name = "senderAccountId") Integer senderAccountId,
-            @RequestParam(name = "receiverAccountId") Integer receiverAccountId) {
-        List<AccountActivityView> accountActivityViews = accountActivityService.getAccountActivityViews(senderAccountId, receiverAccountId);
-        return ResponseEntity.ok(accountActivityViews);
+            @RequestParam(name = "recipientAccountId") Integer recipientAccountId) {
+        return ResponseEntity.ok(accountActivityService.getAccountActivityViews(senderAccountId, recipientAccountId));
     }
 
     @PostMapping("/{id}/receipt")

@@ -24,18 +24,18 @@ public class AccountActivity {
     @JoinColumn(name = "sender_account_id", referencedColumnName = "id")
     private Account senderAccount;
     @ManyToOne
-    @JoinColumn(name = "receiver_account_id", referencedColumnName = "id")
-    private Account receiverAccount;
+    @JoinColumn(name = "recipient_account_id", referencedColumnName = "id")
+    private Account recipientAccount;
     private Double amount;
     private LocalDateTime createdAt;
     @JdbcTypeCode(SqlTypes.JSON)
     private Map<String, Object> summary;
     private String explanation;
 
-    public AccountActivity(AccountActivityType type, Account senderAccount, Account receiverAccount, Double amount, Map<String, Object> summary, String explanation) {
+    public AccountActivity(AccountActivityType type, Account senderAccount, Account recipientAccount, Double amount, Map<String, Object> summary, String explanation) {
         this.type = type;
         this.senderAccount = senderAccount;
-        this.receiverAccount = receiverAccount;
+        this.recipientAccount = recipientAccount;
         this.amount = amount;
         this.summary = summary;
         this.explanation = explanation;

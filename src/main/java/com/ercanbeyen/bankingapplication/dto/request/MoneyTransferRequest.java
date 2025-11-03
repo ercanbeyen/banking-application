@@ -8,8 +8,8 @@ import jakarta.validation.constraints.Size;
 public record MoneyTransferRequest(
         @NotNull(message = "Sender account id should not be null")
         Integer senderAccountId,
-        @NotNull(message = "Receiver account id should not be null")
-        Integer receiverAccountId,
+        @NotNull(message = "Recipient account id should not be null")
+        Integer recipientAccountId,
         Integer chargedAccountId,
         @Min(value = 1, message = "Minimum amount is {value}")
         Double amount,

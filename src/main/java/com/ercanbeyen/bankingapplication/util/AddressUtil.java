@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.enums.Ownership;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
@@ -16,7 +15,7 @@ public class AddressUtil {
     public void checkAddressRequest(Address request) {
         checkCompanyName(request.getType(), request.getCompanyName());
         checkOwnership(request.getType(), request.getOwnership());
-        log.info("{} request is valid", Entity.ADDRESS.getValue());
+        log.info("Address request is valid");
     }
 
     private static void checkCompanyName(AddressType type, String companyName) {

@@ -20,6 +20,7 @@ import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerServiceImpl;
+import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -287,51 +288,6 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Delete customer case")
-    void givenExistingId_whenDeleteEntity_thenReturnNothing() {
-        // given
-        Customer customer = customers.getFirst();
-
-        doReturn(Optional.of(customer))
-                .when(customerRepository)
-                .findById(anyInt());
-        doNothing()
-                .when(customerRepository)
-                .delete(any());
-
-        // when
-        customerService.deleteEntity(customer.getId());
-
-        // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verify(customerRepository, times(1))
-                .delete(any());
-    }
-
-    @Test
-    @DisplayName("Exception path test: Delete customer case")
-    void givenNotExistingId_whenDeleteEntity_thenThrowResourceNotFoundException() {
-        // given
-        String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
-
-        doReturn(Optional.empty())
-                .when(customerRepository)
-                .findById(anyInt());
-
-        // when
-        RuntimeException exception = assertThrows(ResourceNotFoundException.class, () -> customerService.deleteEntity(20));
-        String actual = exception.getMessage();
-
-        // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verifyNoMoreInteractions(customerRepository, customerMapper);
-
-        assertEquals(expected, actual);
-    }
-
-    @Test
     @Timeout(value = 5) // The default time unit is seconds
     @DisplayName("Happy path test: Upload photo case")
     void givenMultipartFile_whenUploadPhoto_thenReturnMessage() throws IOException {
@@ -415,7 +371,6 @@ class CustomerServiceTest {
 
     @Test
     @DisplayName("Exception path test: Download profile photo")
-    @Disabled(value = "This test is not increasing any coverage data")
     void givenId_whenDownloadProfilePhoto_thenThrowResourceNotFoundException() {
         // given
         String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
@@ -449,6 +404,26 @@ class CustomerServiceTest {
 
         // when
         String actual = customerService.deleteProfilePhoto(id);
+
+        // then
+        verify(customerRepository, times(1)).findById(id);
+
+        assertEquals(expected, actual);
+    }
+
+    @Test
+    @DisplayName("Happy path test: Get agreement subjects")
+    void givenId_whenGetAgreementSubjects_thenReturnList() {
+        // given
+        List<String> expected = List.of(AgreementUtil.generateSubject(Entity.CUSTOMER));
+        int id = customers.getFirst().getId();
+
+        doReturn(Optional.of(customers.getFirst()))
+                .when(customerRepository)
+                .findById(anyInt());
+
+        // when
+        List<String> actual = customerService.getAgreementSubjects(id);
 
         // then
         verify(customerRepository, times(1)).findById(id);

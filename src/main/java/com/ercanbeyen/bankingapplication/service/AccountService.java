@@ -27,6 +27,6 @@ public interface AccountService extends BaseService<AccountDto, AccountFiltering
     Account getChargedAccount(Integer extraChargedAccountId, List<Account> relatedAccounts);
     Account findChargedAccountById(Integer id);
     Account findActiveAccountById(Integer id);
-    void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account receiverAccount);
+    void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account recipientAccount);
     List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringRequest request);
 }

@@ -10,7 +10,7 @@ import java.util.List;
 public record AccountActivityFilteringOption(
         List<AccountActivityType> activityTypes,
         Integer senderAccountId,
-        Integer receiverAccountId,
+        Integer recipientAccountId,
         @NotNull(message = "Minimum amount should not be null")
         @Min(value = 0, message = "Minimum amount value should be at least {value}")
         Double minimumAmount,

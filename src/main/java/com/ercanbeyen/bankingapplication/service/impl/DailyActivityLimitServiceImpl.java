@@ -9,7 +9,7 @@ import com.ercanbeyen.bankingapplication.entity.DailyActivityLimit;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.DailyActivityLimitMapper;
-import com.ercanbeyen.bankingapplication.repository.DailyActivityRepository;
+import com.ercanbeyen.bankingapplication.repository.DailyActivityLimitRepository;
 import com.ercanbeyen.bankingapplication.service.DailyActivityLimitService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
@@ -26,7 +26,7 @@ import java.util.List;
 @RequiredArgsConstructor
 @Service
 public class DailyActivityLimitServiceImpl implements DailyActivityLimitService {
-    private final DailyActivityRepository dailyActivityLimitRepository;
+    private final DailyActivityLimitRepository dailyActivityLimitRepository;
     private final DailyActivityLimitMapper dailyActivityLimitMapper;
 
     @CacheEvict(value = "dailyActivityLimits", allEntries = true)
@@ -44,11 +44,7 @@ public class DailyActivityLimitServiceImpl implements DailyActivityLimitService 
     @Override
     public DailyActivityLimitDto getDailyActivityLimit(AccountActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
         DailyActivityLimit dailyActivityLimit = findByActivityType(activityType);
-
-        log.info("We are in getDailyActivityLimit --> No caching");
-
         return dailyActivityLimitMapper.entityToDto(dailyActivityLimit);
     }
 
