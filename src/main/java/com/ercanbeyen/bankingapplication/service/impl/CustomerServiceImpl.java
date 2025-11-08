@@ -21,7 +21,6 @@ import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
-import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -92,8 +91,7 @@ public class CustomerServiceImpl implements CustomerService {
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
-        String agreementSubject = AgreementUtil.generateSubject(Entity.CUSTOMER);
-        agreementService.addCustomerToAgreement(agreementSubject, customer);
+        agreementService.approveAgreements(AgreementSubject.CUSTOMER, customer);
 
         return customerMapper.entityToDto(savedCustomer);
     }
@@ -381,12 +379,12 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public List<String> getAgreementSubjects(Integer id) {
+    public List<String> getAgreementTitles(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return findById(id)
                 .getAgreements()
                 .stream()
-                .map(Agreement::getSubject)
+                .map(Agreement::getTitle)
                 .toList();
     }
 

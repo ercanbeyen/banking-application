@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
@@ -12,7 +13,6 @@ import com.ercanbeyen.bankingapplication.mapper.AgreementMapper;
 import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.FileService;
-import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,15 +31,15 @@ public class AgreementServiceImpl implements AgreementService {
     private final FileService fileService;
 
     @Override
-    public AgreementDto createAgreement(String subject, MultipartFile request) {
+    public AgreementDto createAgreement(String title, String subject, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        String fileName = AgreementUtil.generateFileName(subject);
-        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
+        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, title);
 
         Agreement agreement = new Agreement();
         agreement.setFile(fileCompletableFuture.join());
-        agreement.setSubject(subject);
+        agreement.setTitle(title);
+        agreement.setSubject(AgreementSubject.valueOf(subject));
 
         Agreement savedAgreement = agreementRepository.save(agreement);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.AGREEMENT.getValue(), savedAgreement.getId());
@@ -48,15 +48,15 @@ public class AgreementServiceImpl implements AgreementService {
     }
 
     @Override
-    public AgreementDto updateAgreement(String id, String subject, MultipartFile request) {
+    public AgreementDto updateAgreement(String id, String title, String subject, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Agreement agreement = findById(id);
-        String fileName = AgreementUtil.generateFileName(subject);
-        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
+        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, title);
 
         agreement.setFile(fileCompletableFuture.join());
-        agreement.setSubject(subject);
+        agreement.setTitle(title);
+        agreement.setSubject(AgreementSubject.valueOf(subject));
 
         Agreement savedAgreement = agreementRepository.save(agreement);
 
@@ -81,21 +81,28 @@ public class AgreementServiceImpl implements AgreementService {
     }
 
     @Override
-    public void addCustomerToAgreement(String subject, Customer customer) {
+    public void approveAgreements(AgreementSubject subject, Customer customer) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Agreement agreement = findAgreementBySubject(subject);
+        List<Agreement> agreements = agreementRepository.findBySubject(subject);
 
-        if (agreementRepository.findBySubjectAndCustomerNationalId(subject, customer.getNationalId()).isPresent()) {
-            log.warn("Customer {} has already been added to {} agreement before", customer.getNationalId(), subject);
-            return;
+        if (agreements.isEmpty()) {
+            log.error("No agreement is found for subject {}", subject.getValue());
+            throw new ResourceNotFoundException("No agreement is found");
         }
 
-        log.info("Customer {} has not added to {} agreement before", customer.getNationalId(), subject);
-        agreement.getCustomers().add(customer);
-        agreementRepository.save(agreement);
+        for (Agreement agreement : agreements) {
+            String title = agreement.getTitle();
 
-        log.info("Customer {} is successfully added to agreement {}", customer.getNationalId(), agreement.getSubject());
+            if (agreementRepository.findByTitleAndCustomerNationalId(title, customer.getNationalId()).isPresent()) {
+                log.warn("Customer {} has already been added to {} agreement before", customer.getNationalId(), title);
+                continue;
+            }
+
+            agreement.getCustomers().add(customer);
+            agreementRepository.save(agreement);
+            log.info("Customer {} is successfully added to all agreements of subject {}", customer.getNationalId(), agreement.getTitle());
+        }
     }
 
     @Override
@@ -121,18 +128,6 @@ public class AgreementServiceImpl implements AgreementService {
     private Agreement findById(String id) {
         String entity = Entity.AGREEMENT.getValue();
         Agreement agreement = agreementRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
-
-        log.info(LogMessage.RESOURCE_FOUND, entity);
-
-        return agreement;
-    }
-
-    private Agreement findAgreementBySubject(String subject) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        String entity = Entity.AGREEMENT.getValue();
-        Agreement agreement = agreementRepository.findBySubject(subject)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
         log.info(LogMessage.RESOURCE_FOUND, entity);

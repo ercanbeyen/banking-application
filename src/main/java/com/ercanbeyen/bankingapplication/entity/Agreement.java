@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -16,7 +17,10 @@ public class Agreement {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     @Column(unique = true, nullable = false)
-    private String subject;
+    private String title;
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AgreementSubject subject;
     @ManyToOne
     @JoinColumn(name = "file_id", referencedColumnName = "id")
     private File file;
@@ -24,8 +28,8 @@ public class Agreement {
     @JoinTable(
             name = "agreement_customer",
             joinColumns = @JoinColumn(
-                    name = "agreement_subject",
-                    referencedColumnName = "subject"
+                    name = "agreement_title",
+                    referencedColumnName = "title"
             ),
             inverseJoinColumns = @JoinColumn(
                     name = "customer_national_id",

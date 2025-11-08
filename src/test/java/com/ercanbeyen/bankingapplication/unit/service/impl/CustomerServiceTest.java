@@ -4,12 +4,14 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
+import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.factory.MockAgreementFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCashFlowCalendarFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
@@ -20,7 +22,6 @@ import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerServiceImpl;
-import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -178,7 +179,7 @@ class CustomerServiceTest {
                 .save(any());
         doNothing()
                 .when(agreementService)
-                .addCustomerToAgreement(any(), any());
+                .approveAgreements(any(), any());
         doReturn(expected)
                 .when(customerMapper)
                 .entityToDto(any());
@@ -196,7 +197,7 @@ class CustomerServiceTest {
         verify(customerRepository, times(1))
                 .save(any());
         verify(agreementService, times(1))
-                .addCustomerToAgreement(any(), any());
+                .approveAgreements(any(), any());
         verify(customerMapper, times(1))
                 .entityToDto(any());
 
@@ -412,10 +413,11 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Get agreement subjects")
-    void givenId_whenGetAgreementSubjects_thenReturnList() {
+    @DisplayName("Happy path test: Get agreement titles")
+    void givenId_whenGetAgreementTitles_thenReturnList() {
         // given
-        List<String> expected = List.of(AgreementUtil.generateSubject(Entity.CUSTOMER));
+        Agreement agreement = MockAgreementFactory.getMockAgreement();
+        List<String> expected = List.of(agreement.getTitle());
         int id = customers.getFirst().getId();
 
         doReturn(Optional.of(customers.getFirst()))
@@ -423,7 +425,7 @@ class CustomerServiceTest {
                 .findById(anyInt());
 
         // when
-        List<String> actual = customerService.getAgreementSubjects(id);
+        List<String> actual = customerService.getAgreementTitles(id);
 
         // then
         verify(customerRepository, times(1)).findById(id);
