@@ -12,12 +12,13 @@ import java.util.Optional;
 
 @Repository
 public interface AgreementRepository extends JpaRepository<Agreement, String> {
+    Optional<Agreement> findByTitle(String title);
     List<Agreement> findBySubject(AgreementSubject subject);
     @Query(value = """
-            SELECT *
+            SELECT CASE WHEN COUNT(a.title) > 0 THEN 1 ELSE 0 END
             FROM agreements a
             INNER JOIN agreement_customer ac ON a.title = ac.agreement_title
             WHERE ac.agreement_title = :title AND ac.customer_national_id = :national_id
             """, nativeQuery = true)
-    Optional<Agreement> findByTitleAndCustomerNationalId(@Param("title") String title, @Param("national_id") String nationalId);
+    int existsByTitleAndCustomerNationalId(@Param("title") String title, @Param("national_id") String nationalId);
 }

@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.dto.AgreementDto;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AgreementMapper;
 import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
@@ -76,8 +77,25 @@ public class AgreementServiceImpl implements AgreementService {
     @Override
     public AgreementDto getAgreement(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Agreement agreement = findById(id);
-        return agreementMapper.entityToDto(agreement);
+        return agreementMapper.entityToDto(findById(id));
+    }
+
+    @Override
+    public void approveAgreement(String title, Customer customer) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Agreement agreement = agreementRepository.findByTitle(title)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.AGREEMENT.getValue())));
+
+        if (existsByTitleAndCustomerNationalId(title, customer.getNationalId())) {
+            log.error("Customer {} has already been added to {} agreement before", customer.getNationalId(), title);
+            throw new ResourceConflictException("Customer has already approved the agreement before");
+        }
+
+        log.info("Customer has not approved the agreement {} yet", agreement.getTitle());
+
+        agreement.getCustomers().add(customer);
+        agreementRepository.save(agreement);
     }
 
     @Override
@@ -94,7 +112,7 @@ public class AgreementServiceImpl implements AgreementService {
         for (Agreement agreement : agreements) {
             String title = agreement.getTitle();
 
-            if (agreementRepository.findByTitleAndCustomerNationalId(title, customer.getNationalId()).isPresent()) {
+            if (existsByTitleAndCustomerNationalId(title, customer.getNationalId())) {
                 log.warn("Customer {} has already been added to {} agreement before", customer.getNationalId(), title);
                 continue;
             }
@@ -133,5 +151,9 @@ public class AgreementServiceImpl implements AgreementService {
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return agreement;
+    }
+
+    private boolean existsByTitleAndCustomerNationalId(String title, String nationalId) {
+        return agreementRepository.existsByTitleAndCustomerNationalId(title, nationalId) == 1;
     }
 }

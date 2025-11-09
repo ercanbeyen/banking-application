@@ -16,6 +16,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public interface CustomerService extends BaseService<CustomerDto, CustomerFilteringOption> {
+    String approveAgreement(Integer id, String title);
     String addRegisteredRecipient(Integer id, RegisteredRecipient request);
     String removeRegisteredRecipient(Integer id, Integer recipientAccountId);
     String uploadProfilePhoto(Integer id, MultipartFile request);

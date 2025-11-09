@@ -122,6 +122,13 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    public String approveAgreement(Integer id, String title) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        agreementService.approveAgreement(title, findById(id));
+        return "Agreement is successfully approved";
+    }
+
+    @Override
     public String addRegisteredRecipient(Integer id, RegisteredRecipient request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 

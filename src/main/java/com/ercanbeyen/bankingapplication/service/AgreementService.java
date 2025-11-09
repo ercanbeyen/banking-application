@@ -12,6 +12,7 @@ public interface AgreementService {
     AgreementDto updateAgreement(String id, String title, String subject, MultipartFile request);
     List<AgreementDto> getAgreements();
     AgreementDto getAgreement(String id);
-    void approveAgreements(AgreementSubject agreementSubject, Customer customer);
+    void approveAgreement(String title, Customer customer);
+    void approveAgreements(AgreementSubject subject, Customer customer);
     String deleteAgreement(String id);
 }
