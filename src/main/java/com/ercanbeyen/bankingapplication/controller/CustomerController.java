@@ -53,8 +53,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PostMapping("/{id}/agreements/{title}")
-    public ResponseEntity<String> approveAgreement(@PathVariable("id") Integer id, @PathVariable("title") String title) {
-        return ResponseEntity.ok(customerService.approveAgreement(id, title));
+    public ResponseEntity<MessageResponse<String>> approveAgreement(@PathVariable("id") Integer id, @PathVariable("title") String title) {
+        String message = customerService.approveAgreement(id, title);
+        MessageResponse<String> response = new MessageResponse<>(message);
+        return ResponseEntity.ok(response);
     }
 
     @PatchMapping("/{id}/registered-recipients")

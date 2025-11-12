@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Gender;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import jakarta.persistence.*;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.SQLRestriction;
@@ -11,6 +12,7 @@ import org.hibernate.annotations.SQLRestriction;
 import java.time.LocalDate;
 import java.util.*;
 
+@EqualsAndHashCode(callSuper = true)
 @Setter
 @Entity
 @Table(name = "customers", indexes = {
@@ -62,8 +64,8 @@ public non-sealed class Customer extends BaseEntity {
     @JoinColumn(name = "profile_photo")
     private File profilePhoto;
     @Getter
-    @ManyToMany(mappedBy = "customers")
-    private Set<Agreement> agreements = new HashSet<>();
+    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private Set<CustomerAgreement> agreements = new HashSet<>();
     @Getter
     @SQLRestriction("closed_at IS NULL")
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)

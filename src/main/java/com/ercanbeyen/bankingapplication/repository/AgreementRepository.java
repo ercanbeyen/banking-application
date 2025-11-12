@@ -3,8 +3,6 @@ package com.ercanbeyen.bankingapplication.repository;
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.Query;
-import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -14,11 +12,4 @@ import java.util.Optional;
 public interface AgreementRepository extends JpaRepository<Agreement, String> {
     Optional<Agreement> findByTitle(String title);
     List<Agreement> findBySubject(AgreementSubject subject);
-    @Query(value = """
-            SELECT CASE WHEN COUNT(a.title) > 0 THEN 1 ELSE 0 END
-            FROM agreements a
-            INNER JOIN agreement_customer ac ON a.title = ac.agreement_title
-            WHERE ac.agreement_title = :title AND ac.customer_national_id = :national_id
-            """, nativeQuery = true)
-    int existsByTitleAndCustomerNationalId(@Param("title") String title, @Param("national_id") String nationalId);
 }

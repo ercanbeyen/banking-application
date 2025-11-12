@@ -7,17 +7,20 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AgreementMapper;
 import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
+import com.ercanbeyen.bankingapplication.repository.CustomerAgreementRepository;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -28,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
 @Slf4j
 public class AgreementServiceImpl implements AgreementService {
     private final AgreementRepository agreementRepository;
+    private final CustomerAgreementRepository customerAgreementRepository;
     private final AgreementMapper agreementMapper;
     private final FileService fileService;
 
@@ -87,15 +91,18 @@ public class AgreementServiceImpl implements AgreementService {
         Agreement agreement = agreementRepository.findByTitle(title)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.AGREEMENT.getValue())));
 
-        if (existsByTitleAndCustomerNationalId(title, customer.getNationalId())) {
+        if (customerAgreementRepository.existsByAgreementTitleAndCustomerNationalId(title, customer.getNationalId())) {
             log.error("Customer {} has already been added to {} agreement before", customer.getNationalId(), title);
             throw new ResourceConflictException("Customer has already approved the agreement before");
         }
 
         log.info("Customer has not approved the agreement {} yet", agreement.getTitle());
 
-        agreement.getCustomers().add(customer);
-        agreementRepository.save(agreement);
+        CustomerAgreement customerAgreement = new CustomerAgreement();
+        customerAgreement.setCustomer(customer);
+        customerAgreement.setAgreement(agreement);
+
+        customerAgreementRepository.save(customerAgreement);
     }
 
     @Override
@@ -112,31 +119,31 @@ public class AgreementServiceImpl implements AgreementService {
         for (Agreement agreement : agreements) {
             String title = agreement.getTitle();
 
-            if (existsByTitleAndCustomerNationalId(title, customer.getNationalId())) {
+            if (customerAgreementRepository.existsByAgreementTitleAndCustomerNationalId(title, customer.getNationalId())) {
                 log.warn("Customer {} has already been added to {} agreement before", customer.getNationalId(), title);
                 continue;
             }
 
-            agreement.getCustomers().add(customer);
-            agreementRepository.save(agreement);
+            CustomerAgreement customerAgreement = new CustomerAgreement();
+            customerAgreement.setCustomer(customer);
+            customerAgreement.setAgreement(agreement);
+
+            customerAgreementRepository.save(customerAgreement);
+
             log.info("Customer {} is successfully added to all agreements of subject {}", customer.getNationalId(), agreement.getTitle());
         }
     }
 
+    @Transactional
     @Override
     public String deleteAgreement(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.AGREEMENT.getValue();
 
-        agreementRepository.findById(id)
-                .ifPresentOrElse(_ -> {
-                    log.info(LogMessage.RESOURCE_FOUND, entity);
-                    agreementRepository.deleteById(id);
-                }, () -> {
-                    log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
-                    throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
-                });
+        Agreement agreement = findById(id);
+        customerAgreementRepository.deleteAllByAgreementTitle(agreement.getTitle());
+        agreementRepository.delete(agreement);
 
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
 
@@ -151,9 +158,5 @@ public class AgreementServiceImpl implements AgreementService {
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return agreement;
-    }
-
-    private boolean existsByTitleAndCustomerNationalId(String title, String nationalId) {
-        return agreementRepository.existsByTitleAndCustomerNationalId(title, nationalId) == 1;
     }
 }

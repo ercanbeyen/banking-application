@@ -5,8 +5,10 @@ import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -18,12 +20,16 @@ public class MockCustomerFactory {
         List<CashFlowCalendar> cashFlowCalendars = MockCashFlowCalendarFactory.generateMockCashFlowCalendars();
         Agreement agreement = MockAgreementFactory.getMockAgreement();
 
+        CustomerAgreement customerAgreement = new CustomerAgreement();
+        customerAgreement.setAgreement(agreement);
+        customerAgreement.setApprovedAt(LocalDateTime.now());
+
         List<Customer> customers = new ArrayList<>();
         List<CustomerDto> requests = generateMockCustomerDtos();
 
-        addCustomerToList(requests.getFirst(), cashFlowCalendars.getFirst(), Set.of(agreement), customers);
-        addCustomerToList(requests.get(1), cashFlowCalendars.get(1), Set.of(agreement), customers);
-        addCustomerToList(requests.getLast(), cashFlowCalendars.getLast(), Set.of(agreement), customers);
+        addCustomerToList(requests.getFirst(), cashFlowCalendars.getFirst(), Set.of(customerAgreement), customers);
+        addCustomerToList(requests.get(1), cashFlowCalendars.get(1), Set.of(customerAgreement), customers);
+        addCustomerToList(requests.getLast(), cashFlowCalendars.getLast(), Set.of(customerAgreement), customers);
 
         return customers;
     }
@@ -71,7 +77,7 @@ public class MockCustomerFactory {
         return List.of(customerDto1, customerDto2, customerDto3);
     }
 
-    private static void addCustomerToList(CustomerDto request, CashFlowCalendar cashFlowCalendar, Set<Agreement> agreements, List<Customer> customers) {
+    private static void addCustomerToList(CustomerDto request, CashFlowCalendar cashFlowCalendar, Set<CustomerAgreement> agreements, List<Customer> customers) {
         Customer customer = new Customer();
         customer.setId(request.getId());
         customer.setName(request.getName());

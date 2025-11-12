@@ -391,7 +391,7 @@ public class CustomerServiceImpl implements CustomerService {
         return findById(id)
                 .getAgreements()
                 .stream()
-                .map(Agreement::getTitle)
+                .map(customerAgreement -> customerAgreement.getAgreement().getTitle())
                 .toList();
     }
 
