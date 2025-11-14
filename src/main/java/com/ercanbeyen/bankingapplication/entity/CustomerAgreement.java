@@ -24,4 +24,14 @@ public class CustomerAgreement {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "approved_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     private LocalDateTime approvedAt;
+
+    @Override
+    public String toString() {
+        return "CustomerAgreement{" +
+                "id='" + id + '\'' +
+                ", customer=" + customer.getNationalId() +
+                ", agreement=" + agreement.getTitle() +
+                ", approvedAt=" + approvedAt +
+                '}';
+    }
 }

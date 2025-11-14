@@ -71,7 +71,6 @@ public class AgreementServiceImpl implements AgreementService {
     @Override
     public List<AgreementDto> getAgreements() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
         return agreementRepository.findAll()
                 .stream()
                 .map(agreementMapper::entityToDto)

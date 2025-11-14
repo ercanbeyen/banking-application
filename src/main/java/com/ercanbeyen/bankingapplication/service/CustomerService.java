@@ -28,7 +28,7 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     List<MoneyTransferOrderDto> getMoneyTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType);
     CashFlowCalendarDto getCashFlowCalendar(Integer id, Integer year, Integer month);
     List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month);
-    List<String> getAgreementTitles(Integer id);
+    List<CustomerAgreementDto> getAgreements(Integer id);
     List<RegisteredRecipient> getRegisteredRecipients(Integer id);
     Customer findByNationalId(String nationalId);
     boolean existsByNationalId(String nationalId);

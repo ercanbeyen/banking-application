@@ -7,6 +7,7 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Set;
 
 @Data
@@ -30,4 +31,20 @@ public class Agreement {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "created_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     LocalDateTime createdAt;
+
+    @Override
+    public String toString() {
+        List<String> customerNationalIds = customers.stream()
+                .map(customerAgreement -> customerAgreement.getCustomer().getNationalId())
+                .toList();
+
+        return "Agreement{" +
+                "id='" + id + '\'' +
+                ", title='" + title + '\'' +
+                ", subject=" + subject +
+                ", file=" + file.getName() +
+                ", customers=" + customerNationalIds +
+                ", createdAt=" + createdAt +
+                '}';
+    }
 }

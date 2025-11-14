@@ -17,6 +17,7 @@ import com.ercanbeyen.bankingapplication.mapper.*;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.repository.CustomerAgreementRepository;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
@@ -38,11 +39,13 @@ import java.util.function.Predicate;
 @Slf4j
 public class CustomerServiceImpl implements CustomerService {
     private final CustomerRepository customerRepository;
+    private final CustomerAgreementRepository customerAgreementRepository;
     private final CustomerMapper customerMapper;
     private final AccountMapper accountMapper;
     private final MoneyTransferOrderMapper moneyTransferOrderMapper;
     private final NotificationMapper notificationMapper;
     private final CashFlowCalendarMapper cashFlowCalendarMapper;
+    private final CustomerAgreementMapper customerAgreementMapper;
     private final FileService fileService;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
@@ -386,12 +389,11 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public List<String> getAgreementTitles(Integer id) {
+    public List<CustomerAgreementDto> getAgreements(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return findById(id)
-                .getAgreements()
+        return customerAgreementRepository.findByCustomer(findById(id))
                 .stream()
-                .map(customerAgreement -> customerAgreement.getAgreement().getTitle())
+                .map(customerAgreementMapper::entityToDto)
                 .toList();
     }
 

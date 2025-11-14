@@ -12,6 +12,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 
 public class MockCustomerFactory {
     private MockCustomerFactory() {}
@@ -21,6 +22,7 @@ public class MockCustomerFactory {
         Agreement agreement = MockAgreementFactory.getMockAgreement();
 
         CustomerAgreement customerAgreement = new CustomerAgreement();
+        customerAgreement.setId(UUID.randomUUID().toString());
         customerAgreement.setAgreement(agreement);
         customerAgreement.setApprovedAt(LocalDateTime.now());
 

@@ -136,10 +136,8 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @GetMapping("/{id}/agreements")
-    public ResponseEntity<MessageResponse<List<String>>> getAgreementTitles(@PathVariable("id") Integer id) {
-        List<String> agreementSubjects = customerService.getAgreementTitles(id);
-        MessageResponse<List<String>> response = new MessageResponse<>(agreementSubjects);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<List<CustomerAgreementDto>> getAgreements(@PathVariable("id") Integer id) {
+        return ResponseEntity.ok(customerService.getAgreements(id));
     }
 
     @GetMapping("/{id}/registered-recipients")

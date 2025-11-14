@@ -3,20 +3,17 @@ package com.ercanbeyen.bankingapplication.unit.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
+import com.ercanbeyen.bankingapplication.dto.CustomerAgreementDto;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
-import com.ercanbeyen.bankingapplication.entity.Agreement;
-import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
-import com.ercanbeyen.bankingapplication.entity.Customer;
-import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.factory.MockAgreementFactory;
-import com.ercanbeyen.bankingapplication.factory.MockCashFlowCalendarFactory;
-import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
-import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
+import com.ercanbeyen.bankingapplication.factory.*;
+import com.ercanbeyen.bankingapplication.mapper.CustomerAgreementMapper;
 import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
+import com.ercanbeyen.bankingapplication.repository.CustomerAgreementRepository;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
@@ -34,8 +31,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -50,7 +46,11 @@ class CustomerServiceTest {
     @Mock
     private CustomerRepository customerRepository;
     @Mock
+    private CustomerAgreementRepository customerAgreementRepository;
+    @Mock
     private CustomerMapper customerMapper;
+    @Mock
+    private CustomerAgreementMapper customerAgreementMapper;
     @Mock
     private FileService fileService;
     @Mock
@@ -58,6 +58,8 @@ class CustomerServiceTest {
     @Mock
     private AgreementService agreementService;
     private List<Customer> customers;
+    private List<CustomerAgreement> customerAgreements;
+    private List<CustomerAgreementDto> customerAgreementDtos;
     private List<CustomerDto> customerDtos;
     private List<CashFlowCalendar> cashFlowCalendars;
 
@@ -77,6 +79,8 @@ class CustomerServiceTest {
         customers = MockCustomerFactory.generateMockCustomers();
         customerDtos = MockCustomerFactory.generateMockCustomerDtos();
         cashFlowCalendars = MockCashFlowCalendarFactory.generateMockCashFlowCalendars();
+        customerAgreements = MockCustomerAgreementFactory.generateMockCustomerAgreements();
+        customerAgreementDtos = MockCustomerAgreementFactory.generateMockCustomerAgreementDtos();
     }
 
     @AfterEach
@@ -413,24 +417,35 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Get agreement titles")
-    void givenId_whenGetAgreementTitles_thenReturnList() {
+    @DisplayName("Happy path test: Get agreements")
+    void givenId_whenGetAgreements_thenReturnCustomerAgreements() {
         // given
-        Agreement agreement = MockAgreementFactory.getMockAgreement();
-        List<String> expected = List.of(agreement.getTitle());
         int id = customers.getFirst().getId();
+
+        List<CustomerAgreementDto> expected = customerAgreementDtos;
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
+        doReturn(customerAgreements)
+                .when(customerAgreementRepository)
+                .findByCustomer(any());
+        doReturn(expected.getFirst())
+                .when(customerAgreementMapper)
+                .entityToDto(any());
 
         // when
-        List<String> actual = customerService.getAgreementTitles(id);
+        List<CustomerAgreementDto> actual = customerService.getAgreements(id);
 
         // then
-        verify(customerRepository, times(1)).findById(id);
+        verify(customerRepository, times(1))
+                .findById(anyInt());
+        verify(customerAgreementRepository, times(1))
+                .findByCustomer(any());
+        verify(customerAgreementMapper, times(1))
+                .entityToDto(any());
 
-        assertEquals(expected, actual);
+        assertEquals(expected.size(), actual.size());
     }
 
     private CustomerDto getUpdateMockCustomerDtoRequest(String email) {
