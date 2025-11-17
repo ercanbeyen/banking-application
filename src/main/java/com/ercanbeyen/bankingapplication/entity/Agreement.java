@@ -3,14 +3,16 @@ package com.ercanbeyen.bankingapplication.entity;
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "agreements")
 public class Agreement {

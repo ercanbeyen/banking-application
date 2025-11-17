@@ -13,7 +13,6 @@ import com.ercanbeyen.bankingapplication.factory.*;
 import com.ercanbeyen.bankingapplication.mapper.CustomerAgreementMapper;
 import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
-import com.ercanbeyen.bankingapplication.repository.CustomerAgreementRepository;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
@@ -46,8 +45,6 @@ class CustomerServiceTest {
     @Mock
     private CustomerRepository customerRepository;
     @Mock
-    private CustomerAgreementRepository customerAgreementRepository;
-    @Mock
     private CustomerMapper customerMapper;
     @Mock
     private CustomerAgreementMapper customerAgreementMapper;
@@ -58,7 +55,6 @@ class CustomerServiceTest {
     @Mock
     private AgreementService agreementService;
     private List<Customer> customers;
-    private List<CustomerAgreement> customerAgreements;
     private List<CustomerAgreementDto> customerAgreementDtos;
     private List<CustomerDto> customerDtos;
     private List<CashFlowCalendar> cashFlowCalendars;
@@ -79,7 +75,6 @@ class CustomerServiceTest {
         customers = MockCustomerFactory.generateMockCustomers();
         customerDtos = MockCustomerFactory.generateMockCustomerDtos();
         cashFlowCalendars = MockCashFlowCalendarFactory.generateMockCashFlowCalendars();
-        customerAgreements = MockCustomerAgreementFactory.generateMockCustomerAgreements();
         customerAgreementDtos = MockCustomerAgreementFactory.generateMockCustomerAgreementDtos();
     }
 
@@ -427,9 +422,6 @@ class CustomerServiceTest {
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
-        doReturn(customerAgreements)
-                .when(customerAgreementRepository)
-                .findByCustomer(any());
         doReturn(expected.getFirst())
                 .when(customerAgreementMapper)
                 .entityToDto(any());
@@ -440,8 +432,6 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(customerAgreementRepository, times(1))
-                .findByCustomer(any());
         verify(customerAgreementMapper, times(1))
                 .entityToDto(any());
 

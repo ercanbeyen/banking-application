@@ -11,19 +11,6 @@ import java.util.List;
 import java.util.UUID;
 
 public class MockCustomerAgreementFactory {
-    public static List<CustomerAgreement> generateMockCustomerAgreements() {
-        Agreement agreement = MockAgreementFactory.getMockAgreement();
-        Customer customer = MockCustomerFactory.generateMockCustomers().getFirst();
-
-        CustomerAgreement customerAgreement = new CustomerAgreement();
-        customerAgreement.setId(UUID.randomUUID().toString());
-        customerAgreement.setAgreement(agreement);
-        customerAgreement.setCustomer(customer);
-        customerAgreement.setApprovedAt(LocalDateTime.now());
-
-        return List.of(customerAgreement);
-    }
-
     public static List<CustomerAgreementDto> generateMockCustomerAgreementDtos() {
         List<CustomerAgreement> customerAgreements = generateMockCustomerAgreements();
         List<CustomerAgreementDto> customerAgreementDtos = new ArrayList<>();
@@ -35,5 +22,18 @@ public class MockCustomerAgreementFactory {
         });
 
         return customerAgreementDtos;
+    }
+
+    private static List<CustomerAgreement> generateMockCustomerAgreements() {
+        Agreement agreement = MockAgreementFactory.getMockAgreement();
+        Customer customer = MockCustomerFactory.generateMockCustomers().getFirst();
+
+        CustomerAgreement customerAgreement = new CustomerAgreement();
+        customerAgreement.setId(UUID.randomUUID().toString());
+        customerAgreement.setAgreement(agreement);
+        customerAgreement.setCustomer(customer);
+        customerAgreement.setApprovedAt(LocalDateTime.now());
+
+        return List.of(customerAgreement);
     }
 }
