@@ -100,8 +100,8 @@ public class FileServiceImpl implements FileService {
 
             try {
                 file = new File(name, multipartFile.getContentType(), multipartFile.getBytes());
-            } catch (IOException exception) {
-                throw new ResourceExpectationFailedException("Error occurred in method getBytes");
+            } catch (IOException _) {
+                throw new ResourceExpectationFailedException("Error occurred while processing the file");
             }
 
             File savedFile = fileRepository.save(file);
