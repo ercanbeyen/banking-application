@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
+import com.ercanbeyen.bankingapplication.dto.FilePreviewInfo;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -18,9 +19,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -78,10 +79,9 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public Stream<File> getAllFiles() {
+    public List<FilePreviewInfo> getPreviewInfosOfFiles() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return fileRepository.findAll()
-                .stream();
+        return fileRepository.findAllPreviewInfos();
     }
 
     private File findById(String id) {
