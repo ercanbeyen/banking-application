@@ -6,7 +6,7 @@
 
 ### Summary
 It is a banking application includes basic banking operations. Abstract crud approach is used throughout the development.<br/>
-There are 16 entities in this project
+There are 17 entities in this project
 
 Entities:
 - Customer
@@ -25,6 +25,7 @@ Entities:
 - Fee
 - Cash Flow Calendar
 - Agreement
+- Customer Agreement
 
 ### Requirements
 - Customer's national id, email and phone number must be unique.
