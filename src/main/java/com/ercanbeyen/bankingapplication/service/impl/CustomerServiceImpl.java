@@ -21,7 +21,6 @@ import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
-import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +43,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final MoneyTransferOrderMapper moneyTransferOrderMapper;
     private final NotificationMapper notificationMapper;
     private final CashFlowCalendarMapper cashFlowCalendarMapper;
+    private final CustomerAgreementMapper customerAgreementMapper;
     private final FileService fileService;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
@@ -92,8 +92,7 @@ public class CustomerServiceImpl implements CustomerService {
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
-        String agreementSubject = AgreementUtil.generateSubject(Entity.CUSTOMER);
-        agreementService.addCustomerToAgreement(agreementSubject, customer);
+        agreementService.approveAgreements(AgreementSubject.CUSTOMER, customer);
 
         return customerMapper.entityToDto(savedCustomer);
     }
@@ -121,6 +120,13 @@ public class CustomerServiceImpl implements CustomerService {
     public void deleteEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         log.warn(LogMessage.UNUSABLE_METHOD);
+    }
+
+    @Override
+    public String approveAgreement(Integer id, String title) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        agreementService.approveAgreement(title, findById(id));
+        return "Agreement is successfully approved";
     }
 
     @Override
@@ -381,12 +387,12 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public List<String> getAgreementSubjects(Integer id) {
+    public List<CustomerAgreementDto> getAgreements(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return findById(id)
                 .getAgreements()
                 .stream()
-                .map(Agreement::getSubject)
+                .map(customerAgreementMapper::entityToDto)
                 .toList();
     }
 

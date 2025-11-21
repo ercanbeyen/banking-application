@@ -52,6 +52,13 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.updateEntity(id, request));
     }
 
+    @PostMapping("/{id}/agreements/{title}")
+    public ResponseEntity<MessageResponse<String>> approveAgreement(@PathVariable("id") Integer id, @PathVariable("title") String title) {
+        String message = customerService.approveAgreement(id, title);
+        MessageResponse<String> response = new MessageResponse<>(message);
+        return ResponseEntity.ok(response);
+    }
+
     @PatchMapping("/{id}/registered-recipients")
     public ResponseEntity<String> addRegisteredRecipient(@PathVariable("id") Integer id, @RequestBody @Valid RegisteredRecipient request) {
         return ResponseEntity.ok(customerService.addRegisteredRecipient(id, request));
@@ -129,14 +136,12 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @GetMapping("/{id}/agreements")
-    public ResponseEntity<MessageResponse<List<String>>> getAgreementSubjects(@PathVariable("id") Integer id) {
-        List<String> agreementSubjects = customerService.getAgreementSubjects(id);
-        MessageResponse<List<String>> response = new MessageResponse<>(agreementSubjects);
-        return ResponseEntity.ok(response);
+    public ResponseEntity<List<CustomerAgreementDto>> getAgreements(@PathVariable("id") Integer id) {
+        return ResponseEntity.ok(customerService.getAgreements(id));
     }
 
     @GetMapping("/{id}/registered-recipients")
-    public ResponseEntity<List<RegisteredRecipient>> addRegisteredRecipient(@PathVariable("id") Integer id) {
+    public ResponseEntity<List<RegisteredRecipient>> getRegisteredRecipients(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
     }
 }

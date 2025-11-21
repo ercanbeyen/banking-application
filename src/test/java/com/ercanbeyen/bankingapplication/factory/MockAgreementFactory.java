@@ -1,8 +1,9 @@
 package com.ercanbeyen.bankingapplication.factory;
 
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
-import com.ercanbeyen.bankingapplication.util.AgreementUtil;
+
+import java.util.HashSet;
 
 public class MockAgreementFactory {
     private MockAgreementFactory() {}
@@ -10,7 +11,9 @@ public class MockAgreementFactory {
     public static Agreement getMockAgreement() {
         Agreement agreement = new Agreement();
         agreement.setId(null);
-        agreement.setSubject(AgreementUtil.generateSubject(Entity.CUSTOMER));
+        agreement.setTitle("Customer Information");
+        agreement.setSubject(AgreementSubject.CUSTOMER);
+        agreement.setCustomers(new HashSet<>());
 
         return agreement;
     }

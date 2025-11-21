@@ -17,13 +17,13 @@ public class AgreementController {
     private final AgreementService agreementService;
 
     @PostMapping
-    public ResponseEntity<AgreementDto> createAgreement(@RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
-        return ResponseEntity.ok(agreementService.createAgreement(subject, request));
+    public ResponseEntity<AgreementDto> createAgreement(@RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
+        return ResponseEntity.ok(agreementService.createAgreement(title, subject, request));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
-        return ResponseEntity.ok(agreementService.updateAgreement(id, subject, request));
+    public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
+        return ResponseEntity.ok(agreementService.updateAgreement(id, title, subject, request));
     }
 
     @GetMapping

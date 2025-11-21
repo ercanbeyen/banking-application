@@ -8,7 +8,7 @@ public final class ResponseMessage {
     public static final String SUCCESS = "%s is successfully completed";
     public static final String FILE_UPLOAD_SUCCESS = "File is successfully uploaded";
     public static final String FILE_DELETE_SUCCESS = "File is successfully deleted";
-    public static final String FILE_UPLOAD_ERROR = "Error occurred while uploading file";
+    public static final String FILE_UPLOAD_ERROR = "Error occurred while uploading the file";
     public static final String INVALID_CONTENT_TYPE = "Invalid content type";
     public static final String INVALID_PHOTO_CONTENT_TYPE = INVALID_CONTENT_TYPE + ". Valid content types for photo are " + PhotoUtil.getPlainContentTypes();
     public static final String INVALID_PHONE_NUMBER = "Invalid phone number";

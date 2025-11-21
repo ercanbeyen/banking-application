@@ -24,7 +24,6 @@ import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
-import com.ercanbeyen.bankingapplication.util.AgreementUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
@@ -86,14 +85,14 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountMapper.dtoToEntity(request);
         Customer customer = customerService.findByNationalId(request.getCustomerNationalId());
         Branch branch = branchService.findByName(request.getBranchName());
-
         AccountType accountType = account.getType();
-        String agreementSubject = AgreementUtil.generateSubject(accountType.getValue(), Entity.ACCOUNT);
-        agreementService.addCustomerToAgreement(agreementSubject, customer);
 
         String entity = Entity.ACCOUNT.getValue();
 
         if (AccountUtil.checkAccountTypeMatch.test(accountType, AccountType.DEPOSIT)) {
+            log.info("Account type is {}. So, agreements and interest ratio will be assigned", accountType.getValue());
+            agreementService.approveAgreements(AgreementSubject.DEPOSIT_ACCOUNT, customer);
+
             log.info("{} is {}, so update interest ratio and balance after next {}", entity, accountType.getValue(), Entity.FEE.getValue());
             account.setInterestRatio(0D);
             account.setBalanceAfterNextFee(0D);

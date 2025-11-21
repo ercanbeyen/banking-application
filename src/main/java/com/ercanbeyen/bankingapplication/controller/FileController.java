@@ -1,15 +1,14 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
+import com.ercanbeyen.bankingapplication.dto.response.FilePreview;
 import com.ercanbeyen.bankingapplication.entity.File;
-import com.ercanbeyen.bankingapplication.dto.response.FileResponse;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -29,7 +28,7 @@ public class FileController {
         FileUtil.checkFile(request);
         fileService.storeFile(request);
         MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_UPLOAD_SUCCESS);
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/{id}")
@@ -46,28 +45,28 @@ public class FileController {
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> deleteFile(@PathVariable("id") String id) {
         MessageResponse<String> response = new MessageResponse<>(fileService.deleteFile(id));
-        return new ResponseEntity<>(response, HttpStatus.OK);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping
-    public ResponseEntity<List<FileResponse>> getFileList() {
-        List<FileResponse> fileResponseList = fileService.getAllFiles()
-                .map(file -> {
+    public ResponseEntity<List<FilePreview>> getPreviewsOfFiles() {
+        List<FilePreview> filePreviews = fileService.getPreviewInfosOfFiles()
+                .stream()
+                .map(filePreviewInfo -> {
                     String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()
-                            .path("/api/v1/files")
-                            .path(file.getId())
+                            .path("/api/v1/files/")
+                            .path(filePreviewInfo.id())
                             .toUriString();
 
-                    return new FileResponse(
-                            file.getName(),
+                    return new FilePreview(
+                            filePreviewInfo.name(),
                             fileDownloadUri,
-                            file.getType(),
-                            file.getData().length
+                            filePreviewInfo.type(),
+                            filePreviewInfo.size()
                     );
                 })
                 .toList();
 
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(fileResponseList);
+        return ResponseEntity.ok(filePreviews);
     }
 }
