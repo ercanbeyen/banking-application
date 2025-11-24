@@ -120,7 +120,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = AccountActivityUtil.generatePdfStream(accountActivity.getSummary());
+            outputStream = AccountActivityUtil.generatePdfStreamOfReceipt(accountActivity.getSummary());
             log.info("Receipt is successfully generated");
         } catch (DocumentException exception) {
             log.error("Receipt cannot be created. Exception: {}", exception.getMessage());

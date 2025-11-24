@@ -10,14 +10,21 @@ import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
+import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
+import com.itextpdf.text.DocumentException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
@@ -111,5 +118,23 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @GetMapping("/{id}/account-activities")
     public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
         return ResponseEntity.ok(accountService.getAccountActivities(id, request));
+    }
+
+    @PostMapping("/{id}/statement")
+    public ResponseEntity<byte[]> generateAccountStatement(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) throws DocumentException, IOException {
+        AccountDto accountDto = accountService.getEntity(id);
+        List<Map<String, Object>> summaries = accountService.getAccountActivities(id, request)
+                .stream()
+                .map(AccountActivityDto::summary)
+                .toList();
+
+        ByteArrayOutputStream receiptStream = AccountActivityUtil.generatePdfStreamOfStatement(accountDto, summaries);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statement.pdf");
+        headers.setContentLength(receiptStream.size());
+
+        return new ResponseEntity<>(receiptStream.toByteArray(), headers, HttpStatus.OK);
     }
 }

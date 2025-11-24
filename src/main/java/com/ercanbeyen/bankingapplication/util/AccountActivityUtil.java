@@ -1,8 +1,11 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
+import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.itextpdf.text.*;
+import com.itextpdf.text.Font;
+import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
@@ -22,17 +25,17 @@ import java.util.stream.Stream;
 public class AccountActivityUtil {
     private static final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
-    public ByteArrayOutputStream generatePdfStream(Map<String, Object> summary) throws DocumentException, IOException {
+    public ByteArrayOutputStream generatePdfStreamOfReceipt(Map<String, Object> summary) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         PdfWriter.getInstance(document, outputStream);
         document.open();
 
-        addTitle(document);
+        addTitle(document, "Receipt");
         document.add(new Paragraph("\n"));
 
-        addTable(document, summary);
+        addTableOfReceipt(document, summary);
         document.add(new Paragraph("\n"));
 
         addBottom(document);
@@ -41,17 +44,38 @@ public class AccountActivityUtil {
         return outputStream;
     }
 
-    private static void addTitle(Document document) throws DocumentException {
-        Font boldFont = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
-        String message = "RECEIPT";
+    public ByteArrayOutputStream generatePdfStreamOfStatement(AccountDto accountDto, List<Map<String, Object>> summaries) throws DocumentException, IOException {
+        Document document = new Document();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        Paragraph paragraph = new Paragraph(message, boldFont);
+        PdfWriter.getInstance(document, outputStream);
+        document.open();
+
+        addTitle(document, "Statement");
+        document.add(new Paragraph("\n"));
+
+        addTableOfAccountInformation(document, accountDto);
+        document.add(new Paragraph("\n"));
+
+        addTableOfAccountActivities(document, summaries);
+        document.add(new Paragraph("\n"));
+
+        addBottom(document);
+        document.close();
+
+        return outputStream;
+    }
+
+    private static void addTitle(Document document, String title) throws DocumentException {
+        Font boldFont = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
+
+        Paragraph paragraph = new Paragraph(title.toUpperCase(), boldFont);
         paragraph.setAlignment(Element.ALIGN_CENTER);
 
         document.add(paragraph);
     }
 
-    private static void addTable(Document document, Map<String, Object> summary) throws DocumentException {
+    private static void addTableOfReceipt(Document document, Map<String, Object> summary) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
 
         Stream.of("Field", "Value")
@@ -73,6 +97,51 @@ public class AccountActivityUtil {
 
             table.addCell(key);
             table.addCell(value);
+        }
+
+        document.add(table);
+    }
+
+    private static void addTableOfAccountInformation(Document document, AccountDto accountDto) throws DocumentException {
+        document.add(new Paragraph("Customer National Id: " + accountDto.getCustomerNationalId()));
+        document.add(new Paragraph("Branch: " + accountDto.getBranchName()));
+        document.add(new Paragraph("Account Identity: " + accountDto.getId()));
+        document.add(new Paragraph("Account Type: " + accountDto.getType()));
+        document.add(new Paragraph("Currency: " + accountDto.getCurrency()));
+        document.add(new Paragraph("Balance: " + accountDto.getBalance()));
+    }
+
+    private static void addTableOfAccountActivities(Document document, List<Map<String, Object>> summaries) throws DocumentException {
+        final int numberOfColumns = 3;
+        PdfPTable table = new PdfPTable(numberOfColumns);
+
+        Stream.of("Time", "Account Activity", "Amount")
+                .forEach(title -> {
+                    PdfPCell header = new PdfPCell();
+                    header.setBackgroundColor(BaseColor.CYAN);
+                    header.setBorderWidth(1);
+                    header.setPhrase(new Phrase(title));
+                    table.addCell(header);
+                });
+
+        for (Map<String, Object> summary : summaries) {
+            String[] values = new String[numberOfColumns];
+
+            for (Map.Entry<String, Object> entry : summary.entrySet()) {
+                String key = entry.getKey();
+                String value = entry.getValue().toString();
+
+                switch (key) {
+                    case SummaryField.TIME -> values[0] = value;
+                    case SummaryField.ACCOUNT_ACTIVITY -> values[1] = value;
+                    case SummaryField.AMOUNT -> values[2] = value;
+                    default -> log.info("Unmatched field. Field: {}", key);
+                }
+            }
+
+            for (String value : values) {
+                table.addCell(value);
+            }
         }
 
         document.add(table);
