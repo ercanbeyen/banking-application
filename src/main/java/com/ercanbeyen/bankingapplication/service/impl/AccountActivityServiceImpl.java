@@ -48,9 +48,8 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             boolean recipientAccountIdFilter = filteringOption.recipientAccountId() == null
                     || (accountActivity.getRecipientAccount() != null && filteringOption.recipientAccountId().equals(accountActivity.getRecipientAccount().getId()));
             boolean minimumAmountFilter = (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount());
-            boolean createdAtFilter = (filteringOption.createdAt() == null || (filteringOption.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
-            
-            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter && createdAtFilter;
+
+            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter;
         };
 
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
@@ -200,8 +199,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .stream()
                 .anyMatch(activityType -> accountActivity.getType() == activityType);
         boolean amountCheck = Optional.ofNullable(filteringOption.minimumAmount()).isEmpty() || filteringOption.minimumAmount() <= accountActivity.getAmount();
-        boolean createdAtCheck = Optional.ofNullable(filteringOption.createdAt()).isEmpty() || filteringOption.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate());
+        boolean fromDate = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(accountActivity.getCreatedAt().toLocalDate());
+        boolean toDate = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(accountActivity.getCreatedAt().toLocalDate());
 
-        return typeCheck && amountCheck && createdAtCheck;
+        return typeCheck && amountCheck && fromDate && toDate;
     }
 }

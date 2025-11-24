@@ -398,7 +398,7 @@ public class AccountServiceImpl implements AccountService {
 
         if (balanceActivity == null) {
             AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                    request.activityTypes(), null, null, request.minimumAmount(), request.createdAt());
+                    request.activityTypes(), null, null, request.minimumAmount(), request.fromDate(), request.toDate());
 
             return accountActivityService.getAccountActivities(accountActivityFilteringOption)
                     .stream()
@@ -409,17 +409,17 @@ public class AccountServiceImpl implements AccountService {
         Set<AccountActivityDto> accountActivityDtos = switch (balanceActivity) {
             case DECREASE -> {
                 AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), id, null, request.minimumAmount(), request.createdAt());
+                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
             }
             case INCREASE -> {
                 AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, id, request.minimumAmount(), request.createdAt());
+                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
             }
             case STABLE -> {
                 AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, null, request.minimumAmount(), request.createdAt());
+                        request.activityTypes(), null, null, request.minimumAmount(), request.fromDate(), request.toDate());
                 yield accountActivityService.getAccountActivities(accountActivityFilteringOption)
                         .stream()
                         .filter(accountActivityDto -> {
@@ -529,6 +529,7 @@ public class AccountServiceImpl implements AccountService {
         log.info("Updated daily activity amount: {}", dailyActivityAmount);
 
         Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
+        log.info("Remaining daily activity limit: {}", activityLimit - dailyActivityAmount);
 
         if (dailyActivityAmount > activityLimit) {
             throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType.getValue(), activityLimit));
@@ -547,7 +548,7 @@ public class AccountServiceImpl implements AccountService {
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
-        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, LocalDate.now());
+        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, LocalDate.now(), LocalDate.now());
     }
 
     private static void checkAccountBlocked(Account account) {
