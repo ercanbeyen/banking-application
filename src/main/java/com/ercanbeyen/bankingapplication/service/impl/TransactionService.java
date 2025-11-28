@@ -222,7 +222,7 @@ public class TransactionService {
         /* Match interest ratio for the given currency, balance and deposit period */
         try {
             interestRatio = feeService.getInterestRatio(currency, depositPeriod, balance);
-        } catch (ResourceNotFoundException exception) {
+        } catch (ResourceNotFoundException _) {
             FeeFilteringOption filteringOption = new FeeFilteringOption();
             filteringOption.setCurrency(currency);
             filteringOption.setDepositPeriod(depositPeriod);
@@ -325,6 +325,6 @@ public class TransactionService {
         }
 
         log.info("There is a separate charged {}, so add it into summary", entity);
-        summary.put("Charged " + SummaryField.ACCOUNT_ID, chargedAccount.getId());
+        summary.put("Charged " + SummaryField.ACCOUNT_IDENTITY, chargedAccount.getId());
     }
 }

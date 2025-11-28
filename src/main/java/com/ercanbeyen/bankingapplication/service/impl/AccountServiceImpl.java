@@ -426,8 +426,8 @@ public class AccountServiceImpl implements AccountService {
                             Map<String, Object> summary = accountActivityDto.summary();
                             String accountActivity = (String) summary.get(SummaryField.ACCOUNT_ACTIVITY);
 
-                            boolean accountIdExists = summary.containsKey(SummaryField.ACCOUNT_ID)
-                                    && summary.get(SummaryField.ACCOUNT_ID) == id;
+                            boolean accountIdExists = summary.containsKey(SummaryField.ACCOUNT_IDENTITY)
+                                    && summary.get(SummaryField.ACCOUNT_IDENTITY) == id;
 
                             boolean accountActivityMatches = AccountActivityType.getAccountStatusUpdatingActivities()
                                     .stream()
@@ -579,7 +579,7 @@ public class AccountServiceImpl implements AccountService {
     private void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
         Map<String, Object> summary = new HashMap<>();
         summary.put(SummaryField.ACCOUNT_ACTIVITY, activityType.getValue());
-        summary.put(SummaryField.ACCOUNT_ID, account.getId());
+        summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
         summary.put(SummaryField.FULL_NAME, account.getCustomer().getFullName());
         summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());

@@ -11,7 +11,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
+import com.ercanbeyen.bankingapplication.util.PdfUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
@@ -120,7 +120,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = AccountActivityUtil.generatePdfStreamOfReceipt(accountActivity.getSummary());
+            outputStream = PdfUtil.generatePdfStreamOfReceipt(accountActivity.getSummary());
             log.info("Receipt is successfully generated");
         } catch (DocumentException exception) {
             log.error("Receipt cannot be created. Exception: {}", exception.getMessage());

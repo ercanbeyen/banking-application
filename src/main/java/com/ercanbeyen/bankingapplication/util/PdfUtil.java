@@ -1,8 +1,10 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
-import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.helper.BorderEvent;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
@@ -16,13 +18,14 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 
 @Slf4j
 @UtilityClass
-public class AccountActivityUtil {
+public class PdfUtil {
     private static final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
     public ByteArrayOutputStream generatePdfStreamOfReceipt(Map<String, Object> summary) throws DocumentException, IOException {
@@ -44,17 +47,17 @@ public class AccountActivityUtil {
         return outputStream;
     }
 
-    public ByteArrayOutputStream generatePdfStreamOfStatement(AccountDto accountDto, List<Map<String, Object>> summaries) throws DocumentException, IOException {
+    public ByteArrayOutputStream generatePdfStreamOfStatement(Account account, LocalDate fromDate, LocalDate toDate, List<Map<String, Object>> summaries) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         PdfWriter.getInstance(document, outputStream);
         document.open();
 
-        addTitle(document, "Statement");
+        addTitle(document, "Account Statement");
         document.add(new Paragraph("\n"));
 
-        addTableOfAccountInformation(document, accountDto);
+        addTableOfAccountInformation(document, account, fromDate, toDate);
         document.add(new Paragraph("\n"));
 
         addTableOfAccountActivities(document, summaries);
@@ -102,13 +105,40 @@ public class AccountActivityUtil {
         document.add(table);
     }
 
-    private static void addTableOfAccountInformation(Document document, AccountDto accountDto) throws DocumentException {
-        document.add(new Paragraph("Customer National Id: " + accountDto.getCustomerNationalId()));
-        document.add(new Paragraph("Branch: " + accountDto.getBranchName()));
-        document.add(new Paragraph("Account Identity: " + accountDto.getId()));
-        document.add(new Paragraph("Account Type: " + accountDto.getType()));
-        document.add(new Paragraph("Currency: " + accountDto.getCurrency()));
-        document.add(new Paragraph("Balance: " + accountDto.getBalance()));
+    private static void addTableOfAccountInformation(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
+        BorderEvent borderEvent = new BorderEvent();
+
+        PdfPTable table = new PdfPTable(2);
+        table.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        table.setTableEvent(borderEvent);
+
+        PdfPTable leftTable = new PdfPTable(1);
+        leftTable.setHorizontalAlignment(Element.ALIGN_CENTER);
+        leftTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        leftTable.setTableEvent(borderEvent);
+
+        Customer customer = account.getCustomer();
+        leftTable.addCell("Dear " + customer.getName().toUpperCase());
+        leftTable.addCell("Customer National Identity: " + customer.getNationalId());
+        leftTable.addCell("Branch: " + account.getBranch().getName());
+        leftTable.addCell("Account Identity: " + account.getId());
+        leftTable.addCell("Account Type: " + account.getType());
+        leftTable.addCell("Currency: " + account.getCurrency());
+        leftTable.addCell("Balance: " + account.getBalance());
+
+        table.addCell(leftTable);
+
+        PdfPTable rightTable = new PdfPTable(1);
+        rightTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        rightTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        rightTable.setTableEvent(borderEvent);
+
+        rightTable.addCell("Document Issue Date: " + LocalDate.now());
+        rightTable.addCell("Inquiry Criteria: " + fromDate + " - " + toDate);
+
+        table.addCell(rightTable);
+
+        document.add(table);
     }
 
     private static void addTableOfAccountActivities(Document document, List<Map<String, Object>> summaries) throws DocumentException {

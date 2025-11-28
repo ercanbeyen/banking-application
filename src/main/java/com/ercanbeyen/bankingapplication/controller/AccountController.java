@@ -6,11 +6,12 @@ import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
+import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
-import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
+import com.ercanbeyen.bankingapplication.util.PdfUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
 import jakarta.validation.Valid;
@@ -122,19 +123,19 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PostMapping("/{id}/statement")
     public ResponseEntity<byte[]> generateAccountStatement(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) throws DocumentException, IOException {
-        AccountDto accountDto = accountService.getEntity(id);
+        Account account = accountService.findActiveAccountById(id);
         List<Map<String, Object>> summaries = accountService.getAccountActivities(id, request)
                 .stream()
                 .map(AccountActivityDto::summary)
                 .toList();
 
-        ByteArrayOutputStream receiptStream = AccountActivityUtil.generatePdfStreamOfStatement(accountDto, summaries);
+        ByteArrayOutputStream statementStream = PdfUtil.generatePdfStreamOfStatement(account, request.fromDate(), request.toDate(), summaries);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statement.pdf");
-        headers.setContentLength(receiptStream.size());
+        headers.setContentLength(statementStream.size());
 
-        return new ResponseEntity<>(receiptStream.toByteArray(), headers, HttpStatus.OK);
+        return new ResponseEntity<>(statementStream.toByteArray(), headers, HttpStatus.OK);
     }
 }
