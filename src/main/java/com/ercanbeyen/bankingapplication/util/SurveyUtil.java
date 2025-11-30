@@ -15,8 +15,7 @@ public class SurveyUtil {
     }
 
     public LocalDateTime getNearestValidationTime() {
-        return LocalDateTime.now()
-                .plusHours(1);
+        return LocalDateTime.now().plusHours(1);
     }
 
     public void checkStatisticsParameters(LocalDateTime createdAt, Integer frequency) {

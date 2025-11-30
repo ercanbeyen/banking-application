@@ -17,7 +17,6 @@ public class CustomerUtil {
             throw new BadRequestException("Candidate customer is not an adult");
         }
 
-        request.getAddresses()
-                .forEach(AddressUtil::checkAddressRequest);
+        request.getAddresses().forEach(AddressUtil::checkAddressRequest);
     }
 }

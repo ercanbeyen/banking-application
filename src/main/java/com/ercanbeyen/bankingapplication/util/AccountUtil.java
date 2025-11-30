@@ -24,7 +24,6 @@ import java.util.function.Predicate;
 @Slf4j
 @UtilityClass
 public class AccountUtil {
-
     public void checkRequest(AccountDto accountDto) {
         if (Optional.ofNullable(accountDto.getIsBlocked()).isPresent() || Optional.ofNullable(accountDto.getClosedAt()).isPresent()) {
             throw new BadRequestException("Request should not contain block and closed at statuses");

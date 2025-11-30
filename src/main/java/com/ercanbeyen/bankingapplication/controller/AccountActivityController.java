@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
+import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
@@ -22,6 +23,7 @@ public class AccountActivityController {
 
     @GetMapping
     public ResponseEntity<List<AccountActivityDto>> getAccountActivities(AccountActivityFilteringOption filteringOption) {
+        AccountActivityUtil.checkFilteringOption(filteringOption);
         return ResponseEntity.ok(accountActivityService.getAccountActivities(filteringOption));
     }
 
@@ -39,8 +41,7 @@ public class AccountActivityController {
 
     @PostMapping("/{id}/receipt")
     public ResponseEntity<byte[]> generateReceipt(@PathVariable("id") String id) {
-        /* Export pdf from Account Activity's summary */
-        ByteArrayOutputStream receiptStream = accountActivityService.createReceiptStream(id);
+        ByteArrayOutputStream receiptStream = accountActivityService.generateReceiptStream(id);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);

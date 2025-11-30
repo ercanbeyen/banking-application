@@ -11,7 +11,6 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.util.PdfUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
@@ -36,6 +35,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     private final AccountActivityRepository accountActivityRepository;
     private final AccountActivityViewRepository accountActivityViewRepository;
     private final AccountActivityMapper accountActivityMapper;
+    private final PdfService pdfService;
 
     @Override
     public List<AccountActivityDto> getAccountActivities(AccountActivityFilteringOption filteringOption) {
@@ -107,7 +107,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     }
 
     @Override
-    public ByteArrayOutputStream createReceiptStream(String id) {
+    public ByteArrayOutputStream generateReceiptStream(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivity accountActivity = findById(id);
@@ -120,14 +120,14 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = PdfUtil.generatePdfStreamOfReceipt(accountActivity.getSummary());
+            outputStream = pdfService.generatePdfStreamOfReceipt(accountActivity.getSummary());
             log.info("Receipt is successfully generated");
         } catch (DocumentException exception) {
-            log.error("Receipt cannot be created. Exception: {}", exception.getMessage());
-            throw new InternalServerErrorException("Error occurred while creating receipt");
+            log.error("Receipt cannot be generated. Exception: {}", exception.getMessage());
+            throw new InternalServerErrorException("Error occurred while generating receipt");
         } catch (Exception exception) {
             log.error("Unknown exception occurred. Exception: {}", exception.getMessage());
-            throw new InternalServerErrorException("Unknown error occurred while creating receipt");
+            throw new InternalServerErrorException("Unknown error occurred while generating receipt");
         }
 
         return outputStream;

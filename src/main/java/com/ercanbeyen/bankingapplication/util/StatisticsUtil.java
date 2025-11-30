@@ -23,7 +23,7 @@ public class StatisticsUtil {
                 .collect(Collectors.toMap(
                         Map.Entry::getKey,
                         Map.Entry::getValue,
-                        (value1, value2) -> value1,
+                        (value1, _) -> value1,
                         LinkedHashMap::new
                 ));
     }

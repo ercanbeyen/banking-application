@@ -1,4 +1,4 @@
-package com.ercanbeyen.bankingapplication.util;
+package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.entity.Account;
@@ -11,12 +11,12 @@ import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
-import lombok.experimental.UtilityClass;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
@@ -24,9 +24,11 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @Slf4j
-@UtilityClass
-public class PdfUtil {
+@RequiredArgsConstructor
+@Service
+public class PdfService {
     private static final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
+    private final BorderEvent borderEvent;
 
     public ByteArrayOutputStream generatePdfStreamOfReceipt(Map<String, Object> summary) throws DocumentException, IOException {
         Document document = new Document();
@@ -105,9 +107,7 @@ public class PdfUtil {
         document.add(table);
     }
 
-    private static void addTableOfAccountInformation(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
-        BorderEvent borderEvent = new BorderEvent();
-
+    private void addTableOfAccountInformation(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
         table.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         table.setTableEvent(borderEvent);
@@ -118,8 +118,11 @@ public class PdfUtil {
         leftTable.setTableEvent(borderEvent);
 
         Customer customer = account.getCustomer();
+        Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
+
         leftTable.addCell("Dear " + customer.getName().toUpperCase());
-        leftTable.addCell("Customer National Identity: " + customer.getNationalId());
+        leftTable.addCell("Customer Identity: " + customer.getId());
+        leftTable.addCell("Customer National Identity: " + maskField(entry));
         leftTable.addCell("Branch: " + account.getBranch().getName());
         leftTable.addCell("Account Identity: " + account.getId());
         leftTable.addCell("Account Type: " + account.getType());
@@ -229,13 +232,11 @@ public class PdfUtil {
     }
 
     private static void addLogo(Document document) throws DocumentException, IOException {
-        Path path = Paths.get("/app/photo/logo.png");
-        log.info("Path: {}", path);
-
-        Image image = Image.getInstance(path.toAbsolutePath().toString());
+        Image image = Image.getInstance(Paths.get("/app/photo/logo.png")
+                .toAbsolutePath()
+                .toString());
         image.scalePercent(10);
         image.setAlignment(Element.ALIGN_CENTER);
-
         document.add(image);
     }
 }
