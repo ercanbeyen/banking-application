@@ -395,32 +395,47 @@ public class AccountServiceImpl implements AccountService {
         Account account = findActiveAccountById(id);
         Comparator<AccountActivityDto> accountActivityComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
         BalanceActivity balanceActivity = request.balanceActivity();
+        Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
-        if (balanceActivity == null) {
-            AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                    request.activityTypes(), null, null, request.minimumAmount(), request.fromDate(), request.toDate());
-
-            return accountActivityService.getAccountActivities(accountActivityFilteringOption)
-                    .stream()
-                    .sorted(accountActivityComparator)
-                    .toList();
+        if (Optional.ofNullable(balanceActivity).isPresent()) {
+            accountActivityDtos = getFilteredAccountActivities(id, request, balanceActivity, account);
+        } else {
+            for (BalanceActivity currentBalanceActivity : BalanceActivity.values()) {
+                accountActivityDtos.addAll(getFilteredAccountActivities(id, request, currentBalanceActivity, account));
+            }
         }
 
-        Set<AccountActivityDto> accountActivityDtos = switch (balanceActivity) {
+        return accountActivityDtos.stream()
+                .sorted(accountActivityComparator)
+                .toList();
+    }
+
+    private Account findById(Integer id) {
+        String entity = Entity.ACCOUNT.getValue();
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
+
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        return account;
+    }
+
+    private Set<AccountActivityDto> getFilteredAccountActivities(Integer id, AccountActivityFilteringRequest request, BalanceActivity balanceActivity, Account account) {
+        return switch (balanceActivity) {
             case DECREASE -> {
-                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
+                AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
                         request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate());
-                yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
+                yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case INCREASE -> {
-                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
+                AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
                         request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate());
-                yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
+                yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case STABLE -> {
-                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, null, request.minimumAmount(), request.fromDate(), request.toDate());
-                yield accountActivityService.getAccountActivities(accountActivityFilteringOption)
+                AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
+                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate());
+                yield accountActivityService.getAccountActivities(filteringOption)
                         .stream()
                         .filter(accountActivityDto -> {
                             Map<String, Object> summary = accountActivityDto.summary();
@@ -439,20 +454,6 @@ public class AccountServiceImpl implements AccountService {
                         .collect(Collectors.toSet());
             }
         };
-
-        return accountActivityDtos.stream()
-                .sorted(accountActivityComparator)
-                .toList();
-    }
-
-    private Account findById(Integer id) {
-        String entity = Entity.ACCOUNT.getValue();
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
-
-        log.info(LogMessage.RESOURCE_FOUND, entity);
-
-        return account;
     }
 
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
