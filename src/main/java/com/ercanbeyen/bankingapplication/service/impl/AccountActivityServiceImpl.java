@@ -120,13 +120,13 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = pdfService.generatePdfStreamOfReceipt(accountActivity.getSummary());
+            outputStream = pdfService.generatePdfStreamOfReceipt(accountActivity);
             log.info("Receipt is successfully generated");
         } catch (DocumentException exception) {
             log.error("Receipt cannot be generated. Exception: {}", exception.getMessage());
             throw new InternalServerErrorException("Error occurred while generating receipt");
         } catch (Exception exception) {
-            log.error("Unknown exception occurred. Exception: {}", exception.getMessage());
+            log.error(LogMessage.UNKNOWN_EXCEPTION, exception.getMessage());
             throw new InternalServerErrorException("Unknown error occurred while generating receipt");
         }
 
@@ -199,9 +199,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .stream()
                 .anyMatch(activityType -> accountActivity.getType() == activityType);
         boolean amountCheck = Optional.ofNullable(filteringOption.minimumAmount()).isEmpty() || filteringOption.minimumAmount() <= accountActivity.getAmount();
-        boolean fromDate = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(accountActivity.getCreatedAt().toLocalDate());
-        boolean toDate = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(accountActivity.getCreatedAt().toLocalDate());
+        boolean fromDateCheck = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(accountActivity.getCreatedAt().toLocalDate());
+        boolean toDateCheck = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(accountActivity.getCreatedAt().toLocalDate());
 
-        return typeCheck && amountCheck && fromDate && toDate;
+        return typeCheck && amountCheck && fromDateCheck && toDateCheck;
     }
 }

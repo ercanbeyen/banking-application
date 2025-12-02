@@ -1,7 +1,9 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
+import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.helper.BorderEvent;
@@ -30,7 +32,7 @@ public class PdfService {
     private static final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
     private final BorderEvent borderEvent;
 
-    public ByteArrayOutputStream generatePdfStreamOfReceipt(Map<String, Object> summary) throws DocumentException, IOException {
+    public ByteArrayOutputStream generatePdfStreamOfReceipt(AccountActivity accountActivity) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -40,7 +42,7 @@ public class PdfService {
         addTitle(document, "Receipt");
         document.add(new Paragraph("\n"));
 
-        addTableOfReceipt(document, summary);
+        addTableOfReceipt(document, accountActivity);
         document.add(new Paragraph("\n"));
 
         addBottom(document);
@@ -49,7 +51,7 @@ public class PdfService {
         return outputStream;
     }
 
-    public ByteArrayOutputStream generatePdfStreamOfStatement(Account account, LocalDate fromDate, LocalDate toDate, List<Map<String, Object>> summaries) throws DocumentException, IOException {
+    public ByteArrayOutputStream generatePdfStreamOfStatement(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -62,7 +64,7 @@ public class PdfService {
         addTableOfAccountInformation(document, account, fromDate, toDate);
         document.add(new Paragraph("\n"));
 
-        addTableOfAccountActivities(document, summaries);
+        addTableOfAccountActivities(document, accountActivityDtos);
         document.add(new Paragraph("\n"));
 
         addBottom(document);
@@ -80,7 +82,7 @@ public class PdfService {
         document.add(paragraph);
     }
 
-    private static void addTableOfReceipt(Document document, Map<String, Object> summary) throws DocumentException {
+    private static void addTableOfReceipt(Document document, AccountActivity accountActivity) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
 
         Stream.of("Field", "Value")
@@ -92,7 +94,8 @@ public class PdfService {
                     table.addCell(header);
                 });
 
-        for (Map.Entry<String, Object> entry : summary.entrySet()) {
+
+        for (Map.Entry<String, Object> entry : accountActivity.getSummary().entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue().toString();
 
@@ -144,7 +147,7 @@ public class PdfService {
         document.add(table);
     }
 
-    private static void addTableOfAccountActivities(Document document, List<Map<String, Object>> summaries) throws DocumentException {
+    private static void addTableOfAccountActivities(Document document, List<AccountActivityDto> accountActivityDtos) throws DocumentException {
         final int numberOfColumns = 3;
         PdfPTable table = new PdfPTable(numberOfColumns);
 
@@ -157,24 +160,10 @@ public class PdfService {
                     table.addCell(header);
                 });
 
-        for (Map<String, Object> summary : summaries) {
-            String[] values = new String[numberOfColumns];
-
-            for (Map.Entry<String, Object> entry : summary.entrySet()) {
-                String key = entry.getKey();
-                String value = entry.getValue().toString();
-
-                switch (key) {
-                    case SummaryField.TIME -> values[0] = value;
-                    case SummaryField.ACCOUNT_ACTIVITY -> values[1] = value;
-                    case SummaryField.AMOUNT -> values[2] = value;
-                    default -> log.info("Unmatched field. Field: {}", key);
-                }
-            }
-
-            for (String value : values) {
-                table.addCell(value);
-            }
+        for (AccountActivityDto accountActivityDto : accountActivityDtos) {
+            table.addCell(new PdfPCell(new Phrase(accountActivityDto.createdAt().toString())));
+            table.addCell(new PdfPCell(new Phrase(accountActivityDto.type().toString())));
+            table.addCell(new PdfPCell(new Phrase(accountActivityDto.amount().toString())));
         }
 
         document.add(table);

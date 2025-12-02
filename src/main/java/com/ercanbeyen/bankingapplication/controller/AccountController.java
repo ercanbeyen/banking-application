@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
@@ -28,7 +29,6 @@ import org.springframework.web.bind.annotation.*;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 
@@ -135,10 +135,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
-        List<Map<String, Object>> summaries = accountService.getAccountActivities(id, request)
-                .stream()
-                .map(AccountActivityDto::summary)
-                .toList();
+        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
 
         LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
         LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
@@ -146,13 +143,13 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         ByteArrayOutputStream statementStream;
 
         try {
-            statementStream = pdfService.generatePdfStreamOfStatement(account, fromDate, toDate, summaries);
+            statementStream = pdfService.generatePdfStreamOfStatement(account, fromDate, toDate, accountActivityDtos);
             log.info("Account statement is successfully generated");
         } catch (DocumentException exception) {
             log.error("Account statement cannot be generated. Exception: {}", exception.getMessage());
             throw new InternalServerErrorException("Error occurred while generating account statement");
         } catch (Exception exception) {
-            log.error("Unknown exception occurred. Exception: {}", exception.getMessage());
+            log.error(LogMessage.UNKNOWN_EXCEPTION, exception.getMessage());
             throw new InternalServerErrorException("Unknown error occurred while generating account statement");
         }
 
