@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.helper.BorderEvent;
+import com.ercanbeyen.bankingapplication.helper.PageNumeration;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
@@ -55,7 +56,8 @@ public class PdfService {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        PdfWriter.getInstance(document, outputStream);
+        PdfWriter pdfWriter = PdfWriter.getInstance(document, outputStream);
+        pdfWriter.setPageEvent(new PageNumeration());
         document.open();
 
         addTitle(document, "Account Statement");
