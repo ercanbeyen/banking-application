@@ -11,6 +11,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.util.PdfUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
@@ -35,7 +36,6 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     private final AccountActivityRepository accountActivityRepository;
     private final AccountActivityViewRepository accountActivityViewRepository;
     private final AccountActivityMapper accountActivityMapper;
-    private final PdfService pdfService;
 
     @Override
     public List<AccountActivityDto> getAccountActivities(AccountActivityFilteringOption filteringOption) {
@@ -120,7 +120,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = pdfService.generatePdfStreamOfReceipt(accountActivity);
+            outputStream = PdfUtil.generatePdfStreamOfReceipt(accountActivity);
             log.info("Receipt is successfully generated");
         } catch (DocumentException exception) {
             log.error("Receipt cannot be generated. Exception: {}", exception.getMessage());

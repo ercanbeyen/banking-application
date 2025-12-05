@@ -21,7 +21,7 @@ public class AccountActivityUtil {
         checkDates(request.fromDate(), request.toDate());
     }
 
-    private static void checkDates(LocalDate fromDate, LocalDate toDate) {
+    private void checkDates(LocalDate fromDate, LocalDate toDate) {
         if (isDateEmpty.test(fromDate)) {
             log.warn("From date is null");
             return;
@@ -39,5 +39,5 @@ public class AccountActivityUtil {
         log.info("Dates are compatible");
     }
 
-    private static final Predicate<LocalDate> isDateEmpty = localDate -> Optional.ofNullable(localDate).isEmpty();
+    private final Predicate<LocalDate> isDateEmpty = localDate -> Optional.ofNullable(localDate).isEmpty();
 }

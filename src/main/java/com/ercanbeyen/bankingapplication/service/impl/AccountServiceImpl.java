@@ -26,6 +26,7 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -266,7 +267,7 @@ public class AccountServiceImpl implements AccountService {
 
         String logMessage = status ? "{} {} is blocked" : "Blockage of {} {} is removed";
         logMessage += " at {}";
-        log.info(logMessage, entity, id, LocalDateTime.now());
+        log.info(logMessage, entity, id, TimeUtil.getCurrentTimeStampInTurkey());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
         createAccountActivityForAccountStatusUpdate(account, activityType);
@@ -289,7 +290,7 @@ public class AccountServiceImpl implements AccountService {
             throw new ResourceConflictException(String.format("In order to close %s, balance of the %s must be zero. Currently balance is %s. Please Withdraw or transfer the remaining money.", entity, balance, entity));
         }
 
-        account.setClosedAt(LocalDateTime.now());
+        account.setClosedAt(TimeUtil.getCurrentTimeStampInTurkey());
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
@@ -585,7 +586,7 @@ public class AccountServiceImpl implements AccountService {
         summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
-        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.TIME, TimeUtil.getCurrentTimeStampInTurkey().toString());
 
         AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null);
         accountActivityService.createAccountActivity(request);

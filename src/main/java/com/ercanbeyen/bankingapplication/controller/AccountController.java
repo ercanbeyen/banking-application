@@ -13,7 +13,7 @@ import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
-import com.ercanbeyen.bankingapplication.service.impl.PdfService;
+import com.ercanbeyen.bankingapplication.util.PdfUtil;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
@@ -37,12 +37,10 @@ import java.util.function.UnaryOperator;
 @RequestMapping("/api/v1/accounts")
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;
-    private final PdfService pdfService;
 
-    public AccountController(AccountService accountService, PdfService pdfService) {
+    public AccountController(AccountService accountService) {
         super(accountService);
         this.accountService = accountService;
-        this.pdfService = pdfService;
     }
 
     @PostMapping
@@ -143,7 +141,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         ByteArrayOutputStream statementStream;
 
         try {
-            statementStream = pdfService.generatePdfStreamOfStatement(account, fromDate, toDate, accountActivityDtos);
+            statementStream = PdfUtil.generatePdfStreamOfStatement(account, fromDate, toDate, accountActivityDtos);
             log.info("Account statement is successfully generated");
         } catch (DocumentException exception) {
             log.error("Account statement cannot be generated. Exception: {}", exception.getMessage());

@@ -2,7 +2,6 @@ package com.ercanbeyen.bankingapplication.config;
 
 import com.ercanbeyen.bankingapplication.dto.adapter.LocalDateTimeTypeAdapter;
 import com.ercanbeyen.bankingapplication.dto.adapter.LocalDateTypeAdapter;
-import com.ercanbeyen.bankingapplication.helper.BorderEvent;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -36,10 +35,5 @@ public class AppConfig {
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.registerModule(new JavaTimeModule());
         return objectMapper;
-    }
-
-    @Bean
-    public BorderEvent borderEvent() {
-        return new BorderEvent();
     }
 }

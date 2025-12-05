@@ -1,4 +1,4 @@
-package com.ercanbeyen.bankingapplication.service.impl;
+package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
@@ -6,17 +6,16 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.helper.BorderEvent;
-import com.ercanbeyen.bankingapplication.helper.PageNumeration;
+import com.ercanbeyen.bankingapplication.event.BorderEvent;
+import com.ercanbeyen.bankingapplication.event.PageNumerationEvent;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
 import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
-import lombok.RequiredArgsConstructor;
+import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,11 +26,9 @@ import java.util.Map;
 import java.util.stream.Stream;
 
 @Slf4j
-@RequiredArgsConstructor
-@Service
-public class PdfService {
-    private static final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
-    private final BorderEvent borderEvent;
+@UtilityClass
+public class PdfUtil {
+    private final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
     public ByteArrayOutputStream generatePdfStreamOfReceipt(AccountActivity accountActivity) throws DocumentException, IOException {
         Document document = new Document();
@@ -40,13 +37,15 @@ public class PdfService {
         PdfWriter.getInstance(document, outputStream);
         document.open();
 
+        addHeader(document);
         addTitle(document, "Receipt");
-        document.add(new Paragraph("\n"));
+        Paragraph paragraph = new Paragraph("\n");
+        document.add(paragraph);
 
         addTableOfReceipt(document, accountActivity);
-        document.add(new Paragraph("\n"));
+        document.add(paragraph);
 
-        addBottom(document);
+        addFooter(document);
         document.close();
 
         return outputStream;
@@ -57,25 +56,27 @@ public class PdfService {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         PdfWriter pdfWriter = PdfWriter.getInstance(document, outputStream);
-        pdfWriter.setPageEvent(new PageNumeration());
+        pdfWriter.setPageEvent(new PageNumerationEvent());
         document.open();
 
+        addHeader(document);
         addTitle(document, "Account Statement");
-        document.add(new Paragraph("\n"));
+        Paragraph paragraph = new Paragraph("\n");
+        document.add(paragraph);
 
         addTableOfAccountInformation(document, account, fromDate, toDate);
-        document.add(new Paragraph("\n"));
+        document.add(paragraph);
 
         addTableOfAccountActivities(document, accountActivityDtos);
-        document.add(new Paragraph("\n"));
+        document.add(paragraph);
 
-        addBottom(document);
+        addFooter(document);
         document.close();
 
         return outputStream;
     }
 
-    private static void addTitle(Document document, String title) throws DocumentException {
+    private void addTitle(Document document, String title) throws DocumentException {
         Font boldFont = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
 
         Paragraph paragraph = new Paragraph(title.toUpperCase(), boldFont);
@@ -84,7 +85,7 @@ public class PdfService {
         document.add(paragraph);
     }
 
-    private static void addTableOfReceipt(Document document, AccountActivity accountActivity) throws DocumentException {
+    private void addTableOfReceipt(Document document, AccountActivity accountActivity) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
 
         Stream.of("Field", "Value")
@@ -113,6 +114,8 @@ public class PdfService {
     }
 
     private void addTableOfAccountInformation(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
+        BorderEvent borderEvent = new BorderEvent();
+
         PdfPTable table = new PdfPTable(2);
         table.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         table.setTableEvent(borderEvent);
@@ -126,8 +129,9 @@ public class PdfService {
         Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
 
         leftTable.addCell("Dear " + customer.getName().toUpperCase());
-        leftTable.addCell("Customer Identity: " + customer.getId());
-        leftTable.addCell("Customer National Identity: " + maskField(entry));
+        leftTable.addCell(new Phrase(new Paragraph("\n")));
+        leftTable.addCell("Customer Number: " + customer.getId());
+        leftTable.addCell("Customer National Identity Number: " + maskField(entry));
         leftTable.addCell("Branch: " + account.getBranch().getName());
         leftTable.addCell("Account Identity: " + account.getId());
         leftTable.addCell("Account Type: " + account.getType());
@@ -149,7 +153,7 @@ public class PdfService {
         document.add(table);
     }
 
-    private static void addTableOfAccountActivities(Document document, List<AccountActivityDto> accountActivityDtos) throws DocumentException {
+    private void addTableOfAccountActivities(Document document, List<AccountActivityDto> accountActivityDtos) throws DocumentException {
         final int numberOfColumns = 3;
         PdfPTable table = new PdfPTable(numberOfColumns);
 
@@ -164,14 +168,14 @@ public class PdfService {
 
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {
             table.addCell(new PdfPCell(new Phrase(accountActivityDto.createdAt().toString())));
-            table.addCell(new PdfPCell(new Phrase(accountActivityDto.type().toString())));
+            table.addCell(new PdfPCell(new Phrase(accountActivityDto.type().getValue())));
             table.addCell(new PdfPCell(new Phrase(accountActivityDto.amount().toString())));
         }
 
         document.add(table);
     }
 
-    private static String maskField(Map.Entry<String, Object> entry) {
+    private String maskField(Map.Entry<String, Object> entry) {
         String key = entry.getKey();
         String value = entry.getValue().toString();
         StringBuilder valueBuilder = new StringBuilder();
@@ -197,7 +201,7 @@ public class PdfService {
         return valueBuilder.toString();
     }
 
-    private static StringBuilder maskWordInFullName(String word) {
+    private StringBuilder maskWordInFullName(String word) {
         int length = word.length();
         int endIndex = length < 5 ? 1 : 2;
         log.info("Length and end index: {} & {}", length, endIndex);
@@ -207,22 +211,38 @@ public class PdfService {
                 .append("*".repeat(length - endIndex));
     }
 
-    private static void addBottom(Document document) throws DocumentException, IOException {
-        Paragraph paragraph = new Paragraph("Thank you for working with us");
+    private void addHeader(Document document) throws DocumentException, IOException {
+        Font boldFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
+        String message = "Online Bank";
+
+        Paragraph paragraph = new Paragraph(message, boldFont);
+        paragraph.setAlignment(Element.ALIGN_CENTER);
+        document.add(paragraph);
+        addLogo(document);
+    }
+
+    private void addFooter(Document document) throws DocumentException {
+        Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
+
+        String message = """
+                If the information on this document does not match the bank records,
+                the bank records will be taken as basis and this document will not even constitute the beginning of
+                written evidence.
+                """;
+
+        Paragraph paragraph = new Paragraph(message, font);
+
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
 
-        addLogo(document);
+        message = "Trading hours are shown according to Turkey time.";
 
-        Font boldFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.GREEN);
-        String message = "Online Bank";
-
-        paragraph = new Paragraph(message, boldFont);
+        paragraph = new Paragraph(message, font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
     }
 
-    private static void addLogo(Document document) throws DocumentException, IOException {
+    private void addLogo(Document document) throws DocumentException, IOException {
         Image image = Image.getInstance(Paths.get("/app/photo/logo.png")
                 .toAbsolutePath()
                 .toString());

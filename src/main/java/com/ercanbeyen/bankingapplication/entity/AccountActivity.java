@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -39,6 +40,6 @@ public class AccountActivity {
         this.amount = amount;
         this.summary = summary;
         this.explanation = explanation;
-        this.createdAt = LocalDateTime.now();
+        this.createdAt = TimeUtil.getCurrentTimeStampInTurkey();
     }
 }

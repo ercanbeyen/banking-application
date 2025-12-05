@@ -18,7 +18,7 @@ public class AddressUtil {
         log.info("Address request is valid");
     }
 
-    private static void checkCompanyName(AddressType type, String companyName) {
+    private void checkCompanyName(AddressType type, String companyName) {
         boolean companyNameExists = companyName != null && !companyName.isBlank();
 
         if (type == AddressType.WORK && !companyNameExists) {
@@ -30,7 +30,7 @@ public class AddressUtil {
         }
     }
 
-    private static void checkOwnership(AddressType addressType, Ownership ownership) {
+    private void checkOwnership(AddressType addressType, Ownership ownership) {
         List<Ownership> validOwnerships = addressType == AddressType.WORK
                 ? List.of(Ownership.OWNER, Ownership.EMPLOYEE)
                 : List.of(Ownership.FAMILY_PROPERTY, Ownership.RENT, Ownership.PUBLIC_HOUSING);

@@ -6,9 +6,9 @@ import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -24,7 +24,7 @@ public class MockCustomerFactory {
         CustomerAgreement customerAgreement = new CustomerAgreement();
         customerAgreement.setId(UUID.randomUUID().toString());
         customerAgreement.setAgreement(agreement);
-        customerAgreement.setApprovedAt(LocalDateTime.now());
+        customerAgreement.setApprovedAt(TimeUtil.getCurrentTimeStampInTurkey());
 
         List<Customer> customers = new ArrayList<>();
         List<CustomerDto> requests = generateMockCustomerDtos();

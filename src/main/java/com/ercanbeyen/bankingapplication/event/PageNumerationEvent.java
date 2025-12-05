@@ -1,18 +1,17 @@
-package com.ercanbeyen.bankingapplication.helper;
+package com.ercanbeyen.bankingapplication.event;
 
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.LocalDateTime;
-
 @Slf4j
-public class PageNumeration extends PdfPageEventHelper {
+public class PageNumerationEvent extends PdfPageEventHelper {
     PdfTemplate pdfTemplate;
     private final Font normalFont;
     private final Font smallFont;
 
-    public PageNumeration() {
+    public PageNumerationEvent() {
         this.normalFont = new Font(Font.FontFamily.HELVETICA, Font.STRIKETHRU);
         this.smallFont = new Font(Font.FontFamily.TIMES_ROMAN, Font.UNDERLINE);
     }
@@ -34,7 +33,7 @@ public class PageNumeration extends PdfPageEventHelper {
             cell.setBorder(0);
             cell.setBorderWidthTop(1);
             cell.setHorizontalAlignment(Element.ALIGN_LEFT);
-            cell.setPhrase(new Phrase(LocalDateTime.now().toString(), smallFont));
+            cell.setPhrase(new Phrase(TimeUtil.getCurrentTimeStampInTurkey().toString(), smallFont));
             table.addCell(cell);
 
             cell = new PdfPCell();
@@ -61,7 +60,9 @@ public class PageNumeration extends PdfPageEventHelper {
                 pdfTemplate,
                 Element.ALIGN_LEFT,
                 new Phrase(String.valueOf(document.getPageNumber()), normalFont),
-                2, 2, 0
+                2,
+                2,
+                0
         );
     }
 }

@@ -18,12 +18,12 @@ import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -90,7 +90,7 @@ public class TransactionService {
         summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + account.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee);
-        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.TIME, TimeUtil.getCurrentTimeStampInTurkey().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, account);
@@ -131,7 +131,7 @@ public class TransactionService {
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
         summary.put(SummaryField.PAYMENT_TYPE, request.paymentType());
-        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.TIME, TimeUtil.getCurrentTimeStampInTurkey().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
         createAccountActivityForCharge(transactionFee, summary, chargedAccount);
@@ -189,7 +189,7 @@ public class TransactionService {
         summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
         summary.put(SummaryField.RATE, rate);
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
-        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.TIME, TimeUtil.getCurrentTimeStampInTurkey().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
         createAccountActivityForCharge(transactionFee, summary, chargedAccount);
