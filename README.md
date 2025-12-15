@@ -31,17 +31,17 @@ Entities:
 - Customer's national id, email and phone number must be unique.
 - If account is deposit, then it must also have deposit period and interest ratio.
 - News Report is used to add news.
-- Customer can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
-- Customer can perform transactions within daily transaction limits and may pay transaction fees for some transactions.
-- Customer can create one-time or regular transfer orders to transfer money at future dates.
-- Customer is obliged to comply with the agreements s/he has approved.
+- Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
+- Customers can perform transactions within daily transaction limits and may pay transaction fees for some transactions.
+- Customers can create one-time or regular transfer orders to transfer money at future dates.
+- Customers are obliged to comply with the agreements they have approved.
 
 ### Additionals
 - Scheduled tasks run while application is running.
 - News are automatically added in chunks of size 40.
 - Notifications are created to inform the customer that the relevant transaction has been completed successfully.
 - Customers can participate in surveys related to their transactions.
-- Customer can generate a PDF formatted receipt for a specific account activity at any time.
+- Customers can generate receipts and statements in PDF format at any time.
 - Scripts inside resources/db.stored_procedure must be written into related database containers to call procedures.
 
 ### Tech Stack
