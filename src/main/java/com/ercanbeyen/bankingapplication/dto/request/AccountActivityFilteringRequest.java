@@ -8,7 +8,8 @@ import java.util.List;
 
 public record AccountActivityFilteringRequest(
         BalanceActivity balanceActivity,
-        LocalDate createdAt,
+        LocalDate fromDate,
+        LocalDate toDate,
         Double minimumAmount,
         List<AccountActivityType> activityTypes) {
 

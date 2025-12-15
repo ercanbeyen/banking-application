@@ -1,24 +1,38 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
+import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
+import com.ercanbeyen.bankingapplication.util.PdfUtil;
+import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
+import com.itextpdf.text.DocumentException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayOutputStream;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
+import java.util.function.UnaryOperator;
 
+@Slf4j
 @RestController
 @RequestMapping("/api/v1/accounts")
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
@@ -110,6 +124,40 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @GetMapping("/{id}/account-activities")
     public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+        AccountActivityUtil.checkFilteringRequest(request);
         return ResponseEntity.ok(accountService.getAccountActivities(id, request));
     }
+
+    @PostMapping("/{id}/statement")
+    public ResponseEntity<byte[]> generateAccountStatement(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+        AccountActivityUtil.checkFilteringRequest(request);
+
+        Account account = accountService.findActiveAccountById(id);
+        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
+
+        LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
+        LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
+
+        ByteArrayOutputStream statementStream;
+
+        try {
+            statementStream = PdfUtil.generatePdfStreamOfStatement(account, fromDate, toDate, accountActivityDtos);
+            log.info("Account statement is successfully generated");
+        } catch (DocumentException exception) {
+            log.error("Account statement cannot be generated. Exception: {}", exception.getMessage());
+            throw new InternalServerErrorException("Error occurred while generating account statement");
+        } catch (Exception exception) {
+            log.error(LogMessage.UNKNOWN_EXCEPTION, exception.getMessage());
+            throw new InternalServerErrorException("Unknown error occurred while generating account statement");
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statement.pdf");
+        headers.setContentLength(statementStream.size());
+
+        return new ResponseEntity<>(statementStream.toByteArray(), headers, HttpStatus.OK);
+    }
+
+    private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : LocalDate.now();
 }

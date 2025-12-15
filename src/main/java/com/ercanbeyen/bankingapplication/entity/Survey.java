@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -38,7 +39,7 @@ public class Survey {
     private List<Rating> ratings;
 
     public static Survey valueOf(SurveyDto surveyDto, AccountActivityDto accountActivityDto) {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = TimeUtil.getCurrentTimeStampInTurkey();
         SurveyCompositeKey key = new SurveyCompositeKey(
                 surveyDto.key().getCustomerNationalId(),
                 accountActivityDto.id(),

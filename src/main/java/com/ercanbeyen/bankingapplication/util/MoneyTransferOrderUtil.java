@@ -9,7 +9,6 @@ import java.util.function.Predicate;
 
 @UtilityClass
 public class MoneyTransferOrderUtil {
-
     public void checkMoneyTransferDate(LocalDate request) {
         LocalDate today = LocalDate.now();
 

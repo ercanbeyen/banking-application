@@ -25,6 +25,7 @@ import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.StatisticsUtil;
 import com.ercanbeyen.bankingapplication.util.SurveyUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -113,7 +114,7 @@ public class SurveyServiceImpl implements SurveyService {
         survey.setTitle(request.title());
         survey.setRatings(request.ratings());
         survey.setCustomerSuggestion(request.customerSuggestion());
-        survey.setUpdatedAt(LocalDateTime.now());
+        survey.setUpdatedAt(TimeUtil.getCurrentTimeStampInTurkey());
 
         return surveyMapper.entityToDto(surveyRepository.save(survey));
     }
@@ -143,7 +144,7 @@ public class SurveyServiceImpl implements SurveyService {
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = TimeUtil.getCurrentTimeStampInTurkey();
         LocalDateTime nearestValidationTime = SurveyUtil.getNearestValidationTime();
 
         if (request.isBefore(nearestValidationTime)) {
@@ -233,7 +234,7 @@ public class SurveyServiceImpl implements SurveyService {
     private static void checkExpiration(Survey survey) {
         String entity = Entity.SURVEY.getValue();
 
-        if (survey.getValidUntil().isBefore(LocalDateTime.now())) {
+        if (survey.getValidUntil().isBefore(TimeUtil.getCurrentTimeStampInTurkey())) {
             throw new ResourceConflictException(entity + " expired");
         }
 

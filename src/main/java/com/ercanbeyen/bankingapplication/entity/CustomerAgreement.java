@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SourceType;
 
 import java.time.LocalDateTime;
 
@@ -22,7 +23,7 @@ public class CustomerAgreement {
     @ManyToOne
     @JoinColumn(name = "agreement_title", referencedColumnName = "title")
     private Agreement agreement;
-    @CreationTimestamp
+    @CreationTimestamp(source = SourceType.DB)
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "approved_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     private LocalDateTime approvedAt;

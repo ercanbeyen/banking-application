@@ -26,6 +26,7 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -266,7 +267,7 @@ public class AccountServiceImpl implements AccountService {
 
         String logMessage = status ? "{} {} is blocked" : "Blockage of {} {} is removed";
         logMessage += " at {}";
-        log.info(logMessage, entity, id, LocalDateTime.now());
+        log.info(logMessage, entity, id, TimeUtil.getCurrentTimeStampInTurkey());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
         createAccountActivityForAccountStatusUpdate(account, activityType);
@@ -289,7 +290,7 @@ public class AccountServiceImpl implements AccountService {
             throw new ResourceConflictException(String.format("In order to close %s, balance of the %s must be zero. Currently balance is %s. Please Withdraw or transfer the remaining money.", entity, balance, entity));
         }
 
-        account.setClosedAt(LocalDateTime.now());
+        account.setClosedAt(TimeUtil.getCurrentTimeStampInTurkey());
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
@@ -395,50 +396,15 @@ public class AccountServiceImpl implements AccountService {
         Account account = findActiveAccountById(id);
         Comparator<AccountActivityDto> accountActivityComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
         BalanceActivity balanceActivity = request.balanceActivity();
+        Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
-        if (balanceActivity == null) {
-            AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                    request.activityTypes(), null, null, request.minimumAmount(), request.createdAt());
-
-            return accountActivityService.getAccountActivities(accountActivityFilteringOption)
-                    .stream()
-                    .sorted(accountActivityComparator)
-                    .toList();
+        if (Optional.ofNullable(balanceActivity).isPresent()) {
+            accountActivityDtos = getFilteredAccountActivities(id, request, balanceActivity, account);
+        } else {
+            for (BalanceActivity currentBalanceActivity : BalanceActivity.values()) {
+                accountActivityDtos.addAll(getFilteredAccountActivities(id, request, currentBalanceActivity, account));
+            }
         }
-
-        Set<AccountActivityDto> accountActivityDtos = switch (balanceActivity) {
-            case DECREASE -> {
-                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), id, null, request.minimumAmount(), request.createdAt());
-                yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
-            }
-            case INCREASE -> {
-                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, id, request.minimumAmount(), request.createdAt());
-                yield accountActivityService.getAccountActivitiesOfParticularAccounts(accountActivityFilteringOption, account.getCurrency());
-            }
-            case STABLE -> {
-                AccountActivityFilteringOption accountActivityFilteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, null, request.minimumAmount(), request.createdAt());
-                yield accountActivityService.getAccountActivities(accountActivityFilteringOption)
-                        .stream()
-                        .filter(accountActivityDto -> {
-                            Map<String, Object> summary = accountActivityDto.summary();
-                            String accountActivity = (String) summary.get(SummaryField.ACCOUNT_ACTIVITY);
-
-                            boolean accountIdExists = summary.containsKey(SummaryField.ACCOUNT_ID)
-                                    && summary.get(SummaryField.ACCOUNT_ID) == id;
-
-                            boolean accountActivityMatches = AccountActivityType.getAccountStatusUpdatingActivities()
-                                    .stream()
-                                    .map(AccountActivityType::getValue)
-                                    .anyMatch(accountActivityType -> accountActivityType.equals(accountActivity));
-
-                            return accountIdExists && accountActivityMatches;
-                        })
-                        .collect(Collectors.toSet());
-            }
-        };
 
         return accountActivityDtos.stream()
                 .sorted(accountActivityComparator)
@@ -453,6 +419,42 @@ public class AccountServiceImpl implements AccountService {
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return account;
+    }
+
+    private Set<AccountActivityDto> getFilteredAccountActivities(Integer id, AccountActivityFilteringRequest request, BalanceActivity balanceActivity, Account account) {
+        return switch (balanceActivity) {
+            case DECREASE -> {
+                AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
+                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate());
+                yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
+            }
+            case INCREASE -> {
+                AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
+                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate());
+                yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
+            }
+            case STABLE -> {
+                AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
+                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate());
+                yield accountActivityService.getAccountActivities(filteringOption)
+                        .stream()
+                        .filter(accountActivityDto -> {
+                            Map<String, Object> summary = accountActivityDto.summary();
+                            String accountActivity = (String) summary.get(SummaryField.ACCOUNT_ACTIVITY);
+
+                            boolean accountIdExists = summary.containsKey(SummaryField.ACCOUNT_IDENTITY)
+                                    && summary.get(SummaryField.ACCOUNT_IDENTITY) == id;
+
+                            boolean accountActivityMatches = AccountActivityType.getAccountStatusUpdatingActivities()
+                                    .stream()
+                                    .map(AccountActivityType::getValue)
+                                    .anyMatch(accountActivityType -> accountActivityType.equals(accountActivity));
+
+                            return accountIdExists && accountActivityMatches;
+                        })
+                        .collect(Collectors.toSet());
+            }
+        };
     }
 
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
@@ -529,6 +531,7 @@ public class AccountServiceImpl implements AccountService {
         log.info("Updated daily activity amount: {}", dailyActivityAmount);
 
         Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
+        log.info("Remaining daily activity limit: {}", activityLimit - dailyActivityAmount);
 
         if (dailyActivityAmount > activityLimit) {
             throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType.getValue(), activityLimit));
@@ -547,7 +550,7 @@ public class AccountServiceImpl implements AccountService {
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
-        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, LocalDate.now());
+        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, LocalDate.now(), LocalDate.now());
     }
 
     private static void checkAccountBlocked(Account account) {
@@ -578,12 +581,12 @@ public class AccountServiceImpl implements AccountService {
     private void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
         Map<String, Object> summary = new HashMap<>();
         summary.put(SummaryField.ACCOUNT_ACTIVITY, activityType.getValue());
-        summary.put(SummaryField.ACCOUNT_ID, account.getId());
+        summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
         summary.put(SummaryField.FULL_NAME, account.getCustomer().getFullName());
         summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
-        summary.put(SummaryField.TIME, LocalDateTime.now().toString());
+        summary.put(SummaryField.TIME, TimeUtil.getCurrentTimeStampInTurkey().toString());
 
         AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null);
         accountActivityService.createAccountActivity(request);

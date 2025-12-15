@@ -36,16 +36,15 @@ public class CashFlowCalendarUtil {
         log.info("Year and month values are valid for requesting cash flows");
     }
 
-    public static boolean isDateFuture(LocalDate date, Integer year, Integer month) {
+    public boolean isDateFuture(LocalDate date, Integer year, Integer month) {
         return (date.getYear() > year) || (date.getYear() == year && date.getMonthValue() > month);
     }
 
-    public static boolean isDatePast(LocalDate date, Integer year, Integer month) {
+    public boolean isDatePast(LocalDate date, Integer year, Integer month) {
         return (date.getYear() < year) || (date.getYear() == year && date.getMonthValue() > month);
     }
 
-    public static boolean isDateThisMonth(LocalDate date, Integer year, Integer month) {
+    public boolean isDateThisMonth(LocalDate date, Integer year, Integer month) {
         return (date.getYear() == year) && (date.getMonthValue() == month);
     }
-
 }

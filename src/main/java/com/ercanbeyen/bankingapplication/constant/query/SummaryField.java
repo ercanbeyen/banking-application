@@ -12,7 +12,6 @@ public class SummaryField {
     public static final String BRANCH = "Branch";
     public static final String RATE = "Rate";
     public static final String TRANSACTION_FEE = "Transaction Fee";
-    public static final String ACCOUNT_ID = "Account Id";
 
     private SummaryField() {}
 }

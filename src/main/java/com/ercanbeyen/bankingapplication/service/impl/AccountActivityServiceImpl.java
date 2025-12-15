@@ -11,7 +11,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
+import com.ercanbeyen.bankingapplication.util.PdfUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
@@ -48,9 +48,8 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             boolean recipientAccountIdFilter = filteringOption.recipientAccountId() == null
                     || (accountActivity.getRecipientAccount() != null && filteringOption.recipientAccountId().equals(accountActivity.getRecipientAccount().getId()));
             boolean minimumAmountFilter = (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount());
-            boolean createdAtFilter = (filteringOption.createdAt() == null || (filteringOption.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate())));
-            
-            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter && createdAtFilter;
+
+            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter;
         };
 
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
@@ -108,7 +107,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     }
 
     @Override
-    public ByteArrayOutputStream createReceiptStream(String id) {
+    public ByteArrayOutputStream generateReceiptStream(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivity accountActivity = findById(id);
@@ -121,14 +120,14 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = AccountActivityUtil.generatePdfStream(accountActivity.getSummary());
+            outputStream = PdfUtil.generatePdfStreamOfReceipt(accountActivity);
             log.info("Receipt is successfully generated");
         } catch (DocumentException exception) {
-            log.error("Receipt cannot be created. Exception: {}", exception.getMessage());
-            throw new InternalServerErrorException("Error occurred while creating receipt");
+            log.error("Receipt cannot be generated. Exception: {}", exception.getMessage());
+            throw new InternalServerErrorException("Error occurred while generating receipt");
         } catch (Exception exception) {
-            log.error("Unknown exception occurred. Exception: {}", exception.getMessage());
-            throw new InternalServerErrorException("Unknown error occurred while creating receipt");
+            log.error(LogMessage.UNKNOWN_EXCEPTION, exception.getMessage());
+            throw new InternalServerErrorException("Unknown error occurred while generating receipt");
         }
 
         return outputStream;
@@ -200,8 +199,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .stream()
                 .anyMatch(activityType -> accountActivity.getType() == activityType);
         boolean amountCheck = Optional.ofNullable(filteringOption.minimumAmount()).isEmpty() || filteringOption.minimumAmount() <= accountActivity.getAmount();
-        boolean createdAtCheck = Optional.ofNullable(filteringOption.createdAt()).isEmpty() || filteringOption.createdAt().isEqual(accountActivity.getCreatedAt().toLocalDate());
+        boolean fromDateCheck = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(accountActivity.getCreatedAt().toLocalDate());
+        boolean toDateCheck = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(accountActivity.getCreatedAt().toLocalDate());
 
-        return typeCheck && amountCheck && createdAtCheck;
+        return typeCheck && amountCheck && fromDateCheck && toDateCheck;
     }
 }

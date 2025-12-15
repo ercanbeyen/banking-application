@@ -24,7 +24,6 @@ import java.util.function.Predicate;
 @Slf4j
 @UtilityClass
 public class AccountUtil {
-
     public void checkRequest(AccountDto accountDto) {
         if (Optional.ofNullable(accountDto.getIsBlocked()).isPresent() || Optional.ofNullable(accountDto.getClosedAt()).isPresent()) {
             throw new BadRequestException("Request should not contain block and closed at statuses");
@@ -140,7 +139,7 @@ public class AccountUtil {
         }
     }
 
-    private static void checkOptionalFieldsOfAccount(AccountDto accountDto) {
+    private void checkOptionalFieldsOfAccount(AccountDto accountDto) {
         boolean isInterestNull = isNull.test(accountDto.getInterestRatio());
         boolean isDepositPeriodNull = isNull.test(accountDto.getDepositPeriod());
 
@@ -156,5 +155,5 @@ public class AccountUtil {
         }
     }
 
-    private static final Predicate<Object> isNull = Objects::isNull;
+    private final Predicate<Object> isNull = Objects::isNull;
 }

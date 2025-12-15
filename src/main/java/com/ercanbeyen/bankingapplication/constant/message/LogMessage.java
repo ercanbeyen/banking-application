@@ -28,6 +28,7 @@ public final class LogMessage {
     public static final String ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED = "Only {}s are going to be processed for {} {}";
     public static final String DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE = "Account type is deposit. So need to update deposit account related fields";
     public static final String UNUSABLE_METHOD = "Unusable method";
+    public static final String UNKNOWN_EXCEPTION = "Unknown exception occurred. Exception: {}";
 
     public static class Batch {
         public static final String STEP_STATUS = "!!! Step {} is {} at {}";

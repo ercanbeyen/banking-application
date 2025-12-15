@@ -30,6 +30,7 @@ services:
       - MYSQL_USER=username
       - MYSQL_PASSWORD=password
       - MYSQL_ROOT_PASSWORD=password
+      - TZ=Europe/Istanbul
   cassandradb:
     container_name: "survey-database"
     image: "cassandra"
