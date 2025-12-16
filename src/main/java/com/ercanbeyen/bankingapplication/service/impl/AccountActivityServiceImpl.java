@@ -126,8 +126,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             log.error("Receipt cannot be generated. Exception: {}", exception.getMessage());
             throw new InternalServerErrorException("Error occurred while generating receipt");
         } catch (Exception exception) {
-            log.error(LogMessage.UNKNOWN_EXCEPTION, exception.getMessage());
-            throw new InternalServerErrorException("Unknown error occurred while generating receipt");
+            throw new InternalServerErrorException(exception.getMessage());
         }
 
         return outputStream;

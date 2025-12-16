@@ -75,8 +75,8 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ErrorResponse> handleGeneralException(Exception exception) {
-        log.error("Exception message: {}", exception.getMessage());
+    public ResponseEntity<ErrorResponse> handleGeneralExceptions(Exception exception) {
+        log.error("Internal Server Error occurred. Message: {}", exception.getMessage());
         Exception modifiedException = new Exception("While operation is processing, error was occurred in the server");
         return generateErrorResponse(modifiedException, HttpStatus.INTERNAL_SERVER_ERROR);
     }
