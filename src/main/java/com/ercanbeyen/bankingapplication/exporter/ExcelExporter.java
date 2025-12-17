@@ -1,7 +1,8 @@
-package com.ercanbeyen.bankingapplication.util;
+package com.ercanbeyen.bankingapplication.exporter;
 
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import lombok.experimental.UtilityClass;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFFont;
@@ -10,13 +11,13 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import java.util.List;
 
 @UtilityClass
-public class ExcelUtil {
-    public Workbook generateWorkbook(Account account, List<AccountActivityDto> accountActivityDtos) {
+public class ExcelExporter {
+    public Workbook generateAccountActivityWorkbook(Account account, List<AccountActivityDto> accountActivityDtos) {
         Workbook workbook = new XSSFWorkbook();
         String name = "Account Activities - " + account.getId();
 
         writeHeaderLine(name, workbook);
-        writeDataLines(name, workbook, accountActivityDtos);
+        writeDataLines(account.getId(), name, workbook, accountActivityDtos);
 
         return workbook;
     }
@@ -38,7 +39,7 @@ public class ExcelUtil {
         createCell(row, columnIndex, "Amount", style, sheet);
     }
 
-    private void writeDataLines(String name, Workbook workbook, List<AccountActivityDto> accountActivityDtos) {
+    private void writeDataLines(Integer accountId, String name, Workbook workbook, List<AccountActivityDto> accountActivityDtos) {
         int rowIndex = 1;
         Sheet sheet = workbook.getSheet(name);
 
@@ -52,7 +53,7 @@ public class ExcelUtil {
             int columnIndex = 0;
             createCell(row, columnIndex++, accountActivityDto.createdAt().toString(), style, sheet);
             createCell(row, columnIndex++, accountActivityDto.type().getValue(), style, sheet);
-            createCell(row, columnIndex, accountActivityDto.amount(), style, sheet);
+            createCell(row, columnIndex, ExporterUtil.calculateAmountForDataLine(accountId, accountActivityDto), style, sheet);
         }
     }
 

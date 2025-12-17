@@ -12,8 +12,8 @@ import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
-import com.ercanbeyen.bankingapplication.util.ExcelUtil;
-import com.ercanbeyen.bankingapplication.util.PdfUtil;
+import com.ercanbeyen.bankingapplication.exporter.ExcelExporter;
+import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
@@ -140,8 +140,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = PdfUtil.generatePdfStreamOfStatement(account, fromDate, toDate, accountActivityDtos);
-            log.info("Account statement is successfully generated");
+            outputStream = PdfExporter.generateAccountStatementPdf(account, fromDate, toDate, accountActivityDtos);
+            log.info("Account Statement Pdf is successfully generated");
         } catch (DocumentException | IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }
@@ -158,15 +158,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
                 .body(outputStream.toByteArray());
     }
 
-    @PostMapping("/{id}/account-activities/excel")
+    @PostMapping("/{id}/account-activities/export/excel")
     public ResponseEntity<byte[]> exportAccountActivitiesToExcel(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
         List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
 
-        try (Workbook workbook = ExcelUtil.generateWorkbook(account, accountActivityDtos); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        try (Workbook workbook = ExcelExporter.generateAccountActivityWorkbook(account, accountActivityDtos); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             workbook.write(outputStream);
+
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
             headers.setContentDisposition(ContentDisposition.attachment()

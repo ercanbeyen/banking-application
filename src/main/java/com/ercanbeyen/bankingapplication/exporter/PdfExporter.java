@@ -1,4 +1,4 @@
-package com.ercanbeyen.bankingapplication.util;
+package com.ercanbeyen.bankingapplication.exporter;
 
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.event.BorderEvent;
 import com.ercanbeyen.bankingapplication.event.PageNumerationEvent;
+import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
@@ -27,7 +28,7 @@ import java.util.stream.Stream;
 
 @Slf4j
 @UtilityClass
-public class PdfUtil {
+public class PdfExporter {
     private final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
     public ByteArrayOutputStream generatePdfStreamOfReceipt(AccountActivity accountActivity) throws DocumentException, IOException {
@@ -37,21 +38,21 @@ public class PdfUtil {
         PdfWriter.getInstance(document, outputStream);
         document.open();
 
-        addHeader(document);
-        addTitle(document, "Receipt");
+        writeHeader(document);
+        writeTitle(document, "Receipt");
         Paragraph paragraph = new Paragraph("\n");
         document.add(paragraph);
 
-        addTableOfReceipt(document, accountActivity);
+        writeBodyOfReceipt(document, accountActivity);
         document.add(paragraph);
 
-        addFooter(document);
+        writeFooter(document);
         document.close();
 
         return outputStream;
     }
 
-    public ByteArrayOutputStream generatePdfStreamOfStatement(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos) throws DocumentException, IOException {
+    public ByteArrayOutputStream generateAccountStatementPdf(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -59,24 +60,20 @@ public class PdfUtil {
         pdfWriter.setPageEvent(new PageNumerationEvent());
         document.open();
 
-        addHeader(document);
-        addTitle(document, "Account Statement");
+        writeHeader(document);
+        writeTitle(document, "Account Statement");
         Paragraph paragraph = new Paragraph("\n");
         document.add(paragraph);
 
-        addTableOfAccountInformation(document, account, fromDate, toDate);
-        document.add(paragraph);
+        writeAccountStatementBody(account, fromDate, toDate, accountActivityDtos, document, paragraph);
 
-        addTableOfAccountActivities(document, accountActivityDtos);
-        document.add(paragraph);
-
-        addFooter(document);
+        writeFooter(document);
         document.close();
 
         return outputStream;
     }
 
-    private void addTitle(Document document, String title) throws DocumentException {
+    private void writeTitle(Document document, String title) throws DocumentException {
         Font boldFont = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
 
         Paragraph paragraph = new Paragraph(title.toUpperCase(), boldFont);
@@ -85,9 +82,18 @@ public class PdfUtil {
         document.add(paragraph);
     }
 
-    private void addTableOfReceipt(Document document, AccountActivity accountActivity) throws DocumentException {
+    private void writeAccountStatementBody(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos, Document document, Paragraph paragraph) throws DocumentException {
+        writeAccountInformationTable(document, account, fromDate, toDate);
+        document.add(paragraph);
+
+        writeAccountActivityTable(account, document, accountActivityDtos);
+        document.add(paragraph);
+    }
+
+    private void writeBodyOfReceipt(Document document, AccountActivity accountActivity) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
 
+        /* Header row */
         Stream.of("Field", "Value")
                 .forEach(title -> {
                     PdfPCell header = new PdfPCell();
@@ -97,7 +103,7 @@ public class PdfUtil {
                     table.addCell(header);
                 });
 
-
+        /* Data rows */
         for (Map.Entry<String, Object> entry : accountActivity.getSummary().entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue().toString();
@@ -113,7 +119,7 @@ public class PdfUtil {
         document.add(table);
     }
 
-    private void addTableOfAccountInformation(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
+    private void writeAccountInformationTable(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
         BorderEvent borderEvent = new BorderEvent();
 
         PdfPTable table = new PdfPTable(2);
@@ -153,10 +159,11 @@ public class PdfUtil {
         document.add(table);
     }
 
-    private void addTableOfAccountActivities(Document document, List<AccountActivityDto> accountActivityDtos) throws DocumentException {
+    private void writeAccountActivityTable(Account account, Document document, List<AccountActivityDto> accountActivityDtos) throws DocumentException {
         final int numberOfColumns = 3;
         PdfPTable table = new PdfPTable(numberOfColumns);
 
+        /* Header row */
         Stream.of("Time", "Account Activity", "Amount")
                 .forEach(title -> {
                     PdfPCell header = new PdfPCell();
@@ -166,10 +173,11 @@ public class PdfUtil {
                     table.addCell(header);
                 });
 
+        /* Data rows */
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {
             table.addCell(new PdfPCell(new Phrase(accountActivityDto.createdAt().toString())));
             table.addCell(new PdfPCell(new Phrase(accountActivityDto.type().getValue())));
-            table.addCell(new PdfPCell(new Phrase(accountActivityDto.amount().toString())));
+            table.addCell(new PdfPCell(new Phrase(ExporterUtil.calculateAmountForDataLine(account.getId(), accountActivityDto).toString())));
         }
 
         document.add(table);
@@ -211,17 +219,17 @@ public class PdfUtil {
                 .append("*".repeat(length - endIndex));
     }
 
-    private void addHeader(Document document) throws DocumentException, IOException {
+    private void writeHeader(Document document) throws DocumentException, IOException {
         Font boldFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
         String message = "Online Bank";
 
         Paragraph paragraph = new Paragraph(message, boldFont);
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
-        addLogo(document);
+        writeLogo(document);
     }
 
-    private void addFooter(Document document) throws DocumentException {
+    private void writeFooter(Document document) throws DocumentException {
         Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
 
         String message = """
@@ -242,7 +250,7 @@ public class PdfUtil {
         document.add(paragraph);
     }
 
-    private void addLogo(Document document) throws DocumentException, IOException {
+    private void writeLogo(Document document) throws DocumentException, IOException {
         Image image = Image.getInstance(Paths.get("/app/photo/logo.png")
                 .toAbsolutePath()
                 .toString());

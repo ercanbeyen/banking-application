@@ -11,7 +11,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.util.PdfUtil;
+import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
@@ -26,6 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -120,12 +121,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = PdfUtil.generatePdfStreamOfReceipt(accountActivity);
+            outputStream = PdfExporter.generatePdfStreamOfReceipt(accountActivity);
             log.info("Receipt is successfully generated");
-        } catch (DocumentException exception) {
-            log.error("Receipt cannot be generated. Exception: {}", exception.getMessage());
-            throw new InternalServerErrorException("Error occurred while generating receipt");
-        } catch (Exception exception) {
+        } catch (DocumentException | IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }
 
