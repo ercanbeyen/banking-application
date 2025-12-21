@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import lombok.experimental.UtilityClass;
+import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -16,13 +17,13 @@ public class ExcelExporter {
         Workbook workbook = new XSSFWorkbook();
         String name = "Account Activities - " + account.getId();
 
-        writeHeaderLine(name, workbook);
-        writeDataLines(account.getId(), name, workbook, accountActivityDtos);
+        writeHeaderRow(name, workbook);
+        writeDataRows(account.getId(), name, workbook, accountActivityDtos);
 
         return workbook;
     }
 
-    private void writeHeaderLine(String name, Workbook workbook) {
+    private void writeHeaderRow(String name, Workbook workbook) {
         Sheet sheet = workbook.createSheet(name);
         Row row = workbook.getSheet(name).createRow(0);
 
@@ -30,6 +31,9 @@ public class ExcelExporter {
         XSSFFont font = (XSSFFont) workbook.createFont();
         font.setBold(true);
         font.setFontHeight(16);
+        font.setColor(HSSFColor.HSSFColorPredefined.WHITE.getIndex());
+        style.setFillForegroundColor(IndexedColors.DARK_BLUE.index);
+        style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style.setFont(font);
 
         int columnIndex = 0;
@@ -39,7 +43,7 @@ public class ExcelExporter {
         createCell(row, columnIndex, "Amount", style, sheet);
     }
 
-    private void writeDataLines(Integer accountId, String name, Workbook workbook, List<AccountActivityDto> accountActivityDtos) {
+    private void writeDataRows(Integer accountId, String name, Workbook workbook, List<AccountActivityDto> accountActivityDtos) {
         int rowIndex = 1;
         Sheet sheet = workbook.getSheet(name);
 

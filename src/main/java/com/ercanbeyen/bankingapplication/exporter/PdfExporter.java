@@ -24,7 +24,6 @@ import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
-import java.util.stream.Stream;
 
 @Slf4j
 @UtilityClass
@@ -43,7 +42,7 @@ public class PdfExporter {
         Paragraph paragraph = new Paragraph("\n");
         document.add(paragraph);
 
-        writeBodyOfReceipt(document, accountActivity);
+        writeReceiptBody(document, accountActivity);
         document.add(paragraph);
 
         writeFooter(document);
@@ -90,18 +89,11 @@ public class PdfExporter {
         document.add(paragraph);
     }
 
-    private void writeBodyOfReceipt(Document document, AccountActivity accountActivity) throws DocumentException {
+    private void writeReceiptBody(Document document, AccountActivity accountActivity) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
 
         /* Header row */
-        Stream.of("Field", "Value")
-                .forEach(title -> {
-                    PdfPCell header = new PdfPCell();
-                    header.setBackgroundColor(BaseColor.CYAN);
-                    header.setBorderWidth(1);
-                    header.setPhrase(new Phrase(title));
-                    table.addCell(header);
-                });
+        writeHeaderRowOfActivityTable(List.of("Field", "Value"), table);
 
         /* Data rows */
         for (Map.Entry<String, Object> entry : accountActivity.getSummary().entrySet()) {
@@ -164,14 +156,7 @@ public class PdfExporter {
         PdfPTable table = new PdfPTable(numberOfColumns);
 
         /* Header row */
-        Stream.of("Time", "Account Activity", "Amount")
-                .forEach(title -> {
-                    PdfPCell header = new PdfPCell();
-                    header.setBackgroundColor(BaseColor.CYAN);
-                    header.setBorderWidth(1);
-                    header.setPhrase(new Phrase(title));
-                    table.addCell(header);
-                });
+        writeHeaderRowOfActivityTable(List.of("Time", "Account Activity", "Amount"), table);
 
         /* Data rows */
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {
@@ -181,6 +166,18 @@ public class PdfExporter {
         }
 
         document.add(table);
+    }
+
+    private void writeHeaderRowOfActivityTable(List<String> fields, PdfPTable table) {
+        final Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD, BaseColor.WHITE);
+        fields.forEach(title -> {
+            PdfPCell header = new PdfPCell();
+            header.setBackgroundColor(BaseColor.BLUE);
+            header.setBorderWidth(1);
+            Phrase phrase = new Phrase(title, font);
+            header.setPhrase(phrase);
+            table.addCell(header);
+        });
     }
 
     private String maskField(Map.Entry<String, Object> entry) {
@@ -220,10 +217,10 @@ public class PdfExporter {
     }
 
     private void writeHeader(Document document) throws DocumentException, IOException {
-        Font boldFont = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
+        Font font = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
         String message = "Online Bank";
 
-        Paragraph paragraph = new Paragraph(message, boldFont);
+        Paragraph paragraph = new Paragraph(message, font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
         writeLogo(document);
