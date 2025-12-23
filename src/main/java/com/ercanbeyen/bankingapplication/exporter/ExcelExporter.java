@@ -13,19 +13,29 @@ import java.util.List;
 
 @UtilityClass
 public class ExcelExporter {
-    public Workbook generateAccountActivityWorkbook(Account account, List<AccountActivityDto> accountActivityDtos) {
+    private final int CENTER_COLUMN_INDEX = 5;
+    private int ROW_INDEX_COUNTER = 0;
+
+    public Workbook generateAccountStatementWorkbook(Account account, List<AccountActivityDto> accountActivityDtos) {
         Workbook workbook = new XSSFWorkbook();
         String name = "Account Activities - " + account.getId();
 
-        writeHeaderRow(name, workbook);
-        writeDataRows(account.getId(), name, workbook, accountActivityDtos);
+        writeHeader(name, workbook);
+        writeAccountActivityTable(account, accountActivityDtos, name, workbook);
+        writeFooter(name, workbook);
 
         return workbook;
     }
 
+    private void writeAccountActivityTable(Account account, List<AccountActivityDto> accountActivityDtos, String name, Workbook workbook) {
+        writeHeaderRow(name, workbook);
+        writeDataRows(account.getId(), name, workbook, accountActivityDtos);
+        ROW_INDEX_COUNTER++;
+    }
+
     private void writeHeaderRow(String name, Workbook workbook) {
-        Sheet sheet = workbook.createSheet(name);
-        Row row = workbook.getSheet(name).createRow(0);
+        Sheet sheet = workbook.getSheet(name);
+        Row row = sheet.createRow(ROW_INDEX_COUNTER++);
 
         CellStyle style = workbook.createCellStyle();
         XSSFFont font = (XSSFFont) workbook.createFont();
@@ -44,7 +54,6 @@ public class ExcelExporter {
     }
 
     private void writeDataRows(Integer accountId, String name, Workbook workbook, List<AccountActivityDto> accountActivityDtos) {
-        int rowIndex = 1;
         Sheet sheet = workbook.getSheet(name);
 
         CellStyle style = workbook.createCellStyle();
@@ -53,12 +62,50 @@ public class ExcelExporter {
         style.setFont(font);
 
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {
-            Row row = sheet.createRow(rowIndex++);
+            Row row = sheet.createRow(ROW_INDEX_COUNTER++);
             int columnIndex = 0;
             createCell(row, columnIndex++, accountActivityDto.createdAt().toString(), style, sheet);
             createCell(row, columnIndex++, accountActivityDto.type().getValue(), style, sheet);
             createCell(row, columnIndex, ExporterUtil.calculateAmountForDataLine(accountId, accountActivityDto), style, sheet);
         }
+    }
+
+    private void writeHeader(String name, Workbook workbook) {
+        Sheet sheet = workbook.createSheet(name);
+        Row row = sheet.createRow(ROW_INDEX_COUNTER++);
+
+        CellStyle style = workbook.createCellStyle();
+        XSSFFont font = (XSSFFont) workbook.createFont();
+        font.setBold(true);
+        font.setFontHeight(14);
+        font.setColor(HSSFColor.HSSFColorPredefined.DARK_BLUE.getIndex());
+        style.setFont(font);
+
+        createCell(row, CENTER_COLUMN_INDEX, ExporterUtil.getBankName(), style, sheet);
+
+        row = sheet.createRow(ROW_INDEX_COUNTER);
+        style = workbook.createCellStyle();
+        font = (XSSFFont) workbook.createFont();
+        font.setBold(true);
+        font.setFontHeight(14);
+        font.setColor(HSSFColor.HSSFColorPredefined.DARK_RED.getIndex());
+        style.setFont(font);
+
+        createCell(row, CENTER_COLUMN_INDEX, "ACCOUNT STATEMENT", style, sheet);
+
+        ROW_INDEX_COUNTER += 3;
+    }
+
+    private void writeFooter(String name, Workbook workbook) {
+        Sheet sheet = workbook.getSheet(name);
+
+        Row row = sheet.createRow(ROW_INDEX_COUNTER++);
+        Cell cell = row.createCell(0);
+        cell.setCellValue(ExporterUtil.getLawMessage());
+
+        row = sheet.createRow(ROW_INDEX_COUNTER);
+        cell = row.createCell(0);
+        cell.setCellValue(ExporterUtil.getTimeZoneMessage());
     }
 
     private void createCell(Row row, int columnIndex, Object givenValue, CellStyle style, Sheet sheet) {

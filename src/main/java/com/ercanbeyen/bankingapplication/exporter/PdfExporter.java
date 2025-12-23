@@ -193,7 +193,6 @@ public class PdfExporter {
             valueBuilder.append(maskWordInFullName(name))
                     .append(" ")
                     .append(maskWordInFullName(surname));
-
         } else if (key.equals(SummaryField.NATIONAL_IDENTITY)) {
             int length = value.length();
             valueBuilder.append(value, 0, 3)
@@ -218,9 +217,8 @@ public class PdfExporter {
 
     private void writeHeader(Document document) throws DocumentException, IOException {
         Font font = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
-        String message = "Online Bank";
 
-        Paragraph paragraph = new Paragraph(message, font);
+        Paragraph paragraph = new Paragraph(ExporterUtil.getBankName(), font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
         writeLogo(document);
@@ -229,20 +227,12 @@ public class PdfExporter {
     private void writeFooter(Document document) throws DocumentException {
         Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
 
-        String message = """
-                If the information on this document does not match the bank records,
-                the bank records will be taken as basis and this document will not even constitute the beginning of
-                written evidence.
-                """;
-
-        Paragraph paragraph = new Paragraph(message, font);
+        Paragraph paragraph = new Paragraph(ExporterUtil.getLawMessage(), font);
 
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
 
-        message = "Trading hours are shown according to Turkey time.";
-
-        paragraph = new Paragraph(message, font);
+        paragraph = new Paragraph(ExporterUtil.getTimeZoneMessage(), font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
     }

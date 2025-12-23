@@ -127,7 +127,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return ResponseEntity.ok(accountService.getAccountActivities(id, request));
     }
 
-    @PostMapping("/{id}/statement")
+    @PostMapping("/{id}/statement/pdf")
     public ResponseEntity<byte[]> generateAccountStatement(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
@@ -158,14 +158,14 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
                 .body(outputStream.toByteArray());
     }
 
-    @PostMapping("/{id}/account-activities/export/excel")
+    @PostMapping("/{id}/statement/excel")
     public ResponseEntity<byte[]> exportAccountActivitiesToExcel(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
         List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
 
-        try (Workbook workbook = ExcelExporter.generateAccountActivityWorkbook(account, accountActivityDtos); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             workbook.write(outputStream);
 
             HttpHeaders headers = new HttpHeaders();
