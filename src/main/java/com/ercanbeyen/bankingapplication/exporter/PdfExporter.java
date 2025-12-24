@@ -38,7 +38,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "Receipt");
+        writeTitle(document, "RECEIPT");
         Paragraph paragraph = new Paragraph("\n");
         document.add(paragraph);
 
@@ -60,7 +60,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "Account Statement");
+        writeTitle(document, ExporterUtil.getAccountStatementTitle());
         Paragraph paragraph = new Paragraph("\n");
         document.add(paragraph);
 
@@ -75,7 +75,7 @@ public class PdfExporter {
     private void writeTitle(Document document, String title) throws DocumentException {
         Font boldFont = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
 
-        Paragraph paragraph = new Paragraph(title.toUpperCase(), boldFont);
+        Paragraph paragraph = new Paragraph(title, boldFont);
         paragraph.setAlignment(Element.ALIGN_CENTER);
 
         document.add(paragraph);
@@ -238,7 +238,7 @@ public class PdfExporter {
     }
 
     private void writeLogo(Document document) throws DocumentException, IOException {
-        Image image = Image.getInstance(Paths.get("/app/photo/logo.png")
+        Image image = Image.getInstance(Paths.get(ExporterUtil.getLogoPath())
                 .toAbsolutePath()
                 .toString());
         image.scalePercent(10);

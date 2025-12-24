@@ -24,6 +24,14 @@ public class ExporterUtil {
         return "Online Bank";
     }
 
+    public String getAccountStatementTitle() {
+        return "ACCOUNT STATEMENT";
+    }
+
+    public String getLogoPath() {
+        return "/app/photo/logo.png";
+    }
+
     public String getLawMessage() {
         return """
                 If the information on this document does not match the bank records,
