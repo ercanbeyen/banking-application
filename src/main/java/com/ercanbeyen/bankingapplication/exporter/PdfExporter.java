@@ -82,7 +82,7 @@ public class PdfExporter {
     }
 
     private void writeAccountStatementBody(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos, Document document, Paragraph paragraph) throws DocumentException {
-        writeAccountInformationTable(document, account, fromDate, toDate);
+        writeInformationTable(document, account, fromDate, toDate);
         document.add(paragraph);
 
         writeAccountActivityTable(account, document, accountActivityDtos);
@@ -111,42 +111,42 @@ public class PdfExporter {
         document.add(table);
     }
 
-    private void writeAccountInformationTable(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
+    private void writeInformationTable(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
         BorderEvent borderEvent = new BorderEvent();
 
         PdfPTable table = new PdfPTable(2);
         table.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         table.setTableEvent(borderEvent);
 
-        PdfPTable leftTable = new PdfPTable(1);
-        leftTable.setHorizontalAlignment(Element.ALIGN_CENTER);
-        leftTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
-        leftTable.setTableEvent(borderEvent);
+        PdfPTable accountInformationTable = new PdfPTable(1);
+        accountInformationTable.setHorizontalAlignment(Element.ALIGN_CENTER);
+        accountInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        accountInformationTable.setTableEvent(borderEvent);
 
         Customer customer = account.getCustomer();
         Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
 
-        leftTable.addCell("Dear " + customer.getName().toUpperCase());
-        leftTable.addCell(new Phrase(new Paragraph("\n")));
-        leftTable.addCell("Customer Number: " + customer.getId());
-        leftTable.addCell("Customer National Identity Number: " + maskField(entry));
-        leftTable.addCell("Branch: " + account.getBranch().getName());
-        leftTable.addCell("Account Identity: " + account.getId());
-        leftTable.addCell("Account Type: " + account.getType());
-        leftTable.addCell("Currency: " + account.getCurrency());
-        leftTable.addCell("Balance: " + account.getBalance());
+        accountInformationTable.addCell("Dear " + customer.getName().toUpperCase());
+        accountInformationTable.addCell(new Phrase(new Paragraph("\n")));
+        accountInformationTable.addCell("Customer Number: " + customer.getId());
+        accountInformationTable.addCell("Customer National Identity Number: " + maskField(entry));
+        accountInformationTable.addCell("Branch: " + account.getBranch().getName());
+        accountInformationTable.addCell("Account Identity: " + account.getId());
+        accountInformationTable.addCell("Account Type: " + account.getType());
+        accountInformationTable.addCell("Currency: " + account.getCurrency());
+        accountInformationTable.addCell("Balance: " + account.getBalance());
 
-        table.addCell(leftTable);
+        table.addCell(accountInformationTable);
 
-        PdfPTable rightTable = new PdfPTable(1);
-        rightTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        rightTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
-        rightTable.setTableEvent(borderEvent);
+        PdfPTable transactionInformationTable = new PdfPTable(1);
+        transactionInformationTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
+        transactionInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        transactionInformationTable.setTableEvent(borderEvent);
 
-        rightTable.addCell("Document Issue Date: " + LocalDate.now());
-        rightTable.addCell("Inquiry Criteria: " + fromDate + " - " + toDate);
+        transactionInformationTable.addCell("Document Issue Date: " + LocalDate.now());
+        transactionInformationTable.addCell("Inquiry Criteria: " + fromDate + " - " + toDate);
 
-        table.addCell(rightTable);
+        table.addCell(transactionInformationTable);
 
         document.add(table);
     }

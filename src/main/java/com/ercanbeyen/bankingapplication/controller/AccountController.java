@@ -165,7 +165,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         Account account = accountService.findActiveAccountById(id);
         List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
 
-        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+        LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
+        LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
+
+        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos, fromDate, toDate); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
             workbook.write(outputStream);
 
             HttpHeaders headers = new HttpHeaders();
