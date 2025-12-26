@@ -39,6 +39,10 @@ public class AgreementServiceImpl implements AgreementService {
     public AgreementDto createAgreement(String title, String subject, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
+        if (agreementRepository.existsByTitle(title)) {
+            throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
+        }
+
         CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, title);
 
         Agreement agreement = new Agreement();
@@ -57,6 +61,11 @@ public class AgreementServiceImpl implements AgreementService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Agreement agreement = findById(id);
+
+        if (!agreement.getTitle().equals(title) && agreementRepository.existsByTitle(title)) {
+            throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
+        }
+
         CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, title);
 
         agreement.setFile(fileCompletableFuture.join());

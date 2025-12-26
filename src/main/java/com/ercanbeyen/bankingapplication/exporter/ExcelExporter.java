@@ -21,8 +21,8 @@ import java.util.List;
 
 @UtilityClass
 public class ExcelExporter {
-    private final int BEGINNING_INDEX = 3;
-    private final int CENTER_COLUMN_INDEX = 5;
+    private final int BEGINNING_INDEX = 0;
+    private final int CENTER_COLUMN_INDEX = 1;
     private int rowIndex = 0;
 
     public Workbook generateAccountStatementWorkbook(Account account, List<AccountActivityDto> accountActivityDtos, LocalDate fromDate, LocalDate toDate) throws IOException {
@@ -118,7 +118,7 @@ public class ExcelExporter {
         XSSFClientAnchor anchor = new XSSFClientAnchor();
 
         anchor.setCol1(CENTER_COLUMN_INDEX);
-        anchor.setCol2(CENTER_COLUMN_INDEX + 2);
+        anchor.setCol2(CENTER_COLUMN_INDEX + 1);
         anchor.setRow1(rowIndex);
         anchor.setRow2(rowIndex + 1);
 
@@ -162,7 +162,7 @@ public class ExcelExporter {
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, "Branch:", fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getBranch().getName(), valueColumnStyle, sheet);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Inquiry Criteria:", fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfTransactionInformationTable, "Inquiry Criteria:", fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfTransactionInformationTable, fromDate + " - " + toDate, valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);

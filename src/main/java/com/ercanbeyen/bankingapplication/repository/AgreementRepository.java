@@ -12,4 +12,5 @@ import java.util.Optional;
 public interface AgreementRepository extends JpaRepository<Agreement, String> {
     Optional<Agreement> findByTitle(String title);
     List<Agreement> findBySubject(AgreementSubject subject);
+    boolean existsByTitle(String title);
 }

@@ -8,6 +8,16 @@ import java.util.Optional;
 
 @UtilityClass
 public class ExporterUtil {
+    private final String BANK_NAME = "Online Bank";
+    private final String ACCOUNT_STATEMENT_TITLE = "ACCOUNT STATEMENT";
+    private final String LAW_MESSAGE = """
+            If the information on this document does not match the bank records,
+            the bank records will be taken as basis and this document will not even constitute the beginning of
+            written evidence.
+            """;
+    private final String LOGO_PATH = "/app/photo/logo.png";
+    private final String TIME_ZONE_MESSAGE = "Trading hours are shown according to Turkey time.";
+
     public Double calculateAmountForDataLine(Integer accountId, AccountActivityDto accountActivityDto) {
         Double amount = accountActivityDto.amount();
         boolean accountActivityForSenderExists = Optional.ofNullable(accountActivityDto.senderAccountId()).isPresent()
@@ -21,26 +31,22 @@ public class ExporterUtil {
     }
 
     public String getBankName() {
-        return "Online Bank";
+        return BANK_NAME;
     }
 
     public String getAccountStatementTitle() {
-        return "ACCOUNT STATEMENT";
+        return ACCOUNT_STATEMENT_TITLE;
     }
 
     public String getLogoPath() {
-        return "/app/photo/logo.png";
+        return LOGO_PATH;
     }
 
     public String getLawMessage() {
-        return """
-                If the information on this document does not match the bank records,
-                the bank records will be taken as basis and this document will not even constitute the beginning of
-                written evidence.
-                """;
+        return LAW_MESSAGE;
     }
 
     public String getTimeZoneMessage() {
-        return "Trading hours are shown according to Turkey time.";
+        return TIME_ZONE_MESSAGE;
     }
 }
