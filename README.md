@@ -41,7 +41,7 @@ Entities:
 - News are automatically added in chunks of size 40.
 - Notifications are created to inform the customer that the relevant transaction has been completed successfully.
 - Customers can participate in surveys related to their transactions.
-- Customers can generate receipts and statements in PDF format at any time.
+- Customers can generate receipts and account statements in PDF or Excel format at any time.
 - Scripts inside resources/db.stored_procedure must be written into related database containers to call procedures.
 
 ### Tech Stack

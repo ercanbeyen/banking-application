@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
-import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
@@ -13,20 +12,20 @@ import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
-import com.ercanbeyen.bankingapplication.util.PdfUtil;
+import com.ercanbeyen.bankingapplication.exporter.ExcelExporter;
+import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -128,7 +127,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return ResponseEntity.ok(accountService.getAccountActivities(id, request));
     }
 
-    @PostMapping("/{id}/statement")
+    @PostMapping("/{id}/statement/pdf")
     public ResponseEntity<byte[]> generateAccountStatement(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
@@ -138,25 +137,53 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
         LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
 
-        ByteArrayOutputStream statementStream;
+        ByteArrayOutputStream outputStream;
 
         try {
-            statementStream = PdfUtil.generatePdfStreamOfStatement(account, fromDate, toDate, accountActivityDtos);
-            log.info("Account statement is successfully generated");
-        } catch (DocumentException exception) {
-            log.error("Account statement cannot be generated. Exception: {}", exception.getMessage());
-            throw new InternalServerErrorException("Error occurred while generating account statement");
-        } catch (Exception exception) {
-            log.error(LogMessage.UNKNOWN_EXCEPTION, exception.getMessage());
-            throw new InternalServerErrorException("Unknown error occurred while generating account statement");
+            outputStream = PdfExporter.generateAccountStatementPdf(account, fromDate, toDate, accountActivityDtos);
+            log.info("Account Statement Pdf is successfully generated");
+        } catch (DocumentException | IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
         }
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=statement.pdf");
-        headers.setContentLength(statementStream.size());
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename("account_" + account.getId() + "_statement.pdf")
+                .build());
+        headers.setContentLength(outputStream.size());
 
-        return new ResponseEntity<>(statementStream.toByteArray(), headers, HttpStatus.OK);
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(outputStream.toByteArray());
+    }
+
+    @PostMapping("/{id}/statement/excel")
+    public ResponseEntity<byte[]> exportAccountActivitiesToExcel(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+        AccountActivityUtil.checkFilteringRequest(request);
+
+        Account account = accountService.findActiveAccountById(id);
+        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
+
+        LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
+        LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
+
+        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos, fromDate, toDate); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
+            workbook.write(outputStream);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentDisposition(ContentDisposition.attachment()
+                    .filename("account_" + account.getId() + "_activities.xlsx")
+                    .build());
+            headers.setContentLength(outputStream.size());
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(outputStream.toByteArray());
+        } catch (IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
     }
 
     private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : LocalDate.now();
