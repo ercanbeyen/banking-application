@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.service;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -22,7 +22,7 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     String uploadProfilePhoto(Integer id, MultipartFile request);
     File downloadProfilePhoto(Integer id);
     String deleteProfilePhoto(Integer id);
-    CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency);
+    CustomerFinancialStatusResponse calculateFinancialStatus(String nationalId, Currency toCurrency);
     List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption);
     List<NotificationDto> getNotifications(Integer id);
     List<MoneyTransferOrderDto> getMoneyTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType);

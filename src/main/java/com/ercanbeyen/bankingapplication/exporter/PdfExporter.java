@@ -22,13 +22,34 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @UtilityClass
 public class PdfExporter {
     private final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
+
+    public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer) throws DocumentException, IOException {
+        Document document = new Document();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        PdfWriter writer = PdfWriter.getInstance(document, outputStream);
+        writer.setPageEvent(new PageNumerationEvent());
+        document.open();
+
+        writeHeader(document);
+        writeTitle(document, "FINANCIAL STATUS");
+        addNewLine(document);
+
+        writeFinancialStatusReportBody(document, customer);
+        addNewLine(document);
+
+        writeFooter(document);
+        document.close();
+
+        return outputStream;
+    }
 
     public ByteArrayOutputStream generatePdfStreamOfReceipt(AccountActivity accountActivity) throws DocumentException, IOException {
         Document document = new Document();
@@ -39,11 +60,10 @@ public class PdfExporter {
 
         writeHeader(document);
         writeTitle(document, "RECEIPT");
-        Paragraph paragraph = new Paragraph("\n");
-        document.add(paragraph);
+        addNewLine(document);
 
         writeReceiptBody(document, accountActivity);
-        document.add(paragraph);
+        addNewLine(document);
 
         writeFooter(document);
         document.close();
@@ -55,16 +75,15 @@ public class PdfExporter {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
-        PdfWriter pdfWriter = PdfWriter.getInstance(document, outputStream);
-        pdfWriter.setPageEvent(new PageNumerationEvent());
+        PdfWriter writer = PdfWriter.getInstance(document, outputStream);
+        writer.setPageEvent(new PageNumerationEvent());
         document.open();
 
         writeHeader(document);
         writeTitle(document, ExporterUtil.getAccountStatementTitle());
-        Paragraph paragraph = new Paragraph("\n");
-        document.add(paragraph);
+        addNewLine(document);
 
-        writeAccountStatementBody(account, fromDate, toDate, accountActivityDtos, document, paragraph);
+        writeAccountStatementBody(account, fromDate, toDate, accountActivityDtos, document);
 
         writeFooter(document);
         document.close();
@@ -81,12 +100,38 @@ public class PdfExporter {
         document.add(paragraph);
     }
 
-    private void writeAccountStatementBody(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos, Document document, Paragraph paragraph) throws DocumentException {
-        writeInformationTable(document, account, fromDate, toDate);
+    private void writeFinancialStatusReportBody(Document document, Customer customer) throws DocumentException {
+        String message = "Full Name: " + customer.getFullName();
+        Paragraph paragraph = new Paragraph(message);
         document.add(paragraph);
 
+        addNewLine(document);
+
+        PdfPTable table = new PdfPTable(2);
+        Map<List<Enum<? extends Enum<?>>>, Double> accountFinancialStatuses = new HashMap<>();
+
+        for (Account account : customer.getAccounts()) {
+            List<Enum<? extends Enum<?>>> keys = List.of(account.getType(), account.getCurrency());
+            double balance = account.getBalance();
+            accountFinancialStatuses.computeIfPresent(keys, (_, value) -> value + balance);
+            accountFinancialStatuses.putIfAbsent(keys, balance);
+        }
+
+        for (Map.Entry<List<Enum<? extends Enum<?>>>, Double> entry : accountFinancialStatuses.entrySet()) {
+            table.addCell(new PdfPCell(new Phrase(entry.getKey().toString())));
+            table.addCell(new PdfPCell(new Phrase(entry.getValue().toString())));
+        }
+
+        document.add(table);
+
+    }
+
+    private void writeAccountStatementBody(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos, Document document) throws DocumentException {
+        writeInformationTable(document, account, fromDate, toDate);
+        addNewLine(document);
+
         writeAccountActivityTable(account, document, accountActivityDtos);
-        document.add(paragraph);
+        addNewLine(document);
     }
 
     private void writeReceiptBody(Document document, AccountActivity accountActivity) throws DocumentException {
@@ -244,5 +289,10 @@ public class PdfExporter {
         image.scalePercent(10);
         image.setAlignment(Element.ALIGN_CENTER);
         document.add(image);
+    }
+
+    private void addNewLine(Document document) throws DocumentException {
+        Paragraph paragraph = new Paragraph("\n");
+        document.add(paragraph);
     }
 }

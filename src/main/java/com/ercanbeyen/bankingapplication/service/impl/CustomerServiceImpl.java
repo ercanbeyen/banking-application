@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialStatusResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
@@ -211,7 +211,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency) {
+    public CustomerFinancialStatusResponse calculateFinancialStatus(String nationalId, Currency toCurrency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         List<Account> accounts = findByNationalId(nationalId).getAccounts();
@@ -231,31 +231,27 @@ public class CustomerServiceImpl implements CustomerService {
                         account.getBalance()))
                 .reduce(0D, Double::sum);
 
-        return new CustomerStatusResponse(earning, spending, netStatus);
+        return new CustomerFinancialStatusResponse(earning, spending, netStatus);
     }
 
     @Override
     public List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Customer customer = findById(id);
-        Predicate<Account> accountPredicate = account -> (account.getCustomer().getNationalId().equals(customer.getNationalId()))
-                && (filteringOption.getType() == null || filteringOption.getType() == account.getType())
-                && (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
+        Predicate<Account> accountPredicate = account -> (filteringOption == null)
+                || (filteringOption.getType() == null || filteringOption.getType() == account.getType())
+                || (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
 
         Comparator<Account> accountComparator = Comparator.comparing(Account::getCreatedAt)
                 .reversed();
 
-        List<Account> accounts = customer.getAccounts()
+        return findById(id)
+                .getAccounts()
                 .stream()
                 .filter(accountPredicate)
                 .sorted(accountComparator)
+                .map(accountMapper::entityToDto)
                 .toList();
-
-        List<AccountDto> accountDtos = new ArrayList<>();
-        accounts.forEach(account -> accountDtos.add(accountMapper.entityToDto(account)));
-
-        return accountDtos;
     }
 
     @Override
