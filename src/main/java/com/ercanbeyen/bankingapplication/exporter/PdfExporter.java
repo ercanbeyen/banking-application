@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.exporter;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
@@ -9,6 +11,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.event.BorderEvent;
 import com.ercanbeyen.bankingapplication.event.PageNumerationEvent;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
@@ -22,6 +25,8 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.*;
 import java.util.List;
 
@@ -92,17 +97,34 @@ public class PdfExporter {
     }
 
     private void writeTitle(Document document, String title) throws DocumentException {
-        Font boldFont = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
+        Font font = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
 
-        Paragraph paragraph = new Paragraph(title, boldFont);
+        Paragraph paragraph = new Paragraph(title, font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
 
         document.add(paragraph);
     }
 
     private void writeFinancialStatusReportBody(Document document, Customer customer) throws DocumentException {
-        String message = "Full Name: " + customer.getFullName();
-        Paragraph paragraph = new Paragraph(message);
+        final Font font = new Font();
+        font.setStyle(Font.BOLD);
+
+        Chunk fullNameInputChunk = new Chunk("Full Name: ", font);
+        Chunk fullNameOutputChunk = new Chunk(customer.getFullName());
+
+        Chunk dateInputChunk = new Chunk("  Date: ", font);
+        LocalDateTime today = TimeUtil.getCurrentTimeStampInTurkey();
+        String todayDate = today.toLocalDate().toString();
+        LocalTime todayLocalTime = today.toLocalTime();
+        String todayTime = todayLocalTime.getHour() + ":" + todayLocalTime.getMinute();
+
+        Chunk dateOutputChunk = new Chunk(todayDate + " " + todayTime);
+
+        Phrase phrase = new Phrase();
+        phrase.addAll(List.of(fullNameInputChunk, fullNameOutputChunk, dateInputChunk, dateOutputChunk));
+
+        Paragraph paragraph = new Paragraph(phrase);
+        paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
 
         addNewLine(document);
@@ -111,14 +133,16 @@ public class PdfExporter {
         Map<List<Enum<? extends Enum<?>>>, Double> accountFinancialStatuses = new HashMap<>();
 
         for (Account account : customer.getAccounts()) {
-            List<Enum<? extends Enum<?>>> keys = List.of(account.getType(), account.getCurrency());
+            List<Enum<? extends Enum<?>>> key = List.of(account.getType(), account.getCurrency());
             double balance = account.getBalance();
-            accountFinancialStatuses.computeIfPresent(keys, (_, value) -> value + balance);
-            accountFinancialStatuses.putIfAbsent(keys, balance);
+            accountFinancialStatuses.computeIfPresent(key, (_, value) -> value + balance);
+            accountFinancialStatuses.putIfAbsent(key, balance);
         }
 
         for (Map.Entry<List<Enum<? extends Enum<?>>>, Double> entry : accountFinancialStatuses.entrySet()) {
-            table.addCell(new PdfPCell(new Phrase(entry.getKey().toString())));
+            List<Enum<? extends Enum<?>>> key = entry.getKey();
+            AccountType accountType = AccountType.valueOf(key.getFirst().toString());
+            table.addCell(new PdfPCell(new Phrase(accountType.getValue() + " " + key.getLast() + " " + Entity.ACCOUNT.getValue())));
             table.addCell(new PdfPCell(new Phrase(entry.getValue().toString())));
         }
 
