@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.exporter;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
@@ -20,6 +21,7 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.javatuples.Pair;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -29,6 +31,7 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.*;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @UtilityClass
@@ -130,19 +133,17 @@ public class PdfExporter {
         addNewLine(document);
 
         PdfPTable table = new PdfPTable(2);
-        Map<List<Enum<? extends Enum<?>>>, Double> accountFinancialStatuses = new HashMap<>();
 
-        for (Account account : customer.getAccounts()) {
-            List<Enum<? extends Enum<?>>> key = List.of(account.getType(), account.getCurrency());
-            double balance = account.getBalance();
-            accountFinancialStatuses.computeIfPresent(key, (_, value) -> value + balance);
-            accountFinancialStatuses.putIfAbsent(key, balance);
-        }
+        Map<Pair<AccountType, Currency>, Double> financialStatusesOfAccountsDouble = customer.getAccounts()
+                .stream()
+                .collect(Collectors.groupingBy(account -> new Pair<>(account.getType(), account.getCurrency()), Collectors.summingDouble(Account::getBalance)));
 
-        for (Map.Entry<List<Enum<? extends Enum<?>>>, Double> entry : accountFinancialStatuses.entrySet()) {
-            List<Enum<? extends Enum<?>>> key = entry.getKey();
-            AccountType accountType = AccountType.valueOf(key.getFirst().toString());
-            table.addCell(new PdfPCell(new Phrase(accountType.getValue() + " " + key.getLast() + " " + Entity.ACCOUNT.getValue())));
+
+        writeHeaderRowOfTable(List.of(Entity.ACCOUNT.getValue(), "Balance"), table);
+
+        for (Map.Entry<Pair<AccountType, Currency>, Double> entry : financialStatusesOfAccountsDouble.entrySet()) {
+            Pair<AccountType, Currency> key = entry.getKey();
+            table.addCell(new PdfPCell(new Phrase(key.getValue0().getValue() + " " + key.getValue1())));
             table.addCell(new PdfPCell(new Phrase(entry.getValue().toString())));
         }
 
@@ -162,7 +163,7 @@ public class PdfExporter {
         PdfPTable table = new PdfPTable(2);
 
         /* Header row */
-        writeHeaderRowOfActivityTable(List.of("Field", "Value"), table);
+        writeHeaderRowOfTable(List.of("Field", "Value"), table);
 
         /* Data rows */
         for (Map.Entry<String, Object> entry : accountActivity.getSummary().entrySet()) {
@@ -225,7 +226,7 @@ public class PdfExporter {
         PdfPTable table = new PdfPTable(numberOfColumns);
 
         /* Header row */
-        writeHeaderRowOfActivityTable(List.of("Time", "Account Activity", "Amount"), table);
+        writeHeaderRowOfTable(List.of("Time", "Account Activity", "Amount"), table);
 
         /* Data rows */
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {
@@ -237,7 +238,7 @@ public class PdfExporter {
         document.add(table);
     }
 
-    private void writeHeaderRowOfActivityTable(List<String> fields, PdfPTable table) {
+    private void writeHeaderRowOfTable(List<String> fields, PdfPTable table) {
         final Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD, BaseColor.WHITE);
         fields.forEach(title -> {
             PdfPCell header = new PdfPCell();
