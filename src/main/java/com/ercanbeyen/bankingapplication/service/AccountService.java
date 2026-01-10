@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
@@ -24,7 +25,7 @@ public interface AccountService extends BaseService<AccountDto, AccountFiltering
     String closeAccount(Integer id);
     String getTotalActiveAccounts(AccountType type, Currency currency, City city);
     List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency);
-    Account getChargedAccount(Integer extraChargedAccountId, List<Account> relatedAccounts);
+    Account getChargedAccount(AccountActivityType accountActivityType, Integer extraChargedAccountId, List<Account> relatedAccounts);
     Account findChargedAccountById(Integer id);
     Account findActiveAccountById(Integer id);
     void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account recipientAccount);
