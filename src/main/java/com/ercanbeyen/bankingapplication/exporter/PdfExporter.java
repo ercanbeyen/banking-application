@@ -2,9 +2,9 @@ package com.ercanbeyen.bankingapplication.exporter;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
+import com.ercanbeyen.bankingapplication.dto.FinancialStatus;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -109,13 +109,13 @@ public class PdfExporter {
     }
 
     private void writeFinancialStatusReportBody(Document document, Customer customer) throws DocumentException {
-        final Font font = new Font();
-        font.setStyle(Font.BOLD);
+        final Font boldFont = new Font();
+        boldFont.setStyle(Font.BOLD);
 
-        Chunk fullNameInputChunk = new Chunk("Full Name: ", font);
+        Chunk fullNameInputChunk = new Chunk("Full Name: ", boldFont);
         Chunk fullNameOutputChunk = new Chunk(customer.getFullName());
 
-        Chunk dateInputChunk = new Chunk("  Date: ", font);
+        Chunk dateInputChunk = new Chunk("  Date: ", boldFont);
         LocalDateTime today = TimeUtil.getCurrentTimeStampInTurkey();
         String todayDate = today.toLocalDate().toString();
         LocalTime todayLocalTime = today.toLocalTime();
@@ -134,21 +134,30 @@ public class PdfExporter {
 
         PdfPTable table = new PdfPTable(2);
 
-        Map<Pair<AccountType, Currency>, Double> financialStatusesOfAccountsDouble = customer.getAccounts()
+        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = customer.getAccounts()
                 .stream()
                 .collect(Collectors.groupingBy(account -> new Pair<>(account.getType(), account.getCurrency()), Collectors.summingDouble(Account::getBalance)));
 
+        List<FinancialStatus> financialStatuses = new ArrayList<>();
 
-        writeHeaderRowOfTable(List.of(Entity.ACCOUNT.getValue(), "Balance"), table);
-
-        for (Map.Entry<Pair<AccountType, Currency>, Double> entry : financialStatusesOfAccountsDouble.entrySet()) {
+        for (Map.Entry<Pair<AccountType, Currency>, Double> entry : balancesOfAccountTypes.entrySet()) {
             Pair<AccountType, Currency> key = entry.getKey();
-            table.addCell(new PdfPCell(new Phrase(key.getValue0().getValue() + " " + key.getValue1())));
-            table.addCell(new PdfPCell(new Phrase(entry.getValue().toString())));
+            financialStatuses.add(new FinancialStatus(key.getValue0(), key.getValue1(), entry.getValue()));
+        }
+
+        Map<AccountType, List<FinancialStatus>> financialStatusOfAccountTypes = financialStatuses.stream()
+                .collect(Collectors.groupingBy(FinancialStatus::accountType));
+
+        for (AccountType key : financialStatusOfAccountTypes.keySet()) {
+            writeHeaderRowOfTable(List.of(key.getValue(), "Balance"), table);
+
+            for (FinancialStatus financialStatus : financialStatusOfAccountTypes.get(key)) {
+                table.addCell(new PdfPCell(new Phrase(financialStatus.currency().toString())));
+                table.addCell(new PdfPCell(new Phrase(financialStatus.balance().toString())));
+            }
         }
 
         document.add(table);
-
     }
 
     private void writeAccountStatementBody(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos, Document document) throws DocumentException {
