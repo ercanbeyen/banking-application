@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.LocalTime;
 import java.util.*;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -47,7 +46,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "FINANCIAL STATUS");
+        writeTitle(document, "financial status");
         addNewLine(document);
 
         writeFinancialStatusReportBody(document, customer);
@@ -67,7 +66,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "RECEIPT");
+        writeTitle(document, "receipt");
         addNewLine(document);
 
         writeReceiptBody(document, accountActivity);
@@ -102,7 +101,7 @@ public class PdfExporter {
     private void writeTitle(Document document, String title) throws DocumentException {
         Font font = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
 
-        Paragraph paragraph = new Paragraph(title, font);
+        Paragraph paragraph = new Paragraph(title.toUpperCase(), font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
 
         document.add(paragraph);
@@ -112,14 +111,13 @@ public class PdfExporter {
         final Font boldFont = new Font();
         boldFont.setStyle(Font.BOLD);
 
-        Chunk fullNameInputChunk = new Chunk("Full Name: ", boldFont);
+        Chunk fullNameInputChunk = new Chunk(SummaryField.FULL_NAME + ": ", boldFont);
         Chunk fullNameOutputChunk = new Chunk(customer.getFullName());
 
         Chunk dateInputChunk = new Chunk("  Date: ", boldFont);
         LocalDateTime today = TimeUtil.getCurrentTimeStampInTurkey();
         String todayDate = today.toLocalDate().toString();
-        LocalTime todayLocalTime = today.toLocalTime();
-        String todayTime = todayLocalTime.getHour() + ":" + todayLocalTime.getMinute();
+        String todayTime = TimeUtil.getTimeStatement(today.toLocalTime());
 
         Chunk dateOutputChunk = new Chunk(todayDate + " " + todayTime);
 
@@ -175,7 +173,13 @@ public class PdfExporter {
         writeHeaderRowOfTable(List.of("Field", "Value"), table);
 
         /* Data rows */
-        for (Map.Entry<String, Object> entry : accountActivity.getSummary().entrySet()) {
+        Map<String, Object> summary = accountActivity.getSummary();
+
+        LocalDateTime localDateTime = LocalDateTime.parse(summary.get(SummaryField.TIME).toString());
+        String timeValue = localDateTime.toLocalDate() + " " + TimeUtil.getTimeStatement(localDateTime.toLocalTime());
+        summary.put(SummaryField.TIME, timeValue);
+
+        for (Map.Entry<String, Object> entry : summary.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue().toString();
 
@@ -222,7 +226,8 @@ public class PdfExporter {
         transactionInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         transactionInformationTable.setTableEvent(borderEvent);
 
-        transactionInformationTable.addCell("Document Issue Date: " + LocalDate.now());
+        LocalDateTime today = LocalDateTime.now();
+        transactionInformationTable.addCell("Document Issue Date: " + today.toLocalDate() + " " + TimeUtil.getTimeStatement(today.toLocalTime()));
         transactionInformationTable.addCell("Inquiry Criteria: " + fromDate + " - " + toDate);
 
         table.addCell(transactionInformationTable);
@@ -235,7 +240,7 @@ public class PdfExporter {
         PdfPTable table = new PdfPTable(numberOfColumns);
 
         /* Header row */
-        writeHeaderRowOfTable(List.of("Time", "Account Activity", "Amount"), table);
+        writeHeaderRowOfTable(List.of(SummaryField.TIME, SummaryField.ACCOUNT_ACTIVITY, SummaryField.AMOUNT), table);
 
         /* Data rows */
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {

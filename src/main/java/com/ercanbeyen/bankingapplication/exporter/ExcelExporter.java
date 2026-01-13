@@ -91,7 +91,7 @@ public class ExcelExporter {
         writeHeaderText(workbook, name, HSSFColor.HSSFColorPredefined.DARK_BLUE, ExporterUtil.getBankName());
         rowIndex++;
         writeLogo(workbook, sheet);
-        writeHeaderText(workbook, name, HSSFColor.HSSFColorPredefined.DARK_RED, ExporterUtil.getAccountStatementTitle());
+        writeHeaderText(workbook, name, HSSFColor.HSSFColorPredefined.DARK_RED, ExporterUtil.getAccountStatementTitle().toUpperCase());
     }
 
     private void writeHeaderText(Workbook workbook, String name, HSSFColor.HSSFColorPredefined color, String text) {
