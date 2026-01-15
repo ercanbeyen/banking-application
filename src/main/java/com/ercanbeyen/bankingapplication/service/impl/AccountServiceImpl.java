@@ -268,7 +268,7 @@ public class AccountServiceImpl implements AccountService {
 
         String logMessage = status ? "{} {} is blocked" : "Blockage of {} {} is removed";
         logMessage += " at {}";
-        log.info(logMessage, entity, id, TimeUtil.getCurrentTimeStampInTurkey());
+        log.info(logMessage, entity, id, TimeUtil.getTurkeyDateTime());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
         createAccountActivityForAccountStatusUpdate(account, activityType);
@@ -291,7 +291,7 @@ public class AccountServiceImpl implements AccountService {
             throw new ResourceConflictException(String.format("In order to close %s, balance of the %s must be zero. Currently balance is %s. Please Withdraw or transfer the remaining money.", entity, balance, entity));
         }
 
-        account.setClosedAt(TimeUtil.getCurrentTimeStampInTurkey());
+        account.setClosedAt(TimeUtil.getTurkeyDateTime());
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
@@ -593,7 +593,7 @@ public class AccountServiceImpl implements AccountService {
         summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
-        summary.put(SummaryField.TIME, TimeUtil.getCurrentTimeStampInTurkey().toString());
+        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
         AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null);
         accountActivityService.createAccountActivity(request);

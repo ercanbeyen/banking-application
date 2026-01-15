@@ -9,7 +9,7 @@ import java.util.function.IntFunction;
 
 @UtilityClass
 public class TimeUtil {
-    public LocalDateTime getCurrentTimeStampInTurkey() {
+    public LocalDateTime getTurkeyDateTime() {
         return LocalDateTime.now(ZoneId.of("Europe/Istanbul"));
     }
 

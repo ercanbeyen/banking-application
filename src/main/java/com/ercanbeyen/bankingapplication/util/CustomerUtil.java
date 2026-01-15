@@ -12,7 +12,7 @@ public class CustomerUtil {
     private final long MINIMUM_AGE = 18;
 
     public void checkRequest(CustomerDto request) {
-        if (ChronoUnit.YEARS.between(request.getBirthDate(), LocalDate.from(TimeUtil.getCurrentTimeStampInTurkey())) < MINIMUM_AGE) {
+        if (ChronoUnit.YEARS.between(request.getBirthDate(), LocalDate.from(TimeUtil.getTurkeyDateTime())) < MINIMUM_AGE) {
             throw new BadRequestException("Candidate customer is not an adult");
         }
 

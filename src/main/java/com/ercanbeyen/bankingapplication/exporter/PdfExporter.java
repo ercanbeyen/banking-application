@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.exporter;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.FinancialStatus;
@@ -115,7 +116,7 @@ public class PdfExporter {
         Chunk fullNameOutputChunk = new Chunk(customer.getFullName());
 
         Chunk dateInputChunk = new Chunk("  Date: ", boldFont);
-        LocalDateTime today = TimeUtil.getCurrentTimeStampInTurkey();
+        LocalDateTime today = TimeUtil.getTurkeyDateTime();
         String todayDate = today.toLocalDate().toString();
         String todayTime = TimeUtil.getTimeStatement(today.toLocalTime());
 
@@ -146,10 +147,12 @@ public class PdfExporter {
         Map<AccountType, List<FinancialStatus>> financialStatusOfAccountTypes = financialStatuses.stream()
                 .collect(Collectors.groupingBy(FinancialStatus::accountType));
 
-        for (AccountType key : financialStatusOfAccountTypes.keySet()) {
-            writeHeaderRowOfTable(List.of(key.getValue(), "Balance"), table);
+        for (Map.Entry<AccountType, List<FinancialStatus>> financialStatusOfAccountType : financialStatusOfAccountTypes.entrySet()) {
+            /* Header row */
+            writeHeaderRowOfTable(List.of(financialStatusOfAccountType.getKey().getValue(), "Balance"), table);
 
-            for (FinancialStatus financialStatus : financialStatusOfAccountTypes.get(key)) {
+            /* Data rows */
+            for (FinancialStatus financialStatus : financialStatusOfAccountType.getValue()) {
                 table.addCell(new PdfPCell(new Phrase(financialStatus.currency().toString())));
                 table.addCell(new PdfPCell(new Phrase(financialStatus.balance().toString())));
             }
@@ -209,15 +212,15 @@ public class PdfExporter {
         Customer customer = account.getCustomer();
         Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
 
-        accountInformationTable.addCell("Dear " + customer.getName().toUpperCase());
+        accountInformationTable.addCell(AccountStatementUtil.writeFullName(customer.getName()));
         accountInformationTable.addCell(new Phrase(new Paragraph("\n")));
-        accountInformationTable.addCell("Customer Number: " + customer.getId());
-        accountInformationTable.addCell("Customer National Identity Number: " + maskField(entry));
-        accountInformationTable.addCell("Branch: " + account.getBranch().getName());
-        accountInformationTable.addCell("Account Identity: " + account.getId());
-        accountInformationTable.addCell("Account Type: " + account.getType());
-        accountInformationTable.addCell("Currency: " + account.getCurrency());
-        accountInformationTable.addCell("Balance: " + account.getBalance());
+        accountInformationTable.addCell(AccountStatementUtil.CUSTOMER_NUMBER + customer.getId());
+        accountInformationTable.addCell(AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER + maskField(entry));
+        accountInformationTable.addCell(AccountStatementUtil.BRANCH + account.getBranch().getName());
+        accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_IDENTITY + account.getId());
+        accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_TYPE + account.getType());
+        accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_CURRENCY + account.getCurrency());
+        accountInformationTable.addCell(AccountStatementUtil.BALANCE + account.getBalance());
 
         table.addCell(accountInformationTable);
 
@@ -226,9 +229,8 @@ public class PdfExporter {
         transactionInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         transactionInformationTable.setTableEvent(borderEvent);
 
-        LocalDateTime today = LocalDateTime.now();
-        transactionInformationTable.addCell("Document Issue Date: " + today.toLocalDate() + " " + TimeUtil.getTimeStatement(today.toLocalTime()));
-        transactionInformationTable.addCell("Inquiry Criteria: " + fromDate + " - " + toDate);
+        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + AccountStatementUtil.writeDocumentIssueDate(TimeUtil.getTurkeyDateTime()));
+        transactionInformationTable.addCell(AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
 
         table.addCell(transactionInformationTable);
 

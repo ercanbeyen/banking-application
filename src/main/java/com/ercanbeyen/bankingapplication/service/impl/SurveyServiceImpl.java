@@ -114,7 +114,7 @@ public class SurveyServiceImpl implements SurveyService {
         survey.setTitle(request.title());
         survey.setRatings(request.ratings());
         survey.setCustomerSuggestion(request.customerSuggestion());
-        survey.setUpdatedAt(TimeUtil.getCurrentTimeStampInTurkey());
+        survey.setUpdatedAt(TimeUtil.getTurkeyDateTime());
 
         return surveyMapper.entityToDto(surveyRepository.save(survey));
     }
@@ -144,7 +144,7 @@ public class SurveyServiceImpl implements SurveyService {
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
-        LocalDateTime now = TimeUtil.getCurrentTimeStampInTurkey();
+        LocalDateTime now = TimeUtil.getTurkeyDateTime();
         LocalDateTime nearestValidationTime = SurveyUtil.getNearestValidationTime();
 
         if (request.isBefore(nearestValidationTime)) {
@@ -234,7 +234,7 @@ public class SurveyServiceImpl implements SurveyService {
     private static void checkExpiration(Survey survey) {
         String entity = Entity.SURVEY.getValue();
 
-        if (survey.getValidUntil().isBefore(TimeUtil.getCurrentTimeStampInTurkey())) {
+        if (survey.getValidUntil().isBefore(TimeUtil.getTurkeyDateTime())) {
             throw new ResourceConflictException(entity + " expired");
         }
 

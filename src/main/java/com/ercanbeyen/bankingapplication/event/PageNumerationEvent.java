@@ -33,7 +33,7 @@ public class PageNumerationEvent extends PdfPageEventHelper {
             cell.setBorder(0);
             cell.setBorderWidthTop(1);
             cell.setHorizontalAlignment(Element.ALIGN_LEFT);
-            cell.setPhrase(new Phrase(TimeUtil.getCurrentTimeStampInTurkey().toString(), smallFont));
+            cell.setPhrase(new Phrase(TimeUtil.getTurkeyDateTime().toString(), smallFont));
             table.addCell(cell);
 
             cell = new PdfPCell();

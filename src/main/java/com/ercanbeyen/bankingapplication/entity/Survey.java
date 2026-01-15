@@ -39,7 +39,7 @@ public class Survey {
     private List<Rating> ratings;
 
     public static Survey valueOf(SurveyDto surveyDto, AccountActivityDto accountActivityDto) {
-        LocalDateTime now = TimeUtil.getCurrentTimeStampInTurkey();
+        LocalDateTime now = TimeUtil.getTurkeyDateTime();
         SurveyCompositeKey key = new SurveyCompositeKey(
                 surveyDto.key().getCustomerNationalId(),
                 accountActivityDto.id(),

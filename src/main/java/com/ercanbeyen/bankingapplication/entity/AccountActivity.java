@@ -40,6 +40,6 @@ public class AccountActivity {
         this.amount = amount;
         this.summary = summary;
         this.explanation = explanation;
-        this.createdAt = TimeUtil.getCurrentTimeStampInTurkey();
+        this.createdAt = TimeUtil.getTurkeyDateTime();
     }
 }

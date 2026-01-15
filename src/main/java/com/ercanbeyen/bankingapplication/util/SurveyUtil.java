@@ -9,17 +9,17 @@ import java.time.LocalDateTime;
 @UtilityClass
 public class SurveyUtil {
     public void checkRequestBeforeSave(SurveyDto request) {
-        if (request.validUntil().isBefore(TimeUtil.getCurrentTimeStampInTurkey())) {
+        if (request.validUntil().isBefore(TimeUtil.getTurkeyDateTime())) {
             throw new BadRequestException("Validation time should not be before now");
         }
     }
 
     public LocalDateTime getNearestValidationTime() {
-        return TimeUtil.getCurrentTimeStampInTurkey().plusHours(1);
+        return TimeUtil.getTurkeyDateTime().plusHours(1);
     }
 
     public void checkStatisticsParameters(LocalDateTime createdAt, Integer frequency) {
-        if (createdAt.isAfter(TimeUtil.getCurrentTimeStampInTurkey())) {
+        if (createdAt.isAfter(TimeUtil.getTurkeyDateTime())) {
             throw new BadRequestException("Created at value should not be after now");
         }
 
