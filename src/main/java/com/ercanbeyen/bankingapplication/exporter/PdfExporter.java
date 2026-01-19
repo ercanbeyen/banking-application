@@ -1,11 +1,10 @@
 package com.ercanbeyen.bankingapplication.exporter;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
-import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
-import com.ercanbeyen.bankingapplication.dto.FinancialStatus;
+import com.ercanbeyen.bankingapplication.dto.AccountFinancialStatus;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -22,7 +21,6 @@ import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.javatuples.Pair;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -31,14 +29,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Slf4j
 @UtilityClass
 public class PdfExporter {
     private final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
-    public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer) throws DocumentException, IOException {
+    public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -50,10 +47,10 @@ public class PdfExporter {
         writeTitle(document, "financial status");
         addNewLine(document);
 
-        writeFinancialStatusReportBody(document, customer);
+        writeFinancialStatusReportBody(document, customer, financialStatusesOfAccountTypesWithConvertedCurrencies);
         addNewLine(document);
 
-        writeFooter(document);
+        writeFinancialStatusReportFooter(document);
         document.close();
 
         return outputStream;
@@ -108,7 +105,7 @@ public class PdfExporter {
         document.add(paragraph);
     }
 
-    private void writeFinancialStatusReportBody(Document document, Customer customer) throws DocumentException {
+    private void writeFinancialStatusReportBody(Document document, Customer customer, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException {
         final Font boldFont = new Font();
         boldFont.setStyle(Font.BOLD);
 
@@ -133,28 +130,29 @@ public class PdfExporter {
 
         PdfPTable table = new PdfPTable(2);
 
-        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = customer.getAccounts()
-                .stream()
-                .collect(Collectors.groupingBy(account -> new Pair<>(account.getType(), account.getCurrency()), Collectors.summingDouble(Account::getBalance)));
-
-        List<FinancialStatus> financialStatuses = new ArrayList<>();
-
-        for (Map.Entry<Pair<AccountType, Currency>, Double> entry : balancesOfAccountTypes.entrySet()) {
-            Pair<AccountType, Currency> key = entry.getKey();
-            financialStatuses.add(new FinancialStatus(key.getValue0(), key.getValue1(), entry.getValue()));
-        }
-
-        Map<AccountType, List<FinancialStatus>> financialStatusOfAccountTypes = financialStatuses.stream()
-                .collect(Collectors.groupingBy(FinancialStatus::accountType));
-
-        for (Map.Entry<AccountType, List<FinancialStatus>> financialStatusOfAccountType : financialStatusOfAccountTypes.entrySet()) {
+        for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountType : financialStatusesOfAccountTypesWithConvertedCurrencies.entrySet()) {
             /* Header row */
             writeHeaderRowOfTable(List.of(financialStatusOfAccountType.getKey().getValue(), "Balance"), table);
 
             /* Data rows */
-            for (FinancialStatus financialStatus : financialStatusOfAccountType.getValue()) {
-                table.addCell(new PdfPCell(new Phrase(financialStatus.currency().toString())));
-                table.addCell(new PdfPCell(new Phrase(financialStatus.balance().toString())));
+            for (List<AccountFinancialStatus> accountFinancialStatuses : financialStatusOfAccountType.getValue()) {
+                AccountFinancialStatus accountFinancialStatus = accountFinancialStatuses.getFirst();
+                AccountFinancialStatus accountFinancialStatusWithConvertedCurrency = accountFinancialStatuses.getLast();
+
+                StringBuilder stringBuilder = new StringBuilder()
+                        .append(accountFinancialStatus.balance())
+                        .append(" ")
+                        .append(accountFinancialStatus.currency());
+
+                if (accountFinancialStatus.currency() != accountFinancialStatusWithConvertedCurrency.currency()) {
+                    stringBuilder.append(" / ")
+                            .append(accountFinancialStatusWithConvertedCurrency.balance())
+                            .append(" ")
+                            .append(accountFinancialStatusWithConvertedCurrency.currency());
+                }
+
+                table.addCell(new PdfPCell(new Phrase(accountFinancialStatus.currency().toString())));
+                table.addCell(new PdfPCell(new Phrase(stringBuilder.toString())));
             }
         }
 
@@ -299,6 +297,16 @@ public class PdfExporter {
         return new StringBuilder()
                 .append(word, 0, endIndex)
                 .append("*".repeat(length - endIndex));
+    }
+
+    private void writeFinancialStatusReportFooter(Document document) throws DocumentException {
+        Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
+        String message = "Our immediate banking exchange rates were used in calculating the equivalents for foreign currency assets.";
+        Paragraph paragraph = new Paragraph(message, font);
+        paragraph.setAlignment(Element.ALIGN_CENTER);
+        document.add(paragraph);
+
+        writeFooter(document);
     }
 
     private void writeHeader(Document document) throws DocumentException, IOException {

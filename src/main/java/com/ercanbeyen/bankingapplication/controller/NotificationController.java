@@ -15,6 +15,7 @@ import java.util.concurrent.CompletableFuture;
 @RequiredArgsConstructor
 public class NotificationController {
     private final NotificationService notificationService;
+
     @PostMapping
     public ResponseEntity<CompletableFuture<NotificationDto>> createNotification(@RequestBody @Valid NotificationDto request) {
         return ResponseEntity.ok(notificationService.createNotification(request));

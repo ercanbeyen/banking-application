@@ -1,9 +1,10 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialStatusResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -30,6 +31,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/customers")
@@ -98,9 +100,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{nationalId}/financial-status")
-    public ResponseEntity<CustomerFinancialStatusResponse> calculateFinancialStatus(@PathVariable("nationalId") String nationalId, @RequestParam("base") Currency baseCurrency) {
-        return ResponseEntity.ok(customerService.calculateFinancialStatus(nationalId, baseCurrency));
+    @GetMapping("/{nationalId}/financial-summary")
+    public ResponseEntity<CustomerFinancialSummaryResponse> calculateFinancialSummary(@PathVariable("nationalId") String nationalId, @RequestParam("base") Currency baseCurrency) {
+        return ResponseEntity.ok(customerService.calculateFinancialSummary(nationalId, baseCurrency));
     }
 
     @GetMapping("/{id}/accounts")
@@ -152,10 +154,12 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PostMapping("/{nationalId}/financial-status/report/pdf")
     public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") String nationalId) {
         Customer customer = customerService.findByNationalId(nationalId);
+        Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrencies = customerService.calculateFinancialStatus(nationalId);
+
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = PdfExporter.generatePdfStreamOfFinancialStatusReport(customer);
+            outputStream = PdfExporter.generatePdfStreamOfFinancialStatusReport(customer, financialStatusOfAccountTypesWithConvertedCurrencies);
             log.info("Financial Status Report Pdf is successfully generated");
         } catch (DocumentException | IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());

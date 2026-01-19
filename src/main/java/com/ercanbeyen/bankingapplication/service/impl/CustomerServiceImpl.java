@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialStatusResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
@@ -24,6 +24,7 @@ import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.javatuples.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +33,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -211,7 +213,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public CustomerFinancialStatusResponse calculateFinancialStatus(String nationalId, Currency toCurrency) {
+    public CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency toCurrency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         List<Account> accounts = findByNationalId(nationalId).getAccounts();
@@ -224,14 +226,14 @@ public class CustomerServiceImpl implements CustomerService {
             log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
         }
 
-        Double netStatus = accounts.stream()
+        Double netBalance = accounts.stream()
                 .map(account -> exchangeService.convertMoneyBetweenCurrencies(
                         account.getCurrency(),
                         toCurrency,
                         account.getBalance()))
                 .reduce(0D, Double::sum);
 
-        return new CustomerFinancialStatusResponse(earning, spending, netStatus);
+        return new CustomerFinancialSummaryResponse(earning, spending, netBalance);
     }
 
     @Override
@@ -424,6 +426,41 @@ public class CustomerServiceImpl implements CustomerService {
     public boolean existsByNationalId(String nationalId) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return customerRepository.existsByNationalId(nationalId);
+    }
+
+    @Override
+    public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId) {
+        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = findByNationalId(nationalId)
+                .getAccounts()
+                .stream()
+                .collect(Collectors.groupingBy(account -> new Pair<>(account.getType(), account.getCurrency()), Collectors.summingDouble(Account::getBalance)));
+
+        List<AccountFinancialStatus> accountFinancialStatuses = new ArrayList<>();
+
+        for (Map.Entry<Pair<AccountType, Currency>, Double> entry : balancesOfAccountTypes.entrySet()) {
+            Pair<AccountType, Currency> key = entry.getKey();
+            accountFinancialStatuses.add(new AccountFinancialStatus(key.getValue0(), key.getValue1(), entry.getValue()));
+        }
+
+        Map<AccountType, List<AccountFinancialStatus>> financialStatusOfAccountTypes = accountFinancialStatuses.stream()
+                .collect(Collectors.groupingBy(AccountFinancialStatus::accountType));
+
+        Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrencies = new EnumMap<>(AccountType.class);
+
+        for (Map.Entry<AccountType, List<AccountFinancialStatus>> financialStatusOfAccountType : financialStatusOfAccountTypes.entrySet()) {
+            AccountType accountType = financialStatusOfAccountType.getKey();
+            List<List<AccountFinancialStatus>> accountFinancialStatusesWithConvertedCurrencies = new ArrayList<>();
+
+            for (AccountFinancialStatus accountFinancialStatus : financialStatusOfAccountType.getValue()) {
+                Double balanceOfConvertedCurrency = exchangeService.convertMoneyBetweenCurrencies(accountFinancialStatus.currency(), Currency.getChargeCurrency(), accountFinancialStatus.balance());
+                AccountFinancialStatus accountFinancialStatusOfConvertedExchange = new AccountFinancialStatus(accountType, Currency.getChargeCurrency(), balanceOfConvertedCurrency);
+                accountFinancialStatusesWithConvertedCurrencies.add(List.of(accountFinancialStatus, accountFinancialStatusOfConvertedExchange));
+            }
+
+            financialStatusOfAccountTypesWithConvertedCurrencies.put(accountType, accountFinancialStatusesWithConvertedCurrencies);
+        }
+
+        return financialStatusOfAccountTypesWithConvertedCurrencies;
     }
 
     private Customer findById(Integer id) {
