@@ -30,6 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 
@@ -154,12 +155,20 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PostMapping("/{nationalId}/financial-status/report/pdf")
     public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") String nationalId) {
         Customer customer = customerService.findByNationalId(nationalId);
-        Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrencies = customerService.calculateFinancialStatus(nationalId);
+        Double netBalanceOfCustomer = customerService.calculateNetBalance(nationalId, null, Currency.getChargeCurrency());
+        Map<AccountType, List<List<AccountFinancialStatus>>> accountFinancialStatusesWithConvertedCurrencies = customerService.calculateFinancialStatus(nationalId);
+        Map<AccountType, Double> accountTypeNetBalancesWithConvertedCurrencies = new EnumMap<>(AccountType.class);
+
+        for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrency : accountFinancialStatusesWithConvertedCurrencies.entrySet()) {
+            AccountType accountType = financialStatusOfAccountTypesWithConvertedCurrency.getKey();
+            Double balance = customerService.calculateNetBalance(nationalId, accountType, Currency.getChargeCurrency());
+            accountTypeNetBalancesWithConvertedCurrencies.put(accountType, balance);
+        }
 
         ByteArrayOutputStream outputStream;
 
         try {
-            outputStream = PdfExporter.generatePdfStreamOfFinancialStatusReport(customer, financialStatusOfAccountTypesWithConvertedCurrencies);
+            outputStream = PdfExporter.generatePdfStreamOfFinancialStatusReport(customer, netBalanceOfCustomer, accountTypeNetBalancesWithConvertedCurrencies, accountFinancialStatusesWithConvertedCurrencies);
             log.info("Financial Status Report Pdf is successfully generated");
         } catch (DocumentException | IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());

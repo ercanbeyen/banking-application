@@ -213,25 +213,21 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency toCurrency) {
+    public CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency currency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        List<Account> accounts = findByNationalId(nationalId).getAccounts();
+        Customer customer = findByNationalId(nationalId);
+        List<Account> accounts = customer.getAccounts();
         double earning = 0;
         double spending = 0;
 
         for (Account account : accounts) {
-            earning += calculateTotalAmount(account, BalanceActivity.INCREASE, toCurrency);
-            spending += calculateTotalAmount(account, BalanceActivity.DECREASE, toCurrency);
+            earning += calculateTotalAmount(account, BalanceActivity.INCREASE, currency);
+            spending += calculateTotalAmount(account, BalanceActivity.DECREASE, currency);
             log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
         }
 
-        Double netBalance = accounts.stream()
-                .map(account -> exchangeService.convertMoneyBetweenCurrencies(
-                        account.getCurrency(),
-                        toCurrency,
-                        account.getBalance()))
-                .reduce(0D, Double::sum);
+        Double netBalance = calculateNetBalanceOfAccounts(accounts, null, currency);
 
         return new CustomerFinancialSummaryResponse(earning, spending, netBalance);
     }
@@ -463,6 +459,11 @@ public class CustomerServiceImpl implements CustomerService {
         return financialStatusOfAccountTypesWithConvertedCurrencies;
     }
 
+    @Override
+    public Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency) {
+        return calculateNetBalanceOfAccounts(findByNationalId(nationalId).getAccounts(), accountType, currency);
+    }
+
     private Customer findById(Integer id) {
         String entity = Entity.CUSTOMER.getValue();
         Customer customer = customerRepository.findById(id)
@@ -471,6 +472,16 @@ public class CustomerServiceImpl implements CustomerService {
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return customer;
+    }
+
+    private Double calculateNetBalanceOfAccounts(List<Account> accounts, AccountType accountType, Currency currency) {
+        return accounts.stream()
+                .filter(account -> Optional.ofNullable(accountType).isEmpty() || account.getType() == accountType)
+                .map(account -> exchangeService.convertMoneyBetweenCurrencies(
+                        account.getCurrency(),
+                        currency,
+                        account.getBalance()))
+                .reduce(0D, Double::sum);
     }
 
     private static void getFutureCashFlows(Integer year, Integer month, Customer customer, List<CashFlow> cashFlows) {

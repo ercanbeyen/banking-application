@@ -24,7 +24,7 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     String uploadProfilePhoto(Integer id, MultipartFile request);
     File downloadProfilePhoto(Integer id);
     String deleteProfilePhoto(Integer id);
-    CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency toCurrency);
+    CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency currency);
     List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption);
     List<NotificationDto> getNotifications(Integer id);
     List<MoneyTransferOrderDto> getMoneyTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType);
@@ -35,4 +35,5 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     Customer findByNationalId(String nationalId);
     boolean existsByNationalId(String nationalId);
     Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId);
+    Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency);
 }

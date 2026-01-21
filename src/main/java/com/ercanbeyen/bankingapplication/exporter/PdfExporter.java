@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.exporter;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
@@ -29,13 +30,16 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
+import java.util.function.Function;
 
 @Slf4j
 @UtilityClass
 public class PdfExporter {
     private final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
-    public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException, IOException {
+    public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer, Double netBalanceOfCustomer, Map<AccountType, Double> netBalancesOfAccountTypes, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -47,7 +51,7 @@ public class PdfExporter {
         writeTitle(document, "financial status");
         addNewLine(document);
 
-        writeFinancialStatusReportBody(document, customer, financialStatusesOfAccountTypesWithConvertedCurrencies);
+        writeFinancialStatusReportBody(document, customer, netBalanceOfCustomer, netBalancesOfAccountTypes, financialStatusesOfAccountTypesWithConvertedCurrencies);
         addNewLine(document);
 
         writeFinancialStatusReportFooter(document);
@@ -105,7 +109,7 @@ public class PdfExporter {
         document.add(paragraph);
     }
 
-    private void writeFinancialStatusReportBody(Document document, Customer customer, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException {
+    private void writeFinancialStatusReportBody(Document document, Customer customer, Double netBalanceOfCustomer, Map<AccountType, Double> netBalancesOfAccountTypes, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException {
         final Font boldFont = new Font();
         boldFont.setStyle(Font.BOLD);
 
@@ -119,10 +123,10 @@ public class PdfExporter {
 
         Chunk dateOutputChunk = new Chunk(todayDate + " " + todayTime);
 
-        Phrase phrase = new Phrase();
-        phrase.addAll(List.of(fullNameInputChunk, fullNameOutputChunk, dateInputChunk, dateOutputChunk));
+        Phrase chunkPhrase = new Phrase();
+        chunkPhrase.addAll(List.of(fullNameInputChunk, fullNameOutputChunk, dateInputChunk, dateOutputChunk));
 
-        Paragraph paragraph = new Paragraph(phrase);
+        Paragraph paragraph = new Paragraph(chunkPhrase);
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
 
@@ -130,9 +134,24 @@ public class PdfExporter {
 
         PdfPTable table = new PdfPTable(2);
 
+        writeHeaderRowOfTable.accept(List.of("Asset", "Balance"), table);
+
+        Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD);
+        final Currency financialStatusReportCurrency = Currency.getChargeCurrency();
+
+        Consumer<List<String>> addHeaderElementToTable = headerElements -> headerElements
+                .forEach(headerElement -> {
+                    PdfPCell header = new PdfPCell();
+                    header.setBorderWidth(1);
+                    Phrase phrase = new Phrase(headerElement, font);
+                    header.setPhrase(phrase);
+                    table.addCell(header);
+                });
+
         for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountType : financialStatusesOfAccountTypesWithConvertedCurrencies.entrySet()) {
             /* Header row */
-            writeHeaderRowOfTable(List.of(financialStatusOfAccountType.getKey().getValue(), "Balance"), table);
+            AccountType key = financialStatusOfAccountType.getKey();
+            addHeaderElementToTable.accept(List.of(key.getValue(), netBalancesOfAccountTypes.get(key).toString() + " " + financialStatusReportCurrency));
 
             /* Data rows */
             for (List<AccountFinancialStatus> accountFinancialStatuses : financialStatusOfAccountType.getValue()) {
@@ -156,6 +175,8 @@ public class PdfExporter {
             }
         }
 
+        font.setSize(13);
+        addHeaderElementToTable.accept(List.of("Sum", netBalanceOfCustomer.toString() + " " + financialStatusReportCurrency));
         document.add(table);
     }
 
@@ -171,7 +192,7 @@ public class PdfExporter {
         PdfPTable table = new PdfPTable(2);
 
         /* Header row */
-        writeHeaderRowOfTable(List.of("Field", "Value"), table);
+        writeHeaderRowOfTable.accept(List.of("Field", "Value"), table);
 
         /* Data rows */
         Map<String, Object> summary = accountActivity.getSummary();
@@ -240,7 +261,7 @@ public class PdfExporter {
         PdfPTable table = new PdfPTable(numberOfColumns);
 
         /* Header row */
-        writeHeaderRowOfTable(List.of(SummaryField.TIME, SummaryField.ACCOUNT_ACTIVITY, SummaryField.AMOUNT), table);
+        writeHeaderRowOfTable.accept(List.of(SummaryField.TIME, SummaryField.ACCOUNT_ACTIVITY, SummaryField.AMOUNT), table);
 
         /* Data rows */
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {
@@ -252,31 +273,41 @@ public class PdfExporter {
         document.add(table);
     }
 
-    private void writeHeaderRowOfTable(List<String> fields, PdfPTable table) {
+    private final BiConsumer<List<String>, PdfPTable> writeHeaderRowOfTable = (fields, table) -> {
         final Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD, BaseColor.WHITE);
-        fields.forEach(title -> {
+        fields.forEach(field -> {
             PdfPCell header = new PdfPCell();
             header.setBackgroundColor(BaseColor.BLUE);
             header.setBorderWidth(1);
-            Phrase phrase = new Phrase(title, font);
+            Phrase phrase = new Phrase(field, font);
             header.setPhrase(phrase);
             table.addCell(header);
         });
-    }
+    };
 
     private String maskField(Map.Entry<String, Object> entry) {
         String key = entry.getKey();
         String value = entry.getValue().toString();
         StringBuilder valueBuilder = new StringBuilder();
 
+        Function<String, StringBuilder> maskWordInFullName = word -> {
+            int length = word.length();
+            int endIndex = length < 5 ? 1 : 2;
+            log.info("Length and end index: {} & {}", length, endIndex);
+
+            return new StringBuilder()
+                    .append(word, 0, endIndex)
+                    .append("*".repeat(length - endIndex));
+        };
+
         if (key.equals(SummaryField.FULL_NAME)) {
             int spaceIndex = value.indexOf(' ');
             String name = value.substring(0, spaceIndex);
             String surname = value.substring(spaceIndex + 1);
 
-            valueBuilder.append(maskWordInFullName(name))
+            valueBuilder.append(maskWordInFullName.apply(name))
                     .append(" ")
-                    .append(maskWordInFullName(surname));
+                    .append(maskWordInFullName.apply(surname));
         } else if (key.equals(SummaryField.NATIONAL_IDENTITY)) {
             int length = value.length();
             valueBuilder.append(value, 0, 3)
@@ -287,16 +318,6 @@ public class PdfExporter {
         }
 
         return valueBuilder.toString();
-    }
-
-    private StringBuilder maskWordInFullName(String word) {
-        int length = word.length();
-        int endIndex = length < 5 ? 1 : 2;
-        log.info("Length and end index: {} & {}", length, endIndex);
-
-        return new StringBuilder()
-                .append(word, 0, endIndex)
-                .append("*".repeat(length - endIndex));
     }
 
     private void writeFinancialStatusReportFooter(Document document) throws DocumentException {
@@ -310,7 +331,7 @@ public class PdfExporter {
     }
 
     private void writeHeader(Document document) throws DocumentException, IOException {
-        Font font = new Font(Font.FontFamily.HELVETICA, 12, Font.BOLD, BaseColor.BLUE);
+        Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD, BaseColor.BLUE);
 
         Paragraph paragraph = new Paragraph(ExporterUtil.getBankName(), font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
