@@ -13,6 +13,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.event.BorderEvent;
 import com.ercanbeyen.bankingapplication.event.PageNumerationEvent;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
+import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
@@ -31,7 +32,6 @@ import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.Consumer;
 import java.util.function.Function;
 
 @Slf4j
@@ -139,19 +139,17 @@ public class PdfExporter {
         Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD);
         final Currency financialStatusReportCurrency = Currency.getChargeCurrency();
 
-        Consumer<List<String>> addHeaderElementToTable = headerElements -> headerElements
-                .forEach(headerElement -> {
-                    PdfPCell header = new PdfPCell();
-                    header.setBorderWidth(1);
-                    Phrase phrase = new Phrase(headerElement, font);
-                    header.setPhrase(phrase);
-                    table.addCell(header);
-                });
-
         for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountType : financialStatusesOfAccountTypesWithConvertedCurrencies.entrySet()) {
             /* Header row */
-            AccountType key = financialStatusOfAccountType.getKey();
-            addHeaderElementToTable.accept(List.of(key.getValue(), netBalancesOfAccountTypes.get(key).toString() + " " + financialStatusReportCurrency));
+            AccountType accountType = financialStatusOfAccountType.getKey();
+            List.of(accountType.getValue(), FormatterUtil.convertNumberToFormalExpression(netBalancesOfAccountTypes.get(accountType)) + " " + financialStatusReportCurrency)
+                    .forEach(header -> {
+                        PdfPCell cell = new PdfPCell();
+                        cell.setBorderWidth(1);
+                        Phrase phrase = new Phrase(header, font);
+                        cell.setPhrase(phrase);
+                        table.addCell(cell);
+                    });
 
             /* Data rows */
             for (List<AccountFinancialStatus> accountFinancialStatuses : financialStatusOfAccountType.getValue()) {
@@ -159,13 +157,13 @@ public class PdfExporter {
                 AccountFinancialStatus accountFinancialStatusWithConvertedCurrency = accountFinancialStatuses.getLast();
 
                 StringBuilder stringBuilder = new StringBuilder()
-                        .append(accountFinancialStatus.balance())
+                        .append(FormatterUtil.convertNumberToFormalExpression(accountFinancialStatus.balance()))
                         .append(" ")
                         .append(accountFinancialStatus.currency());
 
                 if (accountFinancialStatus.currency() != accountFinancialStatusWithConvertedCurrency.currency()) {
                     stringBuilder.append(" / ")
-                            .append(accountFinancialStatusWithConvertedCurrency.balance())
+                            .append(FormatterUtil.convertNumberToFormalExpression(accountFinancialStatusWithConvertedCurrency.balance()))
                             .append(" ")
                             .append(accountFinancialStatusWithConvertedCurrency.currency());
                 }
@@ -176,7 +174,16 @@ public class PdfExporter {
         }
 
         font.setSize(13);
-        addHeaderElementToTable.accept(List.of("Sum", netBalanceOfCustomer.toString() + " " + financialStatusReportCurrency));
+        List.of("Sum", FormatterUtil.convertNumberToFormalExpression(netBalanceOfCustomer) + " " + financialStatusReportCurrency)
+                .forEach(footer -> {
+                    PdfPCell cell = new PdfPCell();
+                    cell.setBorderWidth(1);
+                    cell.setBackgroundColor(BaseColor.GRAY);
+                    Phrase phrase = new Phrase(footer, font);
+                    cell.setPhrase(phrase);
+                    table.addCell(cell);
+                });
+
         document.add(table);
     }
 
@@ -239,7 +246,7 @@ public class PdfExporter {
         accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_IDENTITY + account.getId());
         accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_TYPE + account.getType());
         accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_CURRENCY + account.getCurrency());
-        accountInformationTable.addCell(AccountStatementUtil.BALANCE + account.getBalance());
+        accountInformationTable.addCell(AccountStatementUtil.BALANCE + FormatterUtil.convertNumberToFormalExpression(account.getBalance()));
 
         table.addCell(accountInformationTable);
 
@@ -267,7 +274,7 @@ public class PdfExporter {
         for (AccountActivityDto accountActivityDto : accountActivityDtos) {
             table.addCell(new PdfPCell(new Phrase(accountActivityDto.createdAt().toString())));
             table.addCell(new PdfPCell(new Phrase(accountActivityDto.type().getValue())));
-            table.addCell(new PdfPCell(new Phrase(ExporterUtil.calculateAmountForDataLine(account.getId(), accountActivityDto).toString())));
+            table.addCell(new PdfPCell(new Phrase(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(account.getId(), accountActivityDto)))));
         }
 
         document.add(table);

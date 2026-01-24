@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
+import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.experimental.UtilityClass;
 import org.apache.poi.hssf.util.HSSFColor;
@@ -84,7 +85,7 @@ public class ExcelExporter {
             int columnIndex = BEGINNING_INDEX;
             writeCell(row, columnIndex++, accountActivityDto.createdAt().toString(), style, sheet);
             writeCell(row, columnIndex++, accountActivityDto.type().getValue(), style, sheet);
-            writeCell(row, columnIndex, ExporterUtil.calculateAmountForDataLine(accountId, accountActivityDto), style, sheet);
+            writeCell(row, columnIndex, FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountId, accountActivityDto)), style, sheet);
         }
     }
 
@@ -183,7 +184,7 @@ public class ExcelExporter {
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.BALANCE, fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfAccountInformationTable, account.getBalance(), valueColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfAccountInformationTable, FormatterUtil.convertNumberToFormalExpression(account.getBalance()), valueColumnStyle, sheet);
     }
 
     private void writeFooter(String name, Workbook workbook) {

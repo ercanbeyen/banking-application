@@ -426,6 +426,8 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = findByNationalId(nationalId)
                 .getAccounts()
                 .stream()
@@ -461,10 +463,14 @@ public class CustomerServiceImpl implements CustomerService {
 
     @Override
     public Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return calculateNetBalanceOfAccounts(findByNationalId(nationalId).getAccounts(), accountType, currency);
     }
 
-    private Customer findById(Integer id) {
+    @Override
+    public Customer findById(Integer id) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         String entity = Entity.CUSTOMER.getValue();
         Customer customer = customerRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));

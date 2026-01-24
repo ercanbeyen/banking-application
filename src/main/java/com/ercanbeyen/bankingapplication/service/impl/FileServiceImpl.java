@@ -79,7 +79,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public List<FilePreviewInfo> getPreviewInfosOfFiles() {
+    public List<FilePreviewInfo> getFilePreviewInfos() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return fileRepository.findAllPreviewInfos();
     }

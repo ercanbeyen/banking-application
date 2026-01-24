@@ -18,6 +18,7 @@ import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +44,8 @@ public class TransactionService {
     private final CashFlowCalendarService cashFlowCalendarService;
 
     public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         Account[] accounts = new Account[2]; // first account is sender, second account is recipient
         Double transactionFee = getTransactionFee(activityType, List.of(account));
         log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType.getValue(), amount, transactionFee);
@@ -99,6 +102,8 @@ public class TransactionService {
     }
 
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account chargedAccount) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
         List<Account> accountsInMoneyTransfer = List.of(senderAccount, recipientAccount);
         double transactionFee = getTransactionFee(activityType, accountsInMoneyTransfer);
@@ -120,13 +125,22 @@ public class TransactionService {
 
         Account[] accounts = {senderAccount, recipientAccount};
         String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
+        final String senderWord = "Sender ";
+        final String recipientWord = "Recipient ";
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put(SummaryField.FULL_NAME, senderAccount.getCustomer().getFullName());
+        summary.put(senderWord + SummaryField.FULL_NAME, senderAccount.getCustomer().getFullName());
+
+        if (!Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId())) {
+            summary.put(recipientWord + SummaryField.FULL_NAME, recipientAccount.getCustomer().getFullName());
+        }
+
         summary.put(SummaryField.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
-        summary.put("Sender " + SummaryField.ACCOUNT_IDENTITY, senderAccount.getId());
-        summary.put("Recipient " + SummaryField.ACCOUNT_IDENTITY, recipientAccount.getId());
+        summary.put(senderWord + SummaryField.ACCOUNT_IDENTITY, senderAccount.getId());
+        summary.put(recipientWord + SummaryField.ACCOUNT_IDENTITY, recipientAccount.getId());
+
+
         putChargedAccountInformationIntoSummary(senderAccount, chargedAccount, summary);
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
@@ -138,14 +152,16 @@ public class TransactionService {
 
         if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue();
-            String explanation = entity + " " + senderAccount.getId() + " sent " + amount + " " + senderAccount.getCurrency();
+            String explanation = entity + " " + senderAccount.getId() + " sent " + amountInSummary + " " + senderAccount.getCurrency();
             cashFlowCalendarService.createCashFlow(senderAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
-            explanation = entity + " " + recipientAccount.getId() + " received " + amount + recipientAccount.getCurrency();
+            explanation = entity + " " + recipientAccount.getId() + " received " + amountInSummary + recipientAccount.getCurrency();
             cashFlowCalendarService.createCashFlow(recipientAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
         }
     }
 
     public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
 
         List<Account> accountsInMoneyExchange = List.of(sellerAccount, buyerAccount);
@@ -187,7 +203,7 @@ public class TransactionService {
         putChargedAccountInformationIntoSummary(sellerAccount, chargedAccount, summary);
         summary.put("Spent " + SummaryField.AMOUNT, spentAmountInSummary + " " + sellerAccount.getCurrency());
         summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
-        summary.put(SummaryField.RATE, rate);
+        summary.put(SummaryField.RATE, FormatterUtil.convertNumberToFormalExpression(rate));
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
         summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
@@ -196,6 +212,8 @@ public class TransactionService {
     }
 
     public void updateDepositAccountFields(Account account, double balance, int depositPeriod) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         double interestRatio = getInterestRatio(account.getCurrency(), balance, depositPeriod);
         double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(balance, depositPeriod, interestRatio);
 

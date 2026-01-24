@@ -4,7 +4,9 @@ import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
+import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
+import com.ercanbeyen.bankingapplication.dto.response.ReceiptPreview;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -14,6 +16,7 @@ import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
+import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
@@ -30,19 +33,19 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.time.LocalDate;
-import java.util.EnumMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/customers")
 @Slf4j
 public class CustomerController extends BaseController<CustomerDto, CustomerFilteringOption> {
     private final CustomerService customerService;
+    private final AccountService accountService;
 
-    public CustomerController(CustomerService customerService) {
+    public CustomerController(CustomerService customerService, AccountService accountService) {
         super(customerService);
         this.customerService = customerService;
+        this.accountService = accountService;
     }
 
     @PostMapping
@@ -109,6 +112,23 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @GetMapping("/{id}/accounts")
     public ResponseEntity<List<AccountDto>> getAccounts(@PathVariable("id") Integer id, AccountFilteringOption option) {
         return ResponseEntity.ok(customerService.getAccounts(id, option));
+    }
+
+    @GetMapping("/{id}/accounts/receipt-previews")
+    public ResponseEntity<List<ReceiptPreview>> getReceiptPreviews(@PathVariable("id") Integer id) {
+        AccountActivityFilteringRequest request = new AccountActivityFilteringRequest(null, null, null, null, null);
+        Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
+
+        customerService.findById(id)
+                .getAccounts()
+                .forEach(account -> accountActivityDtos.addAll(accountService.getAccountActivities(account.getId(), request)));
+
+        List<ReceiptPreview> receiptPreviews =  accountActivityDtos.stream()
+                .map(accountActivityDto -> new ReceiptPreview(accountActivityDto.id(), accountActivityDto.type(), accountActivityDto.createdAt(), accountActivityDto.amount()))
+                .sorted(Comparator.comparing(ReceiptPreview::time).reversed())
+                .toList();
+
+        return ResponseEntity.ok(receiptPreviews);
     }
 
     @GetMapping("/{id}/notifications")
