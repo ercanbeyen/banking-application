@@ -117,7 +117,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @GetMapping("/{id}/accounts/receipt-previews")
     public ResponseEntity<List<ReceiptPreview>> getReceiptPreviews(@PathVariable("id") Integer id) {
         AccountActivityFilteringRequest request = new AccountActivityFilteringRequest(null, null, null, null, null);
-        Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
+        SortedSet<AccountActivityDto> accountActivityDtos = new TreeSet<>(Comparator.comparing(AccountActivityDto::createdAt).reversed());
 
         customerService.findById(id)
                 .getAccounts()
@@ -125,7 +125,6 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
 
         List<ReceiptPreview> receiptPreviews =  accountActivityDtos.stream()
                 .map(accountActivityDto -> new ReceiptPreview(accountActivityDto.id(), accountActivityDto.type(), accountActivityDto.createdAt(), accountActivityDto.amount()))
-                .sorted(Comparator.comparing(ReceiptPreview::time).reversed())
                 .toList();
 
         return ResponseEntity.ok(receiptPreviews);

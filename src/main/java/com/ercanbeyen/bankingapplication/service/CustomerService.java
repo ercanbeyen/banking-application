@@ -32,9 +32,9 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month);
     List<CustomerAgreementDto> getAgreements(Integer id);
     List<RegisteredRecipient> getRegisteredRecipients(Integer id);
+    Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId);
+    Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency);
     Customer findById(Integer id);
     Customer findByNationalId(String nationalId);
     boolean existsByNationalId(String nationalId);
-    Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId);
-    Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency);
 }

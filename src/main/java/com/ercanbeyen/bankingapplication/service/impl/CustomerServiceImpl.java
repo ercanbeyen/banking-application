@@ -396,34 +396,6 @@ public class CustomerServiceImpl implements CustomerService {
         return findById(id).getRegisteredRecipients();
     }
 
-    /**
-     * @param nationalId is national identity which is unique for each customer
-     * @return customer corresponds to the given nationalId
-     */
-    @Override
-    public Customer findByNationalId(String nationalId) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        String entity = Entity.CUSTOMER.getValue();
-        Customer customer = customerRepository.findByNationalId(nationalId)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
-
-        log.info(LogMessage.RESOURCE_FOUND, entity);
-
-        return customer;
-    }
-
-    /***
-     *
-     * @param nationalId is national identity which is unique for each customer
-     * @return status for customer existence corresponds to nationalId
-     */
-    @Override
-    public boolean existsByNationalId(String nationalId) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return customerRepository.existsByNationalId(nationalId);
-    }
-
     @Override
     public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
@@ -478,6 +450,33 @@ public class CustomerServiceImpl implements CustomerService {
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return customer;
+    }
+
+    /**
+     * @param nationalId is national identity which is unique for each customer
+     * @return customer corresponds to the given nationalId
+     */
+    @Override
+    public Customer findByNationalId(String nationalId) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        String entity = Entity.CUSTOMER.getValue();
+        Customer customer = customerRepository.findByNationalId(nationalId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
+
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        return customer;
+    }
+
+    /**
+     * @param nationalId is national identity which is unique for each customer
+     * @return status for customer existence corresponds to nationalId
+     */
+    @Override
+    public boolean existsByNationalId(String nationalId) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return customerRepository.existsByNationalId(nationalId);
     }
 
     private Double calculateNetBalanceOfAccounts(List<Account> accounts, AccountType accountType, Currency currency) {
