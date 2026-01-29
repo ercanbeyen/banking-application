@@ -12,5 +12,5 @@ public interface FileService {
     CompletableFuture<File> storeFile(MultipartFile request, String name);
     File getFile(String id);
     String deleteFile(String id);
-    List<FilePreviewInfo> getPreviewInfosOfFiles();
+    List<FilePreviewInfo> getFilePreviewInfos();
 }

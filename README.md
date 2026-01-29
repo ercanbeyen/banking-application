@@ -32,7 +32,7 @@ Entities:
 - If account is deposit, then it must also have deposit period and interest ratio.
 - News Report is used to add news.
 - Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
-- Customers can perform transactions within daily transaction limits and may pay transaction fees for some transactions.
+- Customers can trade within daily transaction limits and may incur transaction fees for some transactions.
 - Customers can create one-time or regular transfer orders to transfer money at future dates.
 - Customers are obliged to comply with the agreements they have approved.
 
@@ -41,7 +41,8 @@ Entities:
 - News are automatically added in chunks of size 40.
 - Notifications are created to inform the customer that the relevant transaction has been completed successfully.
 - Customers can participate in surveys related to their transactions.
-- Customers can generate receipts and account statements in PDF or Excel format at any time.
+- Customers can generate receipts, account statements and financial status report in PDF format at any time.
+- Customers can generate account statements in Excel format at any time.
 - Scripts inside resources/db.stored_procedure must be written into related database containers to call procedures.
 
 ### Tech Stack
@@ -102,8 +103,8 @@ In order to monitor the application, you should use below actuator url to get me
 If you want to monitor specific metric, you should append the metric to the actuator url. For example, in order to check health, you should use the below url to check health.<br/>
 `http://localhost:${PORT}/actuator/health`
 
-### Api Documentation
+### API Documentation
 ---
-You may use Swagger-UI with the port of the application you configured to access the project's api documentation.<br/>
+You may use Swagger-UI with the port of the application you configured to access the project's API documentation.<br/>
 You should use the below url to access the Swagger-UI.<br/>
 `http://localhost:${PORT}/swagger-ui.html`

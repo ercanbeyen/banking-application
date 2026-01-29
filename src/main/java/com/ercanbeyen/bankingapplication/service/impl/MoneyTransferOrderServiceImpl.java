@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
@@ -144,7 +145,7 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
 
         accountService.checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
-        Account chargedAccount = accountService.getChargedAccount(request.getChargedAccountId(), List.of(senderAccount));
+        Account chargedAccount = accountService.getChargedAccount(AccountActivityType.MONEY_TRANSFER, request.getChargedAccountId(), List.of(senderAccount, recipientAccount));
 
         return List.of(senderAccount, recipientAccount, chargedAccount);
     }

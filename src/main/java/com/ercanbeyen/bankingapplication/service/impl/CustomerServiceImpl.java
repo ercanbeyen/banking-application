@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
@@ -24,6 +24,7 @@ import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.javatuples.Pair;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
@@ -32,6 +33,7 @@ import java.time.LocalDate;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -211,51 +213,43 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency) {
+    public CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency currency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        List<Account> accounts = findByNationalId(nationalId).getAccounts();
+        Customer customer = findByNationalId(nationalId);
+        List<Account> accounts = customer.getAccounts();
         double earning = 0;
         double spending = 0;
 
         for (Account account : accounts) {
-            earning += calculateTotalAmount(account, BalanceActivity.INCREASE, toCurrency);
-            spending += calculateTotalAmount(account, BalanceActivity.DECREASE, toCurrency);
+            earning += calculateTotalAmount(account, BalanceActivity.INCREASE, currency);
+            spending += calculateTotalAmount(account, BalanceActivity.DECREASE, currency);
             log.info("Earning and Spending for Account {}: {} & {}", earning, spending, account.getId());
         }
 
-        Double netStatus = accounts.stream()
-                .map(account -> exchangeService.convertMoneyBetweenCurrencies(
-                        account.getCurrency(),
-                        toCurrency,
-                        account.getBalance()))
-                .reduce(0D, Double::sum);
+        Double netBalance = calculateNetBalanceOfAccounts(accounts, null, currency);
 
-        return new CustomerStatusResponse(earning, spending, netStatus);
+        return new CustomerFinancialSummaryResponse(earning, spending, netBalance);
     }
 
     @Override
     public List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Customer customer = findById(id);
-        Predicate<Account> accountPredicate = account -> (account.getCustomer().getNationalId().equals(customer.getNationalId()))
-                && (filteringOption.getType() == null || filteringOption.getType() == account.getType())
-                && (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
+        Predicate<Account> accountPredicate = account -> (filteringOption == null)
+                || (filteringOption.getType() == null || filteringOption.getType() == account.getType())
+                || (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
 
         Comparator<Account> accountComparator = Comparator.comparing(Account::getCreatedAt)
                 .reversed();
 
-        List<Account> accounts = customer.getAccounts()
+        return findById(id)
+                .getAccounts()
                 .stream()
                 .filter(accountPredicate)
                 .sorted(accountComparator)
+                .map(accountMapper::entityToDto)
                 .toList();
-
-        List<AccountDto> accountDtos = new ArrayList<>();
-        accounts.forEach(account -> accountDtos.add(accountMapper.entityToDto(account)));
-
-        return accountDtos;
     }
 
     @Override
@@ -402,6 +396,62 @@ public class CustomerServiceImpl implements CustomerService {
         return findById(id).getRegisteredRecipients();
     }
 
+    @Override
+    public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = findByNationalId(nationalId)
+                .getAccounts()
+                .stream()
+                .collect(Collectors.groupingBy(account -> new Pair<>(account.getType(), account.getCurrency()), Collectors.summingDouble(Account::getBalance)));
+
+        List<AccountFinancialStatus> accountFinancialStatuses = new ArrayList<>();
+
+        for (Map.Entry<Pair<AccountType, Currency>, Double> entry : balancesOfAccountTypes.entrySet()) {
+            Pair<AccountType, Currency> key = entry.getKey();
+            accountFinancialStatuses.add(new AccountFinancialStatus(key.getValue0(), key.getValue1(), entry.getValue()));
+        }
+
+        Map<AccountType, List<AccountFinancialStatus>> financialStatusOfAccountTypes = accountFinancialStatuses.stream()
+                .collect(Collectors.groupingBy(AccountFinancialStatus::accountType));
+
+        Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrencies = new EnumMap<>(AccountType.class);
+
+        for (Map.Entry<AccountType, List<AccountFinancialStatus>> financialStatusOfAccountType : financialStatusOfAccountTypes.entrySet()) {
+            AccountType accountType = financialStatusOfAccountType.getKey();
+            List<List<AccountFinancialStatus>> accountFinancialStatusesWithConvertedCurrencies = new ArrayList<>();
+
+            for (AccountFinancialStatus accountFinancialStatus : financialStatusOfAccountType.getValue()) {
+                Double balanceOfConvertedCurrency = exchangeService.convertMoneyBetweenCurrencies(accountFinancialStatus.currency(), Currency.getChargeCurrency(), accountFinancialStatus.balance());
+                AccountFinancialStatus accountFinancialStatusOfConvertedExchange = new AccountFinancialStatus(accountType, Currency.getChargeCurrency(), balanceOfConvertedCurrency);
+                accountFinancialStatusesWithConvertedCurrencies.add(List.of(accountFinancialStatus, accountFinancialStatusOfConvertedExchange));
+            }
+
+            financialStatusOfAccountTypesWithConvertedCurrencies.put(accountType, accountFinancialStatusesWithConvertedCurrencies);
+        }
+
+        return financialStatusOfAccountTypesWithConvertedCurrencies;
+    }
+
+    @Override
+    public Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return calculateNetBalanceOfAccounts(findByNationalId(nationalId).getAccounts(), accountType, currency);
+    }
+
+    @Override
+    public Customer findById(Integer id) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        String entity = Entity.CUSTOMER.getValue();
+        Customer customer = customerRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
+
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        return customer;
+    }
+
     /**
      * @param nationalId is national identity which is unique for each customer
      * @return customer corresponds to the given nationalId
@@ -419,8 +469,7 @@ public class CustomerServiceImpl implements CustomerService {
         return customer;
     }
 
-    /***
-     *
+    /**
      * @param nationalId is national identity which is unique for each customer
      * @return status for customer existence corresponds to nationalId
      */
@@ -430,14 +479,14 @@ public class CustomerServiceImpl implements CustomerService {
         return customerRepository.existsByNationalId(nationalId);
     }
 
-    private Customer findById(Integer id) {
-        String entity = Entity.CUSTOMER.getValue();
-        Customer customer = customerRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
-
-        log.info(LogMessage.RESOURCE_FOUND, entity);
-
-        return customer;
+    private Double calculateNetBalanceOfAccounts(List<Account> accounts, AccountType accountType, Currency currency) {
+        return accounts.stream()
+                .filter(account -> Optional.ofNullable(accountType).isEmpty() || account.getType() == accountType)
+                .map(account -> exchangeService.convertMoneyBetweenCurrencies(
+                        account.getCurrency(),
+                        currency,
+                        account.getBalance()))
+                .reduce(0D, Double::sum);
     }
 
     private static void getFutureCashFlows(Integer year, Integer month, Customer customer, List<CashFlow> cashFlows) {

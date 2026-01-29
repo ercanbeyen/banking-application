@@ -128,7 +128,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     }
 
     @PostMapping("/{id}/statement/pdf")
-    public ResponseEntity<byte[]> generateAccountStatement(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+    public ResponseEntity<byte[]> generateAccountStatementPdf(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
@@ -159,7 +159,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     }
 
     @PostMapping("/{id}/statement/excel")
-    public ResponseEntity<byte[]> exportAccountActivitiesToExcel(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+    public ResponseEntity<byte[]> generateAccountStatementExcel(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
@@ -174,7 +174,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
             headers.setContentDisposition(ContentDisposition.attachment()
-                    .filename("account_" + account.getId() + "_activities.xlsx")
+                    .filename("account_" + account.getId() + "_statement.xlsx")
                     .build());
             headers.setContentLength(outputStream.size());
 

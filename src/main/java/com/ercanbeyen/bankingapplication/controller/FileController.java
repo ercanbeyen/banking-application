@@ -48,9 +48,9 @@ public class FileController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping
-    public ResponseEntity<List<FilePreview>> getPreviewsOfFiles() {
-        List<FilePreview> filePreviews = fileService.getPreviewInfosOfFiles()
+    @GetMapping("/previews")
+    public ResponseEntity<List<FilePreview>> getFilePreviews() {
+        List<FilePreview> filePreviews = fileService.getFilePreviewInfos()
                 .stream()
                 .map(filePreviewInfo -> {
                     String fileDownloadUri = ServletUriComponentsBuilder.fromCurrentContextPath()

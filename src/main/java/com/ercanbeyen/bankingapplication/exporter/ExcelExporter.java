@@ -1,9 +1,13 @@
 package com.ercanbeyen.bankingapplication.exporter;
 
+import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
+import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
+import com.ercanbeyen.bankingapplication.util.FormatterUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.experimental.UtilityClass;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
@@ -63,9 +67,9 @@ public class ExcelExporter {
 
         int columnIndex = BEGINNING_INDEX;
 
-        writeCell(row, columnIndex++, "Time", style, sheet);
-        writeCell(row, columnIndex++, "Account Activity", style, sheet);
-        writeCell(row, columnIndex, "Amount", style, sheet);
+        writeCell(row, columnIndex++, SummaryField.TIME, style, sheet);
+        writeCell(row, columnIndex++, SummaryField.ACCOUNT_ACTIVITY, style, sheet);
+        writeCell(row, columnIndex, SummaryField.AMOUNT, style, sheet);
     }
 
     private void writeDataRows(Integer accountId, String name, Workbook workbook, List<AccountActivityDto> accountActivityDtos) {
@@ -81,7 +85,7 @@ public class ExcelExporter {
             int columnIndex = BEGINNING_INDEX;
             writeCell(row, columnIndex++, accountActivityDto.createdAt().toString(), style, sheet);
             writeCell(row, columnIndex++, accountActivityDto.type().getValue(), style, sheet);
-            writeCell(row, columnIndex, ExporterUtil.calculateAmountForDataLine(accountId, accountActivityDto), style, sheet);
+            writeCell(row, columnIndex, FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountId, accountActivityDto)), style, sheet);
         }
     }
 
@@ -91,7 +95,7 @@ public class ExcelExporter {
         writeHeaderText(workbook, name, HSSFColor.HSSFColorPredefined.DARK_BLUE, ExporterUtil.getBankName());
         rowIndex++;
         writeLogo(workbook, sheet);
-        writeHeaderText(workbook, name, HSSFColor.HSSFColorPredefined.DARK_RED, ExporterUtil.getAccountStatementTitle());
+        writeHeaderText(workbook, name, HSSFColor.HSSFColorPredefined.DARK_RED, ExporterUtil.getAccountStatementTitle().toUpperCase());
     }
 
     private void writeHeaderText(Workbook workbook, String name, HSSFColor.HSSFColorPredefined color, String text) {
@@ -147,40 +151,40 @@ public class ExcelExporter {
         valueColumnStyle.setFont(font);
 
         Row row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Dear " + customer.getName().toUpperCase(), fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.writeFullName(customer.getName()), fieldColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Customer Number:", fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NUMBER, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getId(), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Customer National Identity Number:", fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, customer.getNationalId(), valueColumnStyle, sheet);
-        writeCell(row, fieldColumnIndexOfTransactionInformationTable, "Document Issue Date:", fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfTransactionInformationTable, LocalDate.now().toString(), valueColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, fieldColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeDocumentIssueDate(TimeUtil.getTurkeyDateTime()), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Branch:", fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.BRANCH, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getBranch().getName(), valueColumnStyle, sheet);
-        writeCell(row, fieldColumnIndexOfTransactionInformationTable, "Inquiry Criteria:", fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfTransactionInformationTable, fromDate + " - " + toDate, valueColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.INQUIRY_CRITERIA, fieldColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeInquiryCriteria(fromDate, toDate), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Account Identity:", fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.ACCOUNT_IDENTITY, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getId(), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Account Type:", fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfAccountInformationTable, account.getId(), valueColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.ACCOUNT_TYPE, fieldColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfAccountInformationTable, account.getType().toString(), valueColumnStyle, sheet);
 
 
         row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Currency:", fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.ACCOUNT_CURRENCY, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getCurrency().toString(), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, "Balance:", fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfAccountInformationTable, account.getBalance(), valueColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.BALANCE, fieldColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfAccountInformationTable, FormatterUtil.convertNumberToFormalExpression(account.getBalance()), valueColumnStyle, sheet);
     }
 
     private void writeFooter(String name, Workbook workbook) {

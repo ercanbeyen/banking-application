@@ -9,7 +9,7 @@ import java.util.Optional;
 @UtilityClass
 public class ExporterUtil {
     private final String BANK_NAME = "Online Bank";
-    private final String ACCOUNT_STATEMENT_TITLE = "ACCOUNT STATEMENT";
+    private final String ACCOUNT_STATEMENT_TITLE = "account statement";
     private final String LAW_MESSAGE = """
             If the information on this document does not match the bank records,
             the bank records will be taken as basis and this document will not even constitute the beginning of

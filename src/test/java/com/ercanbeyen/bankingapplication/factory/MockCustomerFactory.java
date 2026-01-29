@@ -24,7 +24,7 @@ public class MockCustomerFactory {
         CustomerAgreement customerAgreement = new CustomerAgreement();
         customerAgreement.setId(UUID.randomUUID().toString());
         customerAgreement.setAgreement(agreement);
-        customerAgreement.setApprovedAt(TimeUtil.getCurrentTimeStampInTurkey());
+        customerAgreement.setApprovedAt(TimeUtil.getTurkeyDateTime());
 
         List<Customer> customers = new ArrayList<>();
         List<CustomerDto> requests = generateMockCustomerDtos();

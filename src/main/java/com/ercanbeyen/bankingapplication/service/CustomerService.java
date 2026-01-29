@@ -1,9 +1,10 @@
 package com.ercanbeyen.bankingapplication.service;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -14,6 +15,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 
 public interface CustomerService extends BaseService<CustomerDto, CustomerFilteringOption> {
     String approveAgreement(Integer id, String title);
@@ -22,7 +24,7 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     String uploadProfilePhoto(Integer id, MultipartFile request);
     File downloadProfilePhoto(Integer id);
     String deleteProfilePhoto(Integer id);
-    CustomerStatusResponse calculateStatus(String nationalId, Currency toCurrency);
+    CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency currency);
     List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption);
     List<NotificationDto> getNotifications(Integer id);
     List<MoneyTransferOrderDto> getMoneyTransferOrders(Integer customerId, LocalDate fromDate, LocalDate toDate, Currency currency, PaymentType paymentType);
@@ -30,6 +32,9 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month);
     List<CustomerAgreementDto> getAgreements(Integer id);
     List<RegisteredRecipient> getRegisteredRecipients(Integer id);
+    Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId);
+    Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency);
+    Customer findById(Integer id);
     Customer findByNationalId(String nationalId);
     boolean existsByNationalId(String nationalId);
 }

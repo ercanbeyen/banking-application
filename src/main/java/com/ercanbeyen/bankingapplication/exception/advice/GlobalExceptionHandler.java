@@ -82,7 +82,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> generateErrorResponse(Exception exception, HttpStatus httpStatus) {
-        ErrorResponse response = new ErrorResponse(httpStatus.value(), exception.getMessage(), TimeUtil.getCurrentTimeStampInTurkey());
+        ErrorResponse response = new ErrorResponse(httpStatus.value(), exception.getMessage(), TimeUtil.getTurkeyDateTime());
         return new ResponseEntity<>(response, httpStatus);
     }
 }

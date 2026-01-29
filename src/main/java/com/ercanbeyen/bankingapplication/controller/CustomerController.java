@@ -1,41 +1,51 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
-import com.ercanbeyen.bankingapplication.dto.response.CustomerStatusResponse;
+import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
+import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
+import com.ercanbeyen.bankingapplication.dto.response.ReceiptPreview;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
+import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
+import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
+import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import com.ercanbeyen.bankingapplication.util.PhotoUtil;
 import com.ercanbeyen.bankingapplication.util.MoneyTransferOrderUtil;
+import com.itextpdf.text.DocumentException;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.validator.constraints.Range;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.time.LocalDate;
-import java.util.List;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/customers")
 @Slf4j
 public class CustomerController extends BaseController<CustomerDto, CustomerFilteringOption> {
     private final CustomerService customerService;
+    private final AccountService accountService;
 
-    public CustomerController(CustomerService customerService) {
+    public CustomerController(CustomerService customerService, AccountService accountService) {
         super(customerService);
         this.customerService = customerService;
+        this.accountService = accountService;
     }
 
     @PostMapping
@@ -94,14 +104,30 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{nationalId}/status")
-    public ResponseEntity<CustomerStatusResponse> calculateStatus(@PathVariable("nationalId") String nationalId, @RequestParam("base") Currency baseCurrency) {
-        return ResponseEntity.ok(customerService.calculateStatus(nationalId, baseCurrency));
+    @GetMapping("/{nationalId}/financial-summary")
+    public ResponseEntity<CustomerFinancialSummaryResponse> calculateFinancialSummary(@PathVariable("nationalId") String nationalId, @RequestParam("base") Currency baseCurrency) {
+        return ResponseEntity.ok(customerService.calculateFinancialSummary(nationalId, baseCurrency));
     }
 
     @GetMapping("/{id}/accounts")
     public ResponseEntity<List<AccountDto>> getAccounts(@PathVariable("id") Integer id, AccountFilteringOption option) {
         return ResponseEntity.ok(customerService.getAccounts(id, option));
+    }
+
+    @GetMapping("/{id}/accounts/receipt-previews")
+    public ResponseEntity<List<ReceiptPreview>> getReceiptPreviews(@PathVariable("id") Integer id) {
+        AccountActivityFilteringRequest request = new AccountActivityFilteringRequest(null, null, null, null, null);
+        SortedSet<AccountActivityDto> accountActivityDtos = new TreeSet<>(Comparator.comparing(AccountActivityDto::createdAt).reversed());
+
+        customerService.findById(id)
+                .getAccounts()
+                .forEach(account -> accountActivityDtos.addAll(accountService.getAccountActivities(account.getId(), request)));
+
+        List<ReceiptPreview> receiptPreviews =  accountActivityDtos.stream()
+                .map(accountActivityDto -> new ReceiptPreview(accountActivityDto.id(), accountActivityDto.type(), accountActivityDto.createdAt(), accountActivityDto.amount()))
+                .toList();
+
+        return ResponseEntity.ok(receiptPreviews);
     }
 
     @GetMapping("/{id}/notifications")
@@ -143,5 +169,39 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @GetMapping("/{id}/registered-recipients")
     public ResponseEntity<List<RegisteredRecipient>> getRegisteredRecipients(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
+    }
+
+    @PostMapping("/{nationalId}/financial-status/report/pdf")
+    public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") String nationalId) {
+        Customer customer = customerService.findByNationalId(nationalId);
+        Double netBalanceOfCustomer = customerService.calculateNetBalance(nationalId, null, Currency.getChargeCurrency());
+        Map<AccountType, List<List<AccountFinancialStatus>>> accountFinancialStatusesWithConvertedCurrencies = customerService.calculateFinancialStatus(nationalId);
+        Map<AccountType, Double> accountTypeNetBalancesWithConvertedCurrencies = new EnumMap<>(AccountType.class);
+
+        for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrency : accountFinancialStatusesWithConvertedCurrencies.entrySet()) {
+            AccountType accountType = financialStatusOfAccountTypesWithConvertedCurrency.getKey();
+            Double balance = customerService.calculateNetBalance(nationalId, accountType, Currency.getChargeCurrency());
+            accountTypeNetBalancesWithConvertedCurrencies.put(accountType, balance);
+        }
+
+        ByteArrayOutputStream outputStream;
+
+        try {
+            outputStream = PdfExporter.generatePdfStreamOfFinancialStatusReport(customer, netBalanceOfCustomer, accountTypeNetBalancesWithConvertedCurrencies, accountFinancialStatusesWithConvertedCurrencies);
+            log.info("Financial Status Report Pdf is successfully generated");
+        } catch (DocumentException | IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename("customer_" + customer.getId() + "_financialStatusReport.pdf")
+                .build());
+        headers.setContentLength(outputStream.size());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(outputStream.toByteArray());
     }
 }

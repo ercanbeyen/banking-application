@@ -17,7 +17,7 @@ public class MockCustomerAgreementFactory {
 
         customerAgreements.forEach(customerAgreement -> {
             CustomerAgreementDto customerAgreementDto = new CustomerAgreementDto(
-                    UUID.randomUUID().toString(), customerAgreement.getCustomer().getNationalId(), customerAgreement.getAgreement().getTitle(), TimeUtil.getCurrentTimeStampInTurkey());
+                    UUID.randomUUID().toString(), customerAgreement.getCustomer().getNationalId(), customerAgreement.getAgreement().getTitle(), TimeUtil.getTurkeyDateTime());
             customerAgreementDtos.add(customerAgreementDto);
         });
 
@@ -32,7 +32,7 @@ public class MockCustomerAgreementFactory {
         customerAgreement.setId(UUID.randomUUID().toString());
         customerAgreement.setAgreement(agreement);
         customerAgreement.setCustomer(customer);
-        customerAgreement.setApprovedAt(TimeUtil.getCurrentTimeStampInTurkey());
+        customerAgreement.setApprovedAt(TimeUtil.getTurkeyDateTime());
 
         return List.of(customerAgreement);
     }

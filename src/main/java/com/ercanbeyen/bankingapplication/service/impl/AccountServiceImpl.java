@@ -15,6 +15,7 @@ import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
@@ -215,7 +216,7 @@ public class AccountServiceImpl implements AccountService {
 
         checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
-        Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(senderAccount));
+        Account chargedAccount = getChargedAccount(AccountActivityType.MONEY_TRANSFER, request.chargedAccountId(), List.of(senderAccount, recipientAccount));
 
         checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
@@ -246,7 +247,7 @@ public class AccountServiceImpl implements AccountService {
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         checkDailyAccountActivityLimit(sellerAccount, request.amount(), activityType);
 
-        Account chargedAccount = getChargedAccount(request.chargedAccountId(), List.of(sellerAccount, buyerAccount));
+        Account chargedAccount = getChargedAccount(AccountActivityType.MONEY_EXCHANGE, request.chargedAccountId(), List.of(sellerAccount, buyerAccount));
         transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, chargedAccount);
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
@@ -267,7 +268,7 @@ public class AccountServiceImpl implements AccountService {
 
         String logMessage = status ? "{} {} is blocked" : "Blockage of {} {} is removed";
         logMessage += " at {}";
-        log.info(logMessage, entity, id, TimeUtil.getCurrentTimeStampInTurkey());
+        log.info(logMessage, entity, id, TimeUtil.getTurkeyDateTime());
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
         createAccountActivityForAccountStatusUpdate(account, activityType);
@@ -290,7 +291,7 @@ public class AccountServiceImpl implements AccountService {
             throw new ResourceConflictException(String.format("In order to close %s, balance of the %s must be zero. Currently balance is %s. Please Withdraw or transfer the remaining money.", entity, balance, entity));
         }
 
-        account.setClosedAt(TimeUtil.getCurrentTimeStampInTurkey());
+        account.setClosedAt(TimeUtil.getTurkeyDateTime());
         accountRepository.save(account);
 
         AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
@@ -316,19 +317,25 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account getChargedAccount(Integer extraChargedAccountId, List<Account> relatedAccounts) {
+    public Account getChargedAccount(AccountActivityType accountActivityType, Integer extraChargedAccountId, List<Account> relatedAccounts) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Account chargedAccount;
+        return switch (accountActivityType) {
+            case AccountActivityType.MONEY_TRANSFER -> {
+                Account senderAccount = relatedAccounts.getFirst();
+                Account recipientAccount = relatedAccounts.getLast();
 
-        if (relatedAccounts.size() == 1) { // Money transfer case
-            Account relatedAccount = relatedAccounts.getFirst();
-            chargedAccount = getChargedAccountInMoneyTransfer(extraChargedAccountId, relatedAccount);
-        } else { // Money exchange case
-            chargedAccount = getChargedAccountInMoneyExchange(extraChargedAccountId, relatedAccounts);
-        }
+                if (Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId())) { // Customer transfers money between his/her accounts
+                    yield senderAccount;
+                }
 
-        return chargedAccount;
+                yield getChargedAccountInMoneyTransfer(extraChargedAccountId, senderAccount);
+            }
+            case AccountActivityType.MONEY_EXCHANGE ->
+                    getChargedAccountInMoneyExchange(extraChargedAccountId, relatedAccounts);
+            default ->
+                    throw new InternalServerErrorException("Unknown account activity type for getting charged account");
+        };
     }
 
     @Override
@@ -339,7 +346,7 @@ public class AccountServiceImpl implements AccountService {
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
         if (account.getCurrency() != CHARGE_CURRENCY) {
-            throw new ResourceConflictException(String.format("Currency of charged %s should be %s", entity, CHARGE_CURRENCY));
+            throw new ResourceConflictException(String.format(ResponseMessage.INVALID_CHARGED_ACCOUNT_CURRENCY, entity, CHARGE_CURRENCY));
         }
 
         AccountType accountType = AccountType.CURRENT;
@@ -477,13 +484,13 @@ public class AccountServiceImpl implements AccountService {
 
         if (Optional.ofNullable(id).isPresent()) { // need an extra charged account
             if (accountWithChargeCurrencyExists) {
-                throw new ResourceConflictException(String.format("Charged %s should not be indicated for %s money transfers", entity, CHARGE_CURRENCY));
+                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_CHARGED_ACCOUNT, entity, CHARGE_CURRENCY));
             }
 
             chargedAccount = findChargedAccountById(id);
         } else { // no need an extra charged account
             if (!accountWithChargeCurrencyExists) {
-                throw new ResourceConflictException(String.format("Charged %s's currency should be %s", entity, CHARGE_CURRENCY));
+                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_CHARGED_ACCOUNT_CURRENCY, entity, CHARGE_CURRENCY));
             }
 
             chargedAccount = accounts.getFirst().getCurrency() == CHARGE_CURRENCY ? accounts.getFirst() : accounts.getLast();
@@ -498,13 +505,13 @@ public class AccountServiceImpl implements AccountService {
 
         if (Optional.ofNullable(id).isPresent()) { // need an extra charged account
             if (account.getCurrency() == CHARGE_CURRENCY) {
-                throw new ResourceConflictException(String.format("Charged %s should not be indicated for %s money transfers", entity, CHARGE_CURRENCY));
+                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_CHARGED_ACCOUNT, entity, CHARGE_CURRENCY));
             }
 
             chargedAccount = findChargedAccountById(id);
         } else { // no need an extra charged account
             if (account.getCurrency() != CHARGE_CURRENCY) {
-                throw new ResourceConflictException(String.format("Charged %s's currency should be %s", entity, CHARGE_CURRENCY));
+                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_CHARGED_ACCOUNT_CURRENCY, entity, CHARGE_CURRENCY));
             }
 
             log.info("Charged {} is the related {} {}. So, no need the indicate a different {}", entity, entity, account.getId(), entity);
@@ -586,7 +593,7 @@ public class AccountServiceImpl implements AccountService {
         summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
-        summary.put(SummaryField.TIME, TimeUtil.getCurrentTimeStampInTurkey().toString());
+        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
         AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null);
         accountActivityService.createAccountActivity(request);
