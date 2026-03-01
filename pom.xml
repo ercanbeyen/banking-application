@@ -29,7 +29,9 @@
         <jackson-datatype-jsr310.version>3.0.0-rc2</jackson-datatype-jsr310.version>
         <jackson-annotations.version>3.0-rc5</jackson-annotations.version>
         <apache-poi.version>5.5.1</apache-poi.version>
+		<jwt.version>0.13.0</jwt.version>
     </properties>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -160,6 +162,27 @@
             <artifactId>poi-ooxml</artifactId>
             <version>${apache-poi.version}</version>
         </dependency>
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-api</artifactId>
+			<version>${jwt.version}</version>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-impl</artifactId>
+			<version>${jwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
+		<dependency>
+			<groupId>io.jsonwebtoken</groupId>
+			<artifactId>jjwt-jackson</artifactId>
+			<version>${jwt.version}</version>
+			<scope>runtime</scope>
+		</dependency>
 	</dependencies>
 
 	<build>
