@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.entity.UserCredential;
 import com.ercanbeyen.bankingapplication.repository.UserCredentialRepository;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,8 +10,6 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
-
 @Component
 public class UserServiceDetailsImpl implements UserDetailsService {
     @Autowired
@@ -17,8 +17,8 @@ public class UserServiceDetailsImpl implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        UserCredential user = userCredentialRepository.findByUsername(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User Credential is not found"));
-        return new UserDetailsImpl(user.getUsername(), user.getPassword(), Collections.emptySet());
+        UserCredential userCredential = userCredentialRepository.findByUsername(username)
+                .orElseThrow(() -> new UsernameNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.USER_CREDENTIAL.getValue())));
+        return UserDetailsImpl.build(userCredential);
     }
 }

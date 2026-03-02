@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
+import com.ercanbeyen.bankingapplication.entity.UserCredential;
+import com.ercanbeyen.bankingapplication.service.UserCredentialService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.stream.Collectors;
 
 @Component
 @Slf4j
@@ -25,6 +28,7 @@ public class JwtService {
     @Value("${jwt.refreshExpiration}")
     private int refreshTokenDuration;
     private SecretKey key;
+    private final UserCredentialService userCredentialService;
 
     @PostConstruct
     public void init() {
@@ -32,7 +36,16 @@ public class JwtService {
     }
 
     public Map<String, String> generateTokens(UserDetails userDetails) {
+        UserCredential userCredential = userCredentialService.findByUsername(userDetails.getUsername());
+        Map<String, Object> claims = new HashMap<>();
+
+        Set<String> roles = userCredential.getRoles().stream()
+                .map(role -> role.getName().name())
+                .collect(Collectors.toSet());
+        claims.put("roles", roles);
+
         String accessToken = Jwts.builder()
+                .setClaims(claims)
                 .setSubject(userDetails.getUsername())
                 .setIssuedAt(new Date())
                 .setExpiration(new Date((new Date()).getTime() + accessTokenDuration))
