@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
+import com.ercanbeyen.bankingapplication.constant.message.JwtMessage;
 import com.ercanbeyen.bankingapplication.entity.UserCredential;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
 import io.jsonwebtoken.*;
@@ -59,7 +60,7 @@ public class JwtService {
                 .signWith(key, SIGNATURE_ALGORITHM)
                 .compact();
 
-        return Map.of("accessToken", accessToken, "refreshToken", refreshToken);
+        return Map.of(JwtMessage.ACCESS_TOKEN, accessToken, JwtMessage.REFRESH_TOKEN_TOKEN, refreshToken);
     }
 
     public String extractUsername(String token) {

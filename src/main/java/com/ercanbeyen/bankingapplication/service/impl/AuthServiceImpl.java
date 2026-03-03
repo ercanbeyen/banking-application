@@ -1,14 +1,18 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.JwtMessage;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
+import com.ercanbeyen.bankingapplication.entity.RefreshToken;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.service.UserDetailsImpl;
 import com.ercanbeyen.bankingapplication.service.AuthService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
+import com.ercanbeyen.bankingapplication.service.RefreshTokenService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -30,8 +34,10 @@ public class AuthServiceImpl implements AuthService {
     private final CustomerService customerService;
     private final UserCredentialService userCredentialService;
     private final UserDetailsService userDetailsService;
+    private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
 
+    @Transactional
     @Override
     public Map<String, String> loginUser(LoginRequest request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -44,7 +50,12 @@ public class AuthServiceImpl implements AuthService {
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserDetailsImpl userDetailsImpl = (UserDetailsImpl) authentication.getPrincipal();
 
-        return jwtService.generateTokens(userDetailsImpl);
+        Map<String, String> tokens = jwtService.generateTokens(userDetailsImpl);
+
+        refreshTokenService.revokeAllRefreshTokens(request.username());
+        refreshTokenService.createRefreshToken(tokens.get(JwtMessage.REFRESH_TOKEN_TOKEN));
+
+        return tokens;
     }
 
     @Transactional
@@ -66,9 +77,16 @@ public class AuthServiceImpl implements AuthService {
             username = jwtService.extractUsername(token);
         } catch (Exception exception) {
             log.error(LogMessage.EXCEPTION, exception.getMessage());
-            throw new BadRequestException("Invalid refresh token!");
+            throw new BadRequestException("Invalid " + Entity.REFRESH_TOKEN.getValue() + "!");
         }
 
-        return jwtService.generateTokens(userDetailsService.loadUserByUsername(username));
+        RefreshToken refreshToken = refreshTokenService.findByToken(token);
+        refreshTokenService.verifyExpiration(refreshToken);
+        refreshTokenService.revokeAllRefreshTokens(username);
+
+        Map<String, String> tokens = jwtService.generateTokens(userDetailsService.loadUserByUsername(username));
+        refreshTokenService.createRefreshToken(tokens.get(JwtMessage.REFRESH_TOKEN_TOKEN));
+
+        return tokens;
     }
 }
