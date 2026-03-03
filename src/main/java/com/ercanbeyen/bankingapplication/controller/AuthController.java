@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.JwtMessage;
+import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
@@ -41,7 +41,7 @@ public class AuthController {
 
     @PostMapping("/refresh")
     public ResponseEntity<Map<String, String>> refreshToken(@RequestBody Map<String, String> request) {
-        String token = Optional.ofNullable(request.get(JwtMessage.REFRESH_TOKEN_TOKEN))
+        String token = Optional.ofNullable(request.get(JwtUtil.REFRESH_TOKEN_TOKEN))
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.REFRESH_TOKEN.getValue())));
 
         Map<String, String> tokens = authService.refreshToken(token);

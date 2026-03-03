@@ -50,7 +50,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
-    public void verifyExpiration(RefreshToken refreshToken) {
+    public void verifyExpiration(String token) {
+        RefreshToken refreshToken = findByToken(token);
         String entityValue = Entity.REFRESH_TOKEN.getValue();
 
         if (refreshToken.getExpiryDate().isBefore(Instant.now())) {

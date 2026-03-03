@@ -1,11 +1,13 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
-import com.ercanbeyen.bankingapplication.constant.message.JwtMessage;
+import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.entity.UserCredential;
+import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -60,7 +62,7 @@ public class JwtService {
                 .signWith(key, SIGNATURE_ALGORITHM)
                 .compact();
 
-        return Map.of(JwtMessage.ACCESS_TOKEN, accessToken, JwtMessage.REFRESH_TOKEN_TOKEN, refreshToken);
+        return Map.of(JwtUtil.ACCESS_TOKEN, accessToken, JwtUtil.REFRESH_TOKEN_TOKEN, refreshToken);
     }
 
     public String extractUsername(String token) {
@@ -69,6 +71,18 @@ public class JwtService {
                 .parseClaimsJws(token)
                 .getBody()
                 .getSubject();
+    }
+
+    public String extractTokenFromHeader(HttpServletRequest servletRequest) {
+        String token = servletRequest.getHeader(JwtUtil.AUTHORIZATION_HEADER);
+
+        if (Optional.ofNullable(token).isPresent() && token.startsWith(JwtUtil.AUTHORIZATION_HEADER_STARTS_WITH)) {
+            token = token.substring(JwtUtil.TOKEN_BEGIN_INDEX);
+        } else {
+            throw new ResourceNotFoundException("Token does not exist");
+        }
+
+        return token;
     }
 
     public boolean validateToken(String token) {

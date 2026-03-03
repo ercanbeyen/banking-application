@@ -11,14 +11,17 @@ import org.springframework.security.config.annotation.method.configuration.Enabl
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.authentication.logout.LogoutHandler;
 
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class WebSecurityConfig {
     private final AuthEntryPointJwt authEntryPointJwt;
+    private final LogoutHandler logoutHandler;
 
     @Bean
     public AuthTokenFilter authenticationJwtTokenFilter() {
@@ -45,6 +48,10 @@ public class WebSecurityConfig {
                         authorizeRequests
                                 .requestMatchers("/api/auth/**", "/api/v1/agreements").permitAll()
                                 .anyRequest().authenticated()
+                )
+                .logout(logoutConfigurer -> logoutConfigurer.logoutUrl("/api/auth/logout")
+                        .addLogoutHandler(logoutHandler)
+                        .logoutSuccessHandler(((_, _, _) -> SecurityContextHolder.clearContext()))
                 );
 
         httpSecurity.addFilterBefore(authenticationJwtTokenFilter(), UsernamePasswordAuthenticationFilter.class);

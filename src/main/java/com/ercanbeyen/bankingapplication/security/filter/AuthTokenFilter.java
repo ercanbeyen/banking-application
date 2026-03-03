@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.security.filter;
 
+import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -48,10 +49,10 @@ public class AuthTokenFilter extends OncePerRequestFilter {
     }
 
     private String parseJwt(HttpServletRequest request) {
-        String headerAuth = request.getHeader("Authorization");
+        String authHeader = request.getHeader(JwtUtil.AUTHORIZATION_HEADER);
 
-        if (headerAuth != null && headerAuth.startsWith("Bearer ")) {
-            return headerAuth.substring(7);
+        if (authHeader != null && authHeader.startsWith(JwtUtil.AUTHORIZATION_HEADER_STARTS_WITH)) {
+            return authHeader.substring(JwtUtil.TOKEN_BEGIN_INDEX);
         }
 
         return null;

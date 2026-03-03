@@ -1,11 +1,10 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.JwtMessage;
+import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
-import com.ercanbeyen.bankingapplication.entity.RefreshToken;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
@@ -53,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
         Map<String, String> tokens = jwtService.generateTokens(userDetailsImpl);
 
         refreshTokenService.revokeAllRefreshTokens(request.username());
-        refreshTokenService.createRefreshToken(tokens.get(JwtMessage.REFRESH_TOKEN_TOKEN));
+        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_TOKEN));
 
         return tokens;
     }
@@ -80,12 +79,11 @@ public class AuthServiceImpl implements AuthService {
             throw new BadRequestException("Invalid " + Entity.REFRESH_TOKEN.getValue() + "!");
         }
 
-        RefreshToken refreshToken = refreshTokenService.findByToken(token);
-        refreshTokenService.verifyExpiration(refreshToken);
+        refreshTokenService.verifyExpiration(token);
         refreshTokenService.revokeAllRefreshTokens(username);
 
         Map<String, String> tokens = jwtService.generateTokens(userDetailsService.loadUserByUsername(username));
-        refreshTokenService.createRefreshToken(tokens.get(JwtMessage.REFRESH_TOKEN_TOKEN));
+        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_TOKEN));
 
         return tokens;
     }
