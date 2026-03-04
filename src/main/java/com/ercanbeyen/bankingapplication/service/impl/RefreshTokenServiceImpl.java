@@ -13,18 +13,16 @@ import com.ercanbeyen.bankingapplication.service.RefreshTokenService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 
 @Service
 @Slf4j
 @RequiredArgsConstructor
 public class RefreshTokenServiceImpl implements RefreshTokenService {
-    @Value("${jwt.refreshExpiration}")
-    private Long refreshTokenDuration;
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
     private final UserCredentialService userCredentialService;
@@ -36,7 +34,10 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUserCredential(userCredential);
-        refreshToken.setExpiryDate(Instant.now().plusMillis(refreshTokenDuration));
+
+        Date expiryDate = jwtService.extractExpiryDate(token);
+        refreshToken.setExpiryDate(expiryDate.toInstant());
+
         refreshToken.setToken(token);
         refreshToken.setStatus(TokenStatus.ACTIVE);
 

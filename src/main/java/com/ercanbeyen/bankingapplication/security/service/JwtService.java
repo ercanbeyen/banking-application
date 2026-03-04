@@ -66,11 +66,18 @@ public class JwtService {
     }
 
     public String extractUsername(String token) {
+        return extractClaims(token).getSubject();
+    }
+
+    public Date extractExpiryDate(String token) {
+        return extractClaims(token).getExpiration();
+    }
+
+    private Claims extractClaims(String token) {
         return Jwts.parser()
                 .setSigningKey(key).build()
                 .parseClaimsJws(token)
-                .getBody()
-                .getSubject();
+                .getBody();
     }
 
     public String extractTokenFromHeader(HttpServletRequest servletRequest) {

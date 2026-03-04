@@ -9,8 +9,10 @@ import java.util.function.IntFunction;
 
 @UtilityClass
 public class TimeUtil {
+    private final String ZONE_ID = "Europe/Istanbul";
+
     public LocalDateTime getTurkeyDateTime() {
-        return LocalDateTime.now(ZoneId.of("Europe/Istanbul"));
+        return LocalDateTime.now(ZoneId.of(ZONE_ID));
     }
 
     public String getTimeStatement(LocalTime localTime) {
