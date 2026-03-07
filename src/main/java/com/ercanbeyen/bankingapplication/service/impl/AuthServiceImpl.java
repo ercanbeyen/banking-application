@@ -52,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
         Map<String, String> tokens = jwtService.generateTokens(userDetailsImpl);
 
         refreshTokenService.revokeAllRefreshTokens(request.username());
-        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_TOKEN));
+        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_HEADER));
 
         return tokens;
     }
@@ -73,7 +73,7 @@ public class AuthServiceImpl implements AuthService {
         String username;
 
         try {
-            username = jwtService.extractUsername(token);
+            username = jwtService.extractSubject(token);
         } catch (Exception exception) {
             log.error(LogMessage.EXCEPTION, exception.getMessage());
             throw new BadRequestException("Invalid " + Entity.REFRESH_TOKEN.getValue() + "!");
@@ -83,7 +83,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenService.revokeAllRefreshTokens(username);
 
         Map<String, String> tokens = jwtService.generateTokens(userDetailsService.loadUserByUsername(username));
-        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_TOKEN));
+        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_HEADER));
 
         return tokens;
     }

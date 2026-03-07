@@ -29,13 +29,13 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     public void createRefreshToken(String token) {
-        String username = jwtService.extractUsername(token);
+        String username = jwtService.extractSubject(token);
         UserCredential userCredential = userCredentialService.findByUsername(username);
 
         RefreshToken refreshToken = new RefreshToken();
         refreshToken.setUserCredential(userCredential);
 
-        Date expiryDate = jwtService.extractExpiryDate(token);
+        Date expiryDate = jwtService.extractExpiration(token);
         refreshToken.setExpiryDate(expiryDate.toInstant());
 
         refreshToken.setToken(token);

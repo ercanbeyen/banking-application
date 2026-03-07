@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.MacAlgorithm;
 import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @RequiredArgsConstructor
 public class JwtService {
-    private static final SignatureAlgorithm SIGNATURE_ALGORITHM = SignatureAlgorithm.HS256;
+    private static final MacAlgorithm ALGORITHM = Jwts.SIG.HS256;
     @Value("${jwt.secret}")
     private String jwtSecret;
     @Value("${jwt.accessExpiration}")
@@ -42,65 +43,70 @@ public class JwtService {
         UserCredential userCredential = userCredentialService.findByUsername(userDetails.getUsername());
         Map<String, Object> claims = new HashMap<>();
 
-        Set<String> roles = userCredential.getRoles().stream()
+        Set<String> roles = userCredential.getRoles()
+                .stream()
                 .map(role -> role.getName().name())
                 .collect(Collectors.toSet());
+
         claims.put("roles", roles);
+        Map<String, Date> times = JwtUtil.generateTimes(accessTokenDuration);
 
         String accessToken = Jwts.builder()
-                .setClaims(claims)
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + accessTokenDuration))
-                .signWith(key, SIGNATURE_ALGORITHM)
+                .header()
+                .add(Header.TYPE, Header.JWT_TYPE)
+                .and()
+                .claims(claims)
+                .subject(userDetails.getUsername())
+                .issuedAt(times.get(Claims.ISSUED_AT))
+                .expiration(times.get(Claims.EXPIRATION))
+                .signWith(key, ALGORITHM)
                 .compact();
+
+        times = JwtUtil.generateTimes(refreshTokenDuration);
 
         String refreshToken = Jwts.builder()
-                .setSubject(userDetails.getUsername())
-                .setIssuedAt(new Date())
-                .setExpiration(new Date((new Date()).getTime() + refreshTokenDuration))
-                .signWith(key, SIGNATURE_ALGORITHM)
+                .header()
+                .add(Header.TYPE, Header.JWT_TYPE)
+                .and()
+                .subject(userDetails.getUsername())
+                .issuedAt(times.get(Claims.ISSUED_AT))
+                .expiration(times.get(Claims.EXPIRATION))
+                .signWith(key, ALGORITHM)
                 .compact();
 
-        return Map.of(JwtUtil.ACCESS_TOKEN, accessToken, JwtUtil.REFRESH_TOKEN_TOKEN, refreshToken);
+        return Map.of(JwtUtil.ACCESS_TOKEN_HEADER, accessToken, JwtUtil.REFRESH_TOKEN_HEADER, refreshToken);
     }
 
-    public String extractUsername(String token) {
+    public String extractSubject(String token) {
         return extractClaims(token).getSubject();
     }
 
-    public Date extractExpiryDate(String token) {
+    public Date extractExpiration(String token) {
         return extractClaims(token).getExpiration();
     }
 
     private Claims extractClaims(String token) {
         return Jwts.parser()
-                .setSigningKey(key).build()
-                .parseClaimsJws(token)
-                .getBody();
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
-    public String extractTokenFromHeader(HttpServletRequest servletRequest) {
-        String token = servletRequest.getHeader(JwtUtil.AUTHORIZATION_HEADER);
-
-        if (Optional.ofNullable(token).isPresent() && token.startsWith(JwtUtil.AUTHORIZATION_HEADER_STARTS_WITH)) {
-            token = token.substring(JwtUtil.TOKEN_BEGIN_INDEX);
-        } else {
-            throw new ResourceNotFoundException("Token does not exist");
-        }
-
-        return token;
+    public String extractToken(HttpServletRequest request) {
+        return JwtUtil.extractToken(request)
+                .orElseThrow(() -> new ResourceNotFoundException("Token does not exist"));
     }
 
     public boolean validateToken(String token) {
         try {
             Jwts.parser()
-                    .setSigningKey(key)
+                    .verifyWith(key)
                     .build()
-                    .parseClaimsJws(token);
+                    .parseSignedClaims(token);
             return true;
         } catch (SecurityException exception) {
-            log.warn("Invalid JWT signature: {}", exception.getMessage());
+            log.error("Invalid JWT signature: {}", exception.getMessage());
         } catch (MalformedJwtException exception) {
             log.error("Invalid JWT token: {}", exception.getMessage());
         } catch (ExpiredJwtException exception) {

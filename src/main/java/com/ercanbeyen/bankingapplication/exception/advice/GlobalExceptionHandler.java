@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -54,8 +55,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequestException(Exception exception) {
+    @ExceptionHandler({BadRequestException.class, BadCredentialsException.class})
+    public ResponseEntity<ErrorResponse> handleBadRequestExceptions(Exception exception) {
         return generateErrorResponse(exception, HttpStatus.BAD_REQUEST);
     }
 
@@ -70,7 +71,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({MaxUploadSizeExceededException.class, ResourceExpectationFailedException.class})
-    public ResponseEntity<ErrorResponse> handleResourceExpectationFailedException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleResourceFailedExceptions(Exception exception) {
         return generateErrorResponse(exception, HttpStatus.EXPECTATION_FAILED);
     }
 

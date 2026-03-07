@@ -1,4 +1,4 @@
-package com.ercanbeyen.bankingapplication.security.config;
+package com.ercanbeyen.bankingapplication.security.handler;
 
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.service.RefreshTokenService;
@@ -18,10 +18,10 @@ public class CustomLogoutHandler implements LogoutHandler {
 
     @Override
     public void logout(HttpServletRequest request, HttpServletResponse response, Authentication authentication) {
-        String token = jwtService.extractTokenFromHeader(request);
+        String token = jwtService.extractToken(request);
         refreshTokenService.verifyExpiration(token);
 
-        String username = jwtService.extractUsername(token);
+        String username = jwtService.extractSubject(token);
         refreshTokenService.revokeAllRefreshTokens(username);
 
         SecurityContextHolder.clearContext();

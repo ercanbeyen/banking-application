@@ -613,11 +613,9 @@ public class CustomerServiceImpl implements CustomerService {
     private void checkUniqueness(Customer customerInDb, CustomerDto request) {
         String nationalId = request.getNationalId();
         String phoneNumber = request.getPhoneNumber();
-        String email = request.getEmail();
 
         Predicate<Customer> nationalIdPredicate = customer -> customer.getNationalId().equals(nationalId);
         Predicate<Customer> phoneNumberPredicate = customer -> customer.getPhoneNumber().equals(phoneNumber);
-        Predicate<Customer> emailPredicate = customer -> customer.getEmail().equals(email);
 
         if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateCharge case
             Predicate<Customer> customerInDbPredicate = _ -> !customerInDb.getNationalId().equals(nationalId);
@@ -625,14 +623,9 @@ public class CustomerServiceImpl implements CustomerService {
 
             customerInDbPredicate = _ -> !customerInDb.getPhoneNumber().equals(phoneNumber);
             phoneNumberPredicate = customerInDbPredicate.and(phoneNumberPredicate);
-
-            customerInDbPredicate = _ -> !customerInDb.getEmail().equals(email);
-            emailPredicate = customerInDbPredicate.and(emailPredicate);
         }
 
-        Predicate<Customer> customerPredicate = nationalIdPredicate
-                .or(phoneNumberPredicate)
-                .or(emailPredicate);
+        Predicate<Customer> customerPredicate = nationalIdPredicate.or(phoneNumberPredicate);
 
         boolean customerExists = customerRepository.findAll()
                 .stream()
