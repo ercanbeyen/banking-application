@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.NewsType;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.NewsDto;
-import com.ercanbeyen.bankingapplication.entity.News;
+import com.ercanbeyen.bankingapplication.model.News;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.mapper.NewsMapper;
 import com.ercanbeyen.bankingapplication.repository.BankNewsRepository;

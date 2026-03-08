@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.mapper;
 
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
-import com.ercanbeyen.bankingapplication.entity.Notification;
+import com.ercanbeyen.bankingapplication.model.Notification;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

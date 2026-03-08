@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.repository;
 
-import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
+import com.ercanbeyen.bankingapplication.model.CustomerAgreement;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;

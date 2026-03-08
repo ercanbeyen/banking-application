@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.integration.repository;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Gender;
-import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.model.Customer;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

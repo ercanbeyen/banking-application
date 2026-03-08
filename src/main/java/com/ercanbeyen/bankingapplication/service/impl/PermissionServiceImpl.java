@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.entity.Permission;
+import com.ercanbeyen.bankingapplication.model.Permission;
 import com.ercanbeyen.bankingapplication.repository.PermissionRepository;
 import com.ercanbeyen.bankingapplication.service.PermissionService;
 import lombok.RequiredArgsConstructor;

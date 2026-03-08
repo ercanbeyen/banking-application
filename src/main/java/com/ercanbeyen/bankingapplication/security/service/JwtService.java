@@ -1,9 +1,9 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
-import com.ercanbeyen.bankingapplication.entity.Permission;
-import com.ercanbeyen.bankingapplication.entity.Role;
+import com.ercanbeyen.bankingapplication.model.Permission;
+import com.ercanbeyen.bankingapplication.model.Role;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
-import com.ercanbeyen.bankingapplication.entity.UserCredential;
+import com.ercanbeyen.bankingapplication.model.UserCredential;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
 import io.jsonwebtoken.*;
@@ -15,14 +15,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.stereotype.Component;
+import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
-@Component
+@Service
 @Slf4j
 @RequiredArgsConstructor
 public class JwtService {

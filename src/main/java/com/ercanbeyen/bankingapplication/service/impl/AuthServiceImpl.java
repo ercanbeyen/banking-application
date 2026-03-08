@@ -8,7 +8,7 @@ import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
-import com.ercanbeyen.bankingapplication.security.service.UserDetailsImpl;
+import com.ercanbeyen.bankingapplication.security.service.impl.UserDetailsImpl;
 import com.ercanbeyen.bankingapplication.service.AuthService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.service.RefreshTokenService;

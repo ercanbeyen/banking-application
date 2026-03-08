@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.ChargeDto;
-import com.ercanbeyen.bankingapplication.entity.Charge;
+import com.ercanbeyen.bankingapplication.model.Charge;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.ChargeMapper;

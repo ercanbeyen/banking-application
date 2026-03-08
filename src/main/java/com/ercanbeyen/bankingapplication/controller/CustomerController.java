@@ -9,12 +9,12 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryRe
 import com.ercanbeyen.bankingapplication.dto.response.ReceiptPreview;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
-import com.ercanbeyen.bankingapplication.entity.Customer;
-import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.model.Customer;
+import com.ercanbeyen.bankingapplication.model.File;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
-import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
+import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
+import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;

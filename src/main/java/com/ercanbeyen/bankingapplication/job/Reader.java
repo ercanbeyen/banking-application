@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.job;
 
 import com.ercanbeyen.bankingapplication.constant.enums.NewsType;
-import com.ercanbeyen.bankingapplication.entity.NewsReport;
+import com.ercanbeyen.bankingapplication.model.NewsReport;
 import com.ercanbeyen.bankingapplication.repository.NewsReportRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.ItemReader;

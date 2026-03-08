@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.repository;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.model.Account;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.jpa.repository.query.Procedure;

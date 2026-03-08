@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto.request;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.model.Account;
 
 import java.util.Map;
 

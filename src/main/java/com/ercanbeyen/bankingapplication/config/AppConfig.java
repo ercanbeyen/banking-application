@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.config;
 
-import com.ercanbeyen.bankingapplication.dto.adapter.LocalDateTimeTypeAdapter;
-import com.ercanbeyen.bankingapplication.dto.adapter.LocalDateTypeAdapter;
+import com.ercanbeyen.bankingapplication.config.adapter.LocalDateTimeTypeAdapter;
+import com.ercanbeyen.bankingapplication.config.adapter.LocalDateTypeAdapter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;

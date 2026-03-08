@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.mapper;
 
 import com.ercanbeyen.bankingapplication.dto.NewsDto;
-import com.ercanbeyen.bankingapplication.entity.News;
+import com.ercanbeyen.bankingapplication.model.News;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")

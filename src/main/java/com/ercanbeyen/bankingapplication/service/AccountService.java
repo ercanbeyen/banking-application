@@ -10,8 +10,8 @@ import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringReq
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
-import com.ercanbeyen.bankingapplication.entity.Account;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.model.Account;
+import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 
 import java.util.List;
 

@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.MoneyTransferOrderDto;
-import com.ercanbeyen.bankingapplication.option.MoneyTransferOrderOption;
+import com.ercanbeyen.bankingapplication.dto.option.MoneyTransferOrderOption;
 import com.ercanbeyen.bankingapplication.service.MoneyTransferOrderService;
 import com.ercanbeyen.bankingapplication.util.MoneyTransferOrderUtil;
 import jakarta.validation.Valid;

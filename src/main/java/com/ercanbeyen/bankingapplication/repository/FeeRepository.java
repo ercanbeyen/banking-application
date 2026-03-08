@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.repository;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.entity.Fee;
+import com.ercanbeyen.bankingapplication.model.Fee;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;

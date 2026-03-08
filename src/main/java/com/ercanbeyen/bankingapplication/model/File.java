@@ -1,0 +1,26 @@
+package com.ercanbeyen.bankingapplication.model;
+
+import jakarta.persistence.*;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+@Data
+@NoArgsConstructor
+@Entity
+@Table(name = "files")
+public class File {
+    @Id
+    @GeneratedValue(strategy = GenerationType.UUID)
+    private String id;
+    private String name;
+    private String type;
+    @Lob
+    @Column(columnDefinition = "BLOB")
+    private byte[] data;
+
+    public File(String name, String type, byte[] data) {
+        this.name = name;
+        this.type = type;
+        this.data = data;
+    }
+}

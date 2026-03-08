@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.mapper;
 
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
-import com.ercanbeyen.bankingapplication.entity.Agreement;
+import com.ercanbeyen.bankingapplication.model.Agreement;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

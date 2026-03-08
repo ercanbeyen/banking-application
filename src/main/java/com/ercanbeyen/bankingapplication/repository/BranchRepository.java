@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.repository;
 
-import com.ercanbeyen.bankingapplication.entity.Branch;
+import com.ercanbeyen.bankingapplication.model.Branch;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;

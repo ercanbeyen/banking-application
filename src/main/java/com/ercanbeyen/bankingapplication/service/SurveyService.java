@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.service;
 import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.dto.response.SurveyStatisticsResponse;
-import com.ercanbeyen.bankingapplication.option.SurveyFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.SurveyFilteringOption;
 
 import java.time.LocalDateTime;
 import java.util.List;

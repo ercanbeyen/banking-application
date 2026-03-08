@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.listener;
 
-import com.ercanbeyen.bankingapplication.entity.BaseEntity;
+import com.ercanbeyen.bankingapplication.model.BaseEntity;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import jakarta.persistence.*;
 import lombok.extern.slf4j.Slf4j;

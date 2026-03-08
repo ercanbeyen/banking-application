@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.mapper;
 
 import com.ercanbeyen.bankingapplication.dto.DailyActivityLimitDto;
-import com.ercanbeyen.bankingapplication.entity.DailyActivityLimit;
+import com.ercanbeyen.bankingapplication.model.DailyActivityLimit;
 import org.mapstruct.Mapper;
 
 @Mapper(componentModel = "spring")

@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.factory;
 
-import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
+import com.ercanbeyen.bankingapplication.model.CashFlowCalendar;
 
 import java.util.ArrayList;
 import java.util.List;

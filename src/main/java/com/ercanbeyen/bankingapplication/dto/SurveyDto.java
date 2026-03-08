@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.dto;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
-import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
+import com.ercanbeyen.bankingapplication.model.SurveyCompositeKey;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;

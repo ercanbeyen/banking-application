@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
-import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.model.Customer;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

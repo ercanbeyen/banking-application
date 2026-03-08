@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.service;
 
-import com.ercanbeyen.bankingapplication.entity.RefreshToken;
+import com.ercanbeyen.bankingapplication.model.RefreshToken;
 
 public interface RefreshTokenService {
     void createRefreshToken(String token);

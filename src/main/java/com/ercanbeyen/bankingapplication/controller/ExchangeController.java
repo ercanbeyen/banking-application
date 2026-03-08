@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.dto.ExchangeDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.ExchangeService;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
-import com.ercanbeyen.bankingapplication.option.ExchangeFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.ExchangeFilteringOption;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;

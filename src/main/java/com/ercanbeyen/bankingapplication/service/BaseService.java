@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.dto.BaseDto;
-import com.ercanbeyen.bankingapplication.option.BaseFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.BaseFilteringOption;
 
 import java.util.List;
 

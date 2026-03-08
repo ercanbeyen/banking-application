@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.embeddable;
 
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentPeriod;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
-import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.model.Account;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;

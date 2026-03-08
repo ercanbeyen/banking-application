@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.mapper;
 
 import com.ercanbeyen.bankingapplication.dto.CashFlowCalendarDto;
-import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
+import com.ercanbeyen.bankingapplication.model.CashFlowCalendar;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

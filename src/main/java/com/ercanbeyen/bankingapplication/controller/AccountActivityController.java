@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;

@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.dto.FilePreviewInfo;
-import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.model.File;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;

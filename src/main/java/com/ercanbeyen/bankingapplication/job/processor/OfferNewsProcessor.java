@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.job.processor;
 
-import com.ercanbeyen.bankingapplication.entity.NewsReport;
-import com.ercanbeyen.bankingapplication.entity.OfferNews;
+import com.ercanbeyen.bankingapplication.model.NewsReport;
+import com.ercanbeyen.bankingapplication.model.OfferNews;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.batch.item.ItemProcessor;

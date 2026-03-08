@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.job;
 
-import com.ercanbeyen.bankingapplication.entity.BankNews;
-import com.ercanbeyen.bankingapplication.entity.NewsReport;
-import com.ercanbeyen.bankingapplication.entity.OfferNews;
+import com.ercanbeyen.bankingapplication.model.BankNews;
+import com.ercanbeyen.bankingapplication.model.NewsReport;
+import com.ercanbeyen.bankingapplication.model.OfferNews;
 import com.ercanbeyen.bankingapplication.repository.BankNewsRepository;
 import com.ercanbeyen.bankingapplication.repository.NewsReportRepository;
 import com.ercanbeyen.bankingapplication.repository.OfferNewsRepository;

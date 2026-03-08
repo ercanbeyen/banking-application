@@ -11,9 +11,9 @@ import java.util.Optional;
 
 @UtilityClass
 public class JwtUtil {
+    private final String TOKEN_TYPE = "Bearer";
     public final String ACCESS_TOKEN_HEADER = "access_token";
     public final String REFRESH_TOKEN_HEADER = "refresh_token";
-    private final String TOKEN_TYPE = "Bearer";
 
     public Optional<String> extractToken(HttpServletRequest request) {
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);

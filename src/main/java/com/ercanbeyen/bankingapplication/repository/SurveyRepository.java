@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.repository;
 
-import com.ercanbeyen.bankingapplication.entity.Survey;
-import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
+import com.ercanbeyen.bankingapplication.model.Survey;
+import com.ercanbeyen.bankingapplication.model.SurveyCompositeKey;
 import org.springframework.data.cassandra.repository.CassandraRepository;
 import org.springframework.stereotype.Repository;
 

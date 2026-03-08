@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.mapper;
 
 import com.ercanbeyen.bankingapplication.dto.BranchDto;
-import com.ercanbeyen.bankingapplication.entity.Account;
-import com.ercanbeyen.bankingapplication.entity.Branch;
+import com.ercanbeyen.bankingapplication.model.Account;
+import com.ercanbeyen.bankingapplication.model.Branch;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

@@ -4,7 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.FilePreviewInfo;
-import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.model.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.FileRepository;

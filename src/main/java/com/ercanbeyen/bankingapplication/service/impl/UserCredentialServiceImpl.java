@@ -4,8 +4,8 @@ import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
-import com.ercanbeyen.bankingapplication.entity.Role;
-import com.ercanbeyen.bankingapplication.entity.UserCredential;
+import com.ercanbeyen.bankingapplication.model.Role;
+import com.ercanbeyen.bankingapplication.model.UserCredential;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.UserCredentialRepository;
 import com.ercanbeyen.bankingapplication.service.RoleService;
@@ -30,7 +30,7 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     public void createUserCredential(RegistrationRequest request) {
         UserCredential userCredential = new UserCredential();
 
-        userCredential.setUsername(request.username());
+        userCredential.setUsername(request.customerDto().getNationalId());
         userCredential.setPassword(passwordEncoder.encode(request.password()));
         Set<Role> roles = new HashSet<>();
 
