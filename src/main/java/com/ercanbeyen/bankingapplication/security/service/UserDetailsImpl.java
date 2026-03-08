@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
+import com.ercanbeyen.bankingapplication.entity.Permission;
+import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.entity.UserCredential;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,7 +24,15 @@ public class UserDetailsImpl implements UserDetails {
 
     public static UserDetailsImpl build(UserCredential userCredential) {
         Set<GrantedAuthority> authorities = new HashSet<>();
-        userCredential.getRoles().forEach(role -> authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName())));
+
+        for (Role role : userCredential.getRoles()) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+
+            for (Permission permission : role.getPermissions()) {
+                authorities.add(new SimpleGrantedAuthority(permission.getName()));
+            }
+        }
+
         return new UserDetailsImpl(userCredential.getUsername(), userCredential.getPassword(), authorities);
     }
 

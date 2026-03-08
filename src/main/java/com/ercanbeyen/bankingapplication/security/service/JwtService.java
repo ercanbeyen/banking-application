@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
+import com.ercanbeyen.bankingapplication.entity.Permission;
+import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.entity.UserCredential;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -40,15 +42,22 @@ public class JwtService {
     }
 
     public Map<String, String> generateTokens(UserDetails userDetails) {
-        UserCredential userCredential = userCredentialService.findByUsername(userDetails.getUsername());
+        String username = userDetails.getUsername();
+        UserCredential userCredential = userCredentialService.findByUsername(username);
+        Set<Role> userCredentialRoles = userCredential.getRoles();
         Map<String, Object> claims = new HashMap<>();
 
-        Set<String> roles = userCredential.getRoles()
-                .stream()
-                .map(role -> role.getName().name())
+        Set<String> roles = userCredentialRoles.stream()
+                .map(role -> role.getName().toString())
                 .collect(Collectors.toSet());
-
         claims.put("roles", roles);
+
+        Set<String> permissions = userCredentialRoles.stream()
+                .flatMap(role -> role.getPermissions().stream())
+                .map(Permission::getName)
+                .collect(Collectors.toSet());
+        claims.put("permissions", permissions);
+
         Map<String, Date> times = JwtUtil.generateTimes(accessTokenDuration);
 
         String accessToken = Jwts.builder()
@@ -56,7 +65,7 @@ public class JwtService {
                 .add(Header.TYPE, Header.JWT_TYPE)
                 .and()
                 .claims(claims)
-                .subject(userDetails.getUsername())
+                .subject(username)
                 .issuedAt(times.get(Claims.ISSUED_AT))
                 .expiration(times.get(Claims.EXPIRATION))
                 .signWith(key, ALGORITHM)
@@ -68,7 +77,7 @@ public class JwtService {
                 .header()
                 .add(Header.TYPE, Header.JWT_TYPE)
                 .and()
-                .subject(userDetails.getUsername())
+                .subject(username)
                 .issuedAt(times.get(Claims.ISSUED_AT))
                 .expiration(times.get(Claims.EXPIRATION))
                 .signWith(key, ALGORITHM)
@@ -83,14 +92,6 @@ public class JwtService {
 
     public Date extractExpiration(String token) {
         return extractClaims(token).getExpiration();
-    }
-
-    private Claims extractClaims(String token) {
-        return Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
     }
 
     public String extractToken(HttpServletRequest request) {
@@ -118,5 +119,13 @@ public class JwtService {
         }
 
         return false;
+    }
+
+    private Claims extractClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }
