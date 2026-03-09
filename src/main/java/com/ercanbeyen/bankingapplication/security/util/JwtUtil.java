@@ -12,8 +12,6 @@ import java.util.Optional;
 @UtilityClass
 public class JwtUtil {
     private final String TOKEN_TYPE = "Bearer";
-    public final String ACCESS_TOKEN_HEADER = "access_token";
-    public final String REFRESH_TOKEN_HEADER = "refresh_token";
 
     public Optional<String> extractToken(HttpServletRequest request) {
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
@@ -34,5 +32,11 @@ public class JwtUtil {
 
     private Date calculateExpiration(Date issuedAt, int tokenDuration) {
         return new Date(issuedAt.getTime() + tokenDuration);
+    }
+
+    @UtilityClass
+    public class Header {
+        public final String ACCESS_TOKEN_HEADER = "access_token";
+        public final String REFRESH_TOKEN_HEADER = "refresh_token";
     }
 }

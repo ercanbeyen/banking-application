@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.job.processor;
 
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.model.BankNews;
 import com.ercanbeyen.bankingapplication.model.NewsReport;
 import lombok.NonNull;
@@ -10,13 +11,14 @@ import org.springframework.stereotype.Component;
 @Slf4j
 @Component
 public class BankNewsProcessor implements ItemProcessor<NewsReport, BankNews> {
-
     @Override
-    public BankNews process(@NonNull NewsReport newsReport) throws Exception {
-        log.info("Processing bank news...{}", newsReport);
+    public BankNews process(@NonNull NewsReport newsReport) {
+        log.info(LogMessage.PROCESS_NEWS, "bank", newsReport);
+
         BankNews bankNews = new BankNews();
         bankNews.setTitle(newsReport.getTitle());
         bankNews.setUrl(newsReport.getUrl());
+
         return bankNews;
     }
 }

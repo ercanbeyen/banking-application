@@ -52,7 +52,7 @@ public class AuthServiceImpl implements AuthService {
         Map<String, String> tokens = jwtService.generateTokens(userDetailsImpl);
 
         refreshTokenService.revokeAllRefreshTokens(request.username());
-        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_HEADER));
+        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
 
         return tokens;
     }
@@ -60,8 +60,8 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public void registerUser(RegistrationRequest request) {
-        if (userCredentialService.existsByUsername(request.username())) {
-            throw new ResourceConflictException("Username is already taken!");
+        if (userCredentialService.existsByUsername(request.customerDto().getNationalId())) {
+            throw new ResourceConflictException("User is already registered!");
         }
 
         customerService.createEntity(request.customerDto());
@@ -83,7 +83,7 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenService.revokeAllRefreshTokens(username);
 
         Map<String, String> tokens = jwtService.generateTokens(userDetailsService.loadUserByUsername(username));
-        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.REFRESH_TOKEN_HEADER));
+        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
 
         return tokens;
     }

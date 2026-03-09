@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class JwtService {
     private static final MacAlgorithm ALGORITHM = Jwts.SIG.HS256;
+    private static final Map<String, String> TOKEN_HEADER = Map.of("typ", "JWT");
     @Value("${jwt.secret}")
     private String jwtSecret;
     @Value("${jwt.accessExpiration}")
@@ -62,7 +63,7 @@ public class JwtService {
 
         String accessToken = Jwts.builder()
                 .header()
-                .add(Header.TYPE, Header.JWT_TYPE)
+                .add(TOKEN_HEADER)
                 .and()
                 .claims(claims)
                 .subject(username)
@@ -75,7 +76,7 @@ public class JwtService {
 
         String refreshToken = Jwts.builder()
                 .header()
-                .add(Header.TYPE, Header.JWT_TYPE)
+                .add(TOKEN_HEADER)
                 .and()
                 .subject(username)
                 .issuedAt(times.get(Claims.ISSUED_AT))
@@ -83,7 +84,7 @@ public class JwtService {
                 .signWith(key, ALGORITHM)
                 .compact();
 
-        return Map.of(JwtUtil.ACCESS_TOKEN_HEADER, accessToken, JwtUtil.REFRESH_TOKEN_HEADER, refreshToken);
+        return Map.of(JwtUtil.Header.ACCESS_TOKEN_HEADER, accessToken, JwtUtil.Header.REFRESH_TOKEN_HEADER, refreshToken);
     }
 
     public String extractSubject(String token) {
