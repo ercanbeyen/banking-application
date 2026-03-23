@@ -21,7 +21,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.javatuples.Pair;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -36,19 +35,16 @@ public class ExchangeServiceImpl implements ExchangeService {
     @Override
     public List<ExchangeDto> getEntities(ExchangeFilteringOption filteringOption) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        List<ExchangeDto> exchangeDtos = new ArrayList<>();
-        exchangeRepository.findAll()
-                .forEach(exchange -> exchangeDtos.add(exchangeMapper.entityToDto(exchange)));
-
-        return exchangeDtos;
+        return exchangeRepository.findAll()
+                .stream()
+                .map(exchangeMapper::entityToDto)
+                .toList();
     }
 
     @Override
     public ExchangeDto getEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Exchange exchange = findById(id);
-        return exchangeMapper.entityToDto(exchange);
+        return exchangeMapper.entityToDto(findById(id));
     }
 
     @Override

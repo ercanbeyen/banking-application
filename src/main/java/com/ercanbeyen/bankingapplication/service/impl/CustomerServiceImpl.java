@@ -255,14 +255,11 @@ public class CustomerServiceImpl implements CustomerService {
     @Override
     public List<NotificationDto> getNotifications(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        Customer customer = findById(id);
-        List<NotificationDto> notificationDtos = new ArrayList<>();
-
-        customer.getNotifications()
-                .forEach(notification -> notificationDtos.add(notificationMapper.entityToDto(notification)));
-
-        return notificationDtos;
+        return findById(id)
+                .getNotifications()
+                .stream()
+                .map(notificationMapper::entityToDto)
+                .toList();
     }
 
     @Override

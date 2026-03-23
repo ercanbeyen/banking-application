@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.service.FeeService;
 import com.ercanbeyen.bankingapplication.util.FeeUtil;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,6 +19,7 @@ public class FeeController extends BaseController<FeeDto, FeeFilteringOption> {
         this.feeService = feeService;
     }
 
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PostMapping
     @Override
     public ResponseEntity<FeeDto> createEntity(@RequestBody @Valid FeeDto request) {
@@ -25,10 +27,18 @@ public class FeeController extends BaseController<FeeDto, FeeFilteringOption> {
         return ResponseEntity.ok(feeService.createEntity(request));
     }
 
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PutMapping("/{id}")
     @Override
     public ResponseEntity<FeeDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid FeeDto request) {
         FeeUtil.checkRequest(request);
         return ResponseEntity.ok(feeService.updateEntity(id, request));
+    }
+
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @Override
+    public ResponseEntity<Void> deleteEntity(Integer id) {
+        feeService.deleteEntity(id);
+        return ResponseEntity.ok().build();
     }
 }

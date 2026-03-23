@@ -22,6 +22,7 @@ import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
@@ -42,6 +43,12 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         this.accountService = accountService;
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @Override
+    public ResponseEntity<List<AccountDto>> getEntities(AccountFilteringOption filteringOption) {
+        return ResponseEntity.ok(accountService.getEntities(filteringOption));
+    }
+
     @PostMapping
     @Override
     public ResponseEntity<AccountDto> createEntity(@RequestBody @Valid AccountDto request) {
@@ -54,6 +61,13 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<AccountDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid AccountDto request) {
         AccountUtil.checkRequest(request);
         return new ResponseEntity<>(accountService.updateEntity(id, request), HttpStatus.OK);
+    }
+
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @Override
+    public ResponseEntity<Void> deleteEntity(Integer id) {
+        accountService.deleteEntity(id);
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/deposit/{id}")
@@ -92,6 +106,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/block/{id}")
     public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("block") Boolean status) {
         MessageResponse<String> response = new MessageResponse<>(accountService.updateBlockStatus(id, status));
@@ -104,6 +119,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('TELLER')")
     @GetMapping("/total")
     public ResponseEntity<MessageResponse<String>> getTotalAccounts(
             @RequestParam("type") AccountType type,
@@ -113,6 +129,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('TELLER')")
     @GetMapping("/statistics/maximum-balances")
     public ResponseEntity<MessageResponse<List<CustomerStatisticsResponse>>> getCustomerInformationWithMaximumBalance(
             @RequestParam("type") AccountType type,

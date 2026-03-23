@@ -28,7 +28,7 @@ public class DataInitializer {
         }
 
         Permission manageEntity = permissionService.createPermission("MANAGE_ENTITY");
-        Permission readUser = permissionService.createPermission("READ_USER");
+        Permission readUser = permissionService.createPermission("READ_DATA");
 
         roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntity, readUser)));
         roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUser)));

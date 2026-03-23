@@ -27,6 +27,8 @@ import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.validator.constraints.Range;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -48,6 +50,12 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         this.accountService = accountService;
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @Override
+    public ResponseEntity<List<CustomerDto>> getEntities(CustomerFilteringOption filteringOption) {
+         return ResponseEntity.ok(customerService.getEntities(filteringOption));
+    }
+
     @PostMapping
     @Override
     public ResponseEntity<CustomerDto> createEntity(@RequestBody @Valid CustomerDto request) {
@@ -60,6 +68,13 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public ResponseEntity<CustomerDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid CustomerDto request) {
         CustomerUtil.checkRequest(request);
         return ResponseEntity.ok(customerService.updateEntity(id, request));
+    }
+
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @Override
+    public ResponseEntity<Void> deleteEntity(Integer id) {
+        customerService.deleteEntity(id);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/{id}/agreements/{title}")
@@ -104,8 +119,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("#username == authentication.principal.username")
     @GetMapping("/{nationalId}/financial-summary")
-    public ResponseEntity<CustomerFinancialSummaryResponse> calculateFinancialSummary(@PathVariable("nationalId") String nationalId, @RequestParam("base") Currency baseCurrency) {
+    public ResponseEntity<CustomerFinancialSummaryResponse> calculateFinancialSummary(@PathVariable("nationalId") @P("username") String nationalId, @RequestParam("base") Currency baseCurrency) {
         return ResponseEntity.ok(customerService.calculateFinancialSummary(nationalId, baseCurrency));
     }
 
@@ -171,8 +187,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA') OR #username == authentication.principal.username")
     @PostMapping("/{nationalId}/financial-status/report/pdf")
-    public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") String nationalId) {
+    public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") @P("username") String nationalId) {
         Customer customer = customerService.findByNationalId(nationalId);
         Double netBalanceOfCustomer = customerService.calculateNetBalance(nationalId, null, Currency.getChargeCurrency());
         Map<AccountType, List<List<AccountFinancialStatus>>> accountFinancialStatusesWithConvertedCurrencies = customerService.calculateFinancialStatus(nationalId);

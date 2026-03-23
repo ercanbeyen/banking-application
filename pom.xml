@@ -19,7 +19,7 @@
 		<lombok.version>1.18.42</lombok.version>
 		<openapi.version>2.8.13</openapi.version>
 		<jackson.version>3.0.0</jackson.version>
-		<datastax.version>4.17.0</datastax.version>
+		<java-driver-core.version>4.19.2</java-driver-core.version>
 		<rest-assured.version>5.5.6</rest-assured.version>
 		<argLine>-Duser.language=en</argLine>
 		<javatuples.version>1.2</javatuples.version>
@@ -30,7 +30,7 @@
         <jackson-annotations.version>3.0-rc5</jackson-annotations.version>
         <apache-poi.version>5.5.1</apache-poi.version>
 		<jwt.version>0.13.0</jwt.version>
-    </properties>
+	</properties>
 
 	<dependencies>
 		<dependency>
@@ -42,9 +42,9 @@
 			<artifactId>spring-boot-starter-data-cassandra</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.datastax.oss</groupId>
+			<groupId>org.apache.cassandra</groupId>
 			<artifactId>java-driver-core</artifactId>
-			<version>${datastax.version}</version>
+			<version>${java-driver-core.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

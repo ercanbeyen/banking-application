@@ -10,6 +10,7 @@ import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,6 +23,37 @@ public class ExchangeController extends BaseController<ExchangeDto, ExchangeFilt
     public ExchangeController(ExchangeService exchangeService) {
         super(exchangeService);
         this.exchangeService = exchangeService;
+    }
+
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @Override
+    public ResponseEntity<List<ExchangeDto>> getEntities(ExchangeFilteringOption filteringOption) {
+         return ResponseEntity.ok(exchangeService.getEntities(filteringOption));
+    }
+
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @Override
+    public ResponseEntity<ExchangeDto> getEntity(Integer id) {
+        return ResponseEntity.ok(exchangeService.getEntity(id));
+    }
+
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @Override
+    public ResponseEntity<ExchangeDto> createEntity(ExchangeDto request) {
+        return ResponseEntity.ok(exchangeService.createEntity(request));
+    }
+
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @Override
+    public ResponseEntity<ExchangeDto> updateEntity(Integer id, ExchangeDto request) {
+        return ResponseEntity.ok(exchangeService.updateEntity(id, request));
+    }
+
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @Override
+    public ResponseEntity<Void> deleteEntity(Integer id) {
+        exchangeService.deleteEntity(id);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/views")
