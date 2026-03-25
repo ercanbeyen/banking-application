@@ -125,6 +125,11 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
+    public CustomerDto getCustomerByNationalId(String nationalId) {
+        return customerMapper.entityToDto(findByNationalId(nationalId));
+    }
+
+    @Override
     public String approveAgreement(Integer id, String title) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         agreementService.approveAgreement(title, findById(id));

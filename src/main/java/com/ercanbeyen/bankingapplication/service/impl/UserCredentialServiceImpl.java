@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
+import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.model.Role;
 import com.ercanbeyen.bankingapplication.model.UserCredential;
@@ -28,10 +29,13 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     @Override
     public void createUserCredential(RegistrationRequest request) {
-        UserCredential userCredential = new UserCredential();
+        CustomerDto requestedCustomer = request.customerDto();
 
-        userCredential.setUsername(request.customerDto().getNationalId());
+        UserCredential userCredential = new UserCredential();
+        userCredential.setCustomerId(requestedCustomer.getId());
+        userCredential.setUsername(requestedCustomer.getNationalId());
         userCredential.setPassword(passwordEncoder.encode(request.password()));
+
         Set<Role> roles = new HashSet<>();
 
         request.roles().forEach(requestedRole -> {

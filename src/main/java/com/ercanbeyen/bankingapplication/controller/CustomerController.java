@@ -53,7 +53,14 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PreAuthorize("hasAuthority('READ_DATA')")
     @Override
     public ResponseEntity<List<CustomerDto>> getEntities(CustomerFilteringOption filteringOption) {
-         return ResponseEntity.ok(customerService.getEntities(filteringOption));
+        return ResponseEntity.ok(customerService.getEntities(filteringOption));
+    }
+
+    @PreAuthorize("#id == authentication.principal.id")
+    @GetMapping("/{id}")
+    @Override
+    public ResponseEntity<CustomerDto> getEntity(@PathVariable("id") @P("id") Integer id) {
+        return ResponseEntity.ok(customerService.getEntity(id));
     }
 
     @PostMapping
@@ -63,9 +70,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return new ResponseEntity<>(customerService.createEntity(request), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @PutMapping("/{id}")
     @Override
-    public ResponseEntity<CustomerDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid CustomerDto request) {
+    public ResponseEntity<CustomerDto> updateEntity(@PathVariable("id") @P("id") Integer id, @RequestBody @Valid CustomerDto request) {
         CustomerUtil.checkRequest(request);
         return ResponseEntity.ok(customerService.updateEntity(id, request));
     }
@@ -77,32 +85,43 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok().build();
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @GetMapping("/search")
+    public ResponseEntity<CustomerDto> getCustomerByNationalId(@RequestParam(value = "nationalId") String nationalId) {
+        return ResponseEntity.ok(customerService.getCustomerByNationalId(nationalId));
+    }
+
+    @PreAuthorize("#id == authentication.principal.id")
     @PostMapping("/{id}/agreements/{title}")
-    public ResponseEntity<MessageResponse<String>> approveAgreement(@PathVariable("id") Integer id, @PathVariable("title") String title) {
+    public ResponseEntity<MessageResponse<String>> approveAgreement(@PathVariable("id") @P("id") Integer id, @PathVariable("title") String title) {
         String message = customerService.approveAgreement(id, title);
         MessageResponse<String> response = new MessageResponse<>(message);
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @PatchMapping("/{id}/registered-recipients")
-    public ResponseEntity<String> addRegisteredRecipient(@PathVariable("id") Integer id, @RequestBody @Valid RegisteredRecipient request) {
+    public ResponseEntity<String> addRegisteredRecipient(@PathVariable("id") @P("id") Integer id, @RequestBody @Valid RegisteredRecipient request) {
         return ResponseEntity.ok(customerService.addRegisteredRecipient(id, request));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @DeleteMapping("/{id}/registered-recipients/{accountId}")
-    public ResponseEntity<String> removeRegisteredRecipient(@PathVariable("id") Integer id, @PathVariable("accountId") Integer accountId) {
+    public ResponseEntity<String> removeRegisteredRecipient(@PathVariable("id") @P("id") Integer id, @PathVariable("accountId") Integer accountId) {
         return ResponseEntity.ok(customerService.removeRegisteredRecipient(id, accountId));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @PostMapping("/{id}")
-    public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") Integer id, @RequestParam("file") MultipartFile request) {
+    public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") @P("id") Integer id, @RequestParam("file") MultipartFile request) {
         PhotoUtil.checkPhoto(request);
         MessageResponse<String> response = new MessageResponse<>(customerService.uploadProfilePhoto(id, request));
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/photo")
-    public ResponseEntity<byte[]> downloadProfilePhoto(@PathVariable("id") Integer id) {
+    public ResponseEntity<byte[]> downloadProfilePhoto(@PathVariable("id") @P("id") Integer id) {
         File file = customerService.downloadProfilePhoto(id);
 
         String fileName = file.getName();
@@ -113,8 +132,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
                 .body(file.getData());
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @DeleteMapping("/{id}/photo")
-    public ResponseEntity<MessageResponse<String>> deleteProfilePhoto(@PathVariable("id") Integer id) {
+    public ResponseEntity<MessageResponse<String>> deleteProfilePhoto(@PathVariable("id") @P("id") Integer id) {
         MessageResponse<String> response = new MessageResponse<>(customerService.deleteProfilePhoto(id));
         return ResponseEntity.ok(response);
     }
@@ -125,13 +145,15 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.calculateFinancialSummary(nationalId, baseCurrency));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/accounts")
-    public ResponseEntity<List<AccountDto>> getAccounts(@PathVariable("id") Integer id, AccountFilteringOption option) {
+    public ResponseEntity<List<AccountDto>> getAccounts(@PathVariable("id") @P("id") Integer id, AccountFilteringOption option) {
         return ResponseEntity.ok(customerService.getAccounts(id, option));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/accounts/receipt-previews")
-    public ResponseEntity<List<ReceiptPreview>> getReceiptPreviews(@PathVariable("id") Integer id) {
+    public ResponseEntity<List<ReceiptPreview>> getReceiptPreviews(@PathVariable("id") @P("id") Integer id) {
         AccountActivityFilteringRequest request = new AccountActivityFilteringRequest(null, null, null, null, null);
         SortedSet<AccountActivityDto> accountActivityDtos = new TreeSet<>(Comparator.comparing(AccountActivityDto::createdAt).reversed());
 
@@ -139,21 +161,23 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
                 .getAccounts()
                 .forEach(account -> accountActivityDtos.addAll(accountService.getAccountActivities(account.getId(), request)));
 
-        List<ReceiptPreview> receiptPreviews =  accountActivityDtos.stream()
+        List<ReceiptPreview> receiptPreviews = accountActivityDtos.stream()
                 .map(accountActivityDto -> new ReceiptPreview(accountActivityDto.id(), accountActivityDto.type(), accountActivityDto.createdAt(), accountActivityDto.amount()))
                 .toList();
 
         return ResponseEntity.ok(receiptPreviews);
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/notifications")
-    public ResponseEntity<List<NotificationDto>> getNotifications(@PathVariable("id") Integer id) {
+    public ResponseEntity<List<NotificationDto>> getNotifications(@PathVariable("id") @P("id") Integer id) {
         return ResponseEntity.ok(customerService.getNotifications(id));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/money-transfer-orders")
     public ResponseEntity<List<MoneyTransferOrderDto>> getMoneyTransferOrders(
-            @PathVariable("id") Integer id,
+            @PathVariable("id") @P("id") Integer id,
             @RequestParam("from") LocalDate fromDate,
             @RequestParam("to") LocalDate toDate,
             @RequestParam(value = "currency", required = false) Currency currency,
@@ -162,28 +186,32 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getMoneyTransferOrders(id, fromDate, toDate, currency, paymentType));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/cash-flow-calendar")
     public ResponseEntity<CashFlowCalendarDto> getCashFlowCalendar(
-            @PathVariable("id") Integer id,
+            @PathVariable("id") @P("id") Integer id,
             @RequestParam("year") Integer year,
             @RequestParam("month") @Range(min = 1, max = 12, message = "Month should be between {min} and {max}") Integer month) {
         CashFlowCalendarUtil.checkMonthAndYearForCashFlowCalendar(year, month);
         return ResponseEntity.ok(customerService.getCashFlowCalendar(id, year, month));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/expected-transactions")
-    public ResponseEntity<List<ExpectedTransaction>> getExpectedTransactions(@PathVariable("id") Integer id, @RequestParam(value = "month", defaultValue = "1") Integer month) {
+    public ResponseEntity<List<ExpectedTransaction>> getExpectedTransactions(@PathVariable("id") @P("id") Integer id, @RequestParam(value = "month", defaultValue = "1") Integer month) {
         CashFlowCalendarUtil.checkMonthValueForExpectedTransactions(month);
         return ResponseEntity.ok(customerService.getExpectedTransactions(id, month));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/agreements")
-    public ResponseEntity<List<CustomerAgreementDto>> getAgreements(@PathVariable("id") Integer id) {
+    public ResponseEntity<List<CustomerAgreementDto>> getAgreements(@PathVariable("id") @P("id") Integer id) {
         return ResponseEntity.ok(customerService.getAgreements(id));
     }
 
+    @PreAuthorize("#id == authentication.principal.id")
     @GetMapping("/{id}/registered-recipients")
-    public ResponseEntity<List<RegisteredRecipient>> getRegisteredRecipients(@PathVariable("id") Integer id) {
+    public ResponseEntity<List<RegisteredRecipient>> getRegisteredRecipients(@PathVariable("id") @P("id") Integer id) {
         return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
     }
 

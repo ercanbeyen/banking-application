@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 public interface CustomerService extends BaseService<CustomerDto, CustomerFilteringOption> {
+    CustomerDto getCustomerByNationalId(String nationalId);
     String approveAgreement(Integer id, String title);
     String addRegisteredRecipient(Integer id, RegisteredRecipient request);
     String removeRegisteredRecipient(Integer id, Integer recipientAccountId);

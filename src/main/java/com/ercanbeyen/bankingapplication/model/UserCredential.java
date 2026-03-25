@@ -21,6 +21,8 @@ public class UserCredential {
     private Long id;
     @Column(unique = true)
     private String username;
+    @Column(unique = true)
+    private Integer customerId;
     private String password;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_credential_roles",
