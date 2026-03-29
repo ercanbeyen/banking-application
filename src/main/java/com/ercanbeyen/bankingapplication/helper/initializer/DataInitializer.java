@@ -27,11 +27,11 @@ public class DataInitializer {
             return;
         }
 
-        Permission manageEntity = permissionService.createPermission("MANAGE_ENTITY");
-        Permission readUser = permissionService.createPermission("READ_DATA");
+        Permission manageEntityPermission = permissionService.createPermission("MANAGE_ENTITY");
+        Permission readUserPermission = permissionService.createPermission("READ_DATA");
 
-        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntity, readUser)));
-        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUser)));
+        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntityPermission, readUserPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUserPermission)));
         roleService.createRole(new CreateRoleRequest(ERole.USER, Set.of()));
     }
 }
