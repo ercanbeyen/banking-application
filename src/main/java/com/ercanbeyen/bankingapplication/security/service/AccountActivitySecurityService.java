@@ -18,11 +18,11 @@ public class AccountActivitySecurityService {
     public boolean isOwner(String accountActivityId, Authentication authentication) {
         AccountActivityDto requestedAccountActivity = accountActivityService.getAccountActivity(accountActivityId);
 
-        Predicate<Integer> checkAccountId = Objects::nonNull;
-        Predicate<Integer> checkAccountOwner = accountId -> accountSecurityService.isOwner(accountId, authentication);
+        Predicate<Integer> accountIdPredicate = Objects::nonNull;
+        Predicate<Integer> accountOwnerPredicate = accountId -> accountSecurityService.isOwner(accountId, authentication);
 
-        boolean isSenderAccount = checkAccountId.and(checkAccountOwner).test(requestedAccountActivity.senderAccountId());
-        boolean isRecipientAccount = checkAccountId.and(checkAccountOwner).test(requestedAccountActivity.recipientAccountId());
+        boolean isSenderAccount = accountIdPredicate.and(accountOwnerPredicate).test(requestedAccountActivity.senderAccountId());
+        boolean isRecipientAccount = accountIdPredicate.and(accountOwnerPredicate).test(requestedAccountActivity.recipientAccountId());
 
         return isSenderAccount || isRecipientAccount;
     }

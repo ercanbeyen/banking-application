@@ -41,7 +41,7 @@ public class FileServiceImpl implements FileService {
     @Override
     public CompletableFuture<File> storeFile(MultipartFile request, String name) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        String fileName = name + "." + FileUtil.getPlainContentTypeOfFile(request); // file extension is added
+        String fileName = name + "." + FileUtil.getPlainContentType(request.getContentType()); // file extension is added
         return saveFile(request, fileName);
     }
 

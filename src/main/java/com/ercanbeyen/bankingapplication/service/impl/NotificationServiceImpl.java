@@ -30,12 +30,12 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Async
     @Override
-    public CompletableFuture<NotificationDto> createNotification(NotificationDto notificationDto) {
+    public void sendNotification(NotificationDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        return CompletableFuture.supplyAsync(() -> {
-            Notification notification = notificationMapper.dtoToEntity(notificationDto);
-            Customer customer = customerService.findByNationalId(notificationDto.customerNationalId());
+        CompletableFuture.supplyAsync(() -> {
+            Notification notification = notificationMapper.dtoToEntity(request);
+            Customer customer = customerService.findByNationalId(request.customerNationalId());
             notification.setCustomer(customer);
 
             Notification savedNotification = notificationRepository.save(notification);

@@ -3,9 +3,12 @@ package com.ercanbeyen.bankingapplication.util;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.util.StringUtil;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.Optional;
 
 @Slf4j
 @UtilityClass
@@ -25,15 +28,16 @@ public class FileUtil {
 
     public List<String> getPlainContentTypes(List<String> contentTypes) {
         return contentTypes.stream()
-                .map(FileUtil::getPlainContentType)
+                .map(FileUtil::extractPlainContentType)
                 .toList();
     }
 
-    public String getPlainContentTypeOfFile(MultipartFile file) {
-        String contentType = file.getContentType();
-        assert contentType != null;
+    public String getPlainContentType(String contentType) {
+        if (StringUtil.isBlank(contentType)) {
+            throw new ResourceExpectationFailedException("Invalid content type");
+        }
 
-        return getPlainContentType(contentType);
+        return extractPlainContentType(contentType);
     }
 
     private void checkLengthOfFileName(MultipartFile request) {
@@ -46,7 +50,7 @@ public class FileUtil {
         int lengthOfOriginalFileName = originalFileName.length();
         log.info("File original name and its length: {} - {}", originalFileName, lengthOfOriginalFileName);
 
-        String plainContentType = getPlainContentTypeOfFile(request);
+        String plainContentType = extractPlainContentType(Objects.requireNonNull(request.getContentType()));
         log.info("Plain content type: {}", plainContentType);
 
         int lengthOfPlainContentType = plainContentType.length();
@@ -59,11 +63,11 @@ public class FileUtil {
         }
     }
 
-    private String getPlainContentType(String contentType) {
+    private String extractPlainContentType(String contentType) {
         String[] contentTypeSplitArray = contentType.split("/");
         String plainContentType = contentTypeSplitArray[1];
 
-        if (plainContentType == null) {
+        if (Optional.ofNullable(plainContentType).isEmpty()) {
             throw new ResourceExpectationFailedException("Invalid content type");
         }
 

@@ -152,7 +152,7 @@ public class AccountServiceImpl implements AccountService {
         String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
 
-        notificationService.createNotification(notificationDto);
+        notificationService.sendNotification(notificationDto);
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
@@ -173,7 +173,7 @@ public class AccountServiceImpl implements AccountService {
 
         String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
-        notificationService.createNotification(notificationDto);
+        notificationService.sendNotification(notificationDto);
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
@@ -197,7 +197,7 @@ public class AccountServiceImpl implements AccountService {
         transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
-        notificationService.createNotification(notificationDto);
+        notificationService.sendNotification(notificationDto);
 
         String response = activityType.getValue() + " transfer";
 
@@ -229,8 +229,8 @@ public class AccountServiceImpl implements AccountService {
             NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made from your %s.", amount, currency, entity));
             NotificationDto recipientNotificationDto = new NotificationDto(recipientAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made to your %s.", amount, currency, entity));
 
-            notificationService.createNotification(senderNotificationDto);
-            notificationService.createNotification(recipientNotificationDto);
+            notificationService.sendNotification(senderNotificationDto);
+            notificationService.sendNotification(recipientNotificationDto);
         }
 
         return String.format(ResponseMessage.SUCCESS, activityType.getValue());
