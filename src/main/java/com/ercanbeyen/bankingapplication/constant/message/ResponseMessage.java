@@ -11,6 +11,7 @@ public final class ResponseMessage {
     public static final String FILE_UPLOAD_ERROR = "Error occurred while uploading the file";
     public static final String INVALID_CONTENT_TYPE = "Invalid content type";
     public static final String INVALID_PHOTO_CONTENT_TYPE = INVALID_CONTENT_TYPE + ". Valid content types for photo are " + PhotoUtil.getPlainContentTypes();
+    public static final String EVALUATION_MESSAGE = "Please evaluate your %s activity at %s in the %s before %s";
     public static final String INVALID_PHONE_NUMBER = "Invalid phone number";
     public static final String IMPROPER_ACCOUNT = "Account is improper for activities";
     public static final String IMPROPER_ACCOUNT_ACTIVITY = "Account activity is improper";

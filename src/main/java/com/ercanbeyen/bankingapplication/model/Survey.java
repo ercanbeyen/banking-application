@@ -1,10 +1,7 @@
 package com.ercanbeyen.bankingapplication.model;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
-import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -27,7 +24,7 @@ public class Survey {
     private SurveyCompositeKey key;
     @Column(value = "title")
     private String title;
-    @Column(value = "account-activity-type")
+    @Column(value = "account_activity_type")
     private AccountActivityType accountActivityType;
     @Column(value = "valid_until")
     private LocalDateTime validUntil;
@@ -37,28 +34,4 @@ public class Survey {
     private String customerSuggestion;
     @Frozen
     private List<Rating> ratings;
-
-    public static Survey valueOf(SurveyDto surveyDto, AccountActivityDto accountActivityDto) {
-        LocalDateTime now = TimeUtil.getTurkeyDateTime();
-        SurveyCompositeKey key = new SurveyCompositeKey(
-                surveyDto.key().getCustomerNationalId(),
-                accountActivityDto.id(),
-                now,
-                surveyDto.key().getSurveyType()
-        );
-
-        /* Rates are null before updated by the customer */
-        surveyDto.ratings()
-                .forEach(rating -> rating.setRate(null));
-
-        return Survey.builder()
-                .key(key)
-                .title(surveyDto.title())
-                .validUntil(surveyDto.validUntil())
-                .updatedAt(now)
-                .accountActivityType(accountActivityDto.type())
-                .customerSuggestion(surveyDto.customerSuggestion())
-                .ratings(surveyDto.ratings())
-                .build();
-    }
 }

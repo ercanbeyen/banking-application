@@ -82,22 +82,41 @@ public class SurveyServiceImpl implements SurveyService {
     public SurveyDto createSurvey(SurveyDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        checkCustomerAndAccountActivity(request.key().getCustomerNationalId(), request.key().getAccountActivityId());
-        AccountActivityDto accountActivityDto = accountActivityService.getAccountActivity(request.key().getAccountActivityId());
-        Survey survey = Survey.valueOf(request, accountActivityDto);
+        SurveyCompositeKey requestedKey = request.key();
 
-        checkExpiration(survey);
+        checkCustomerAndAccountActivity(requestedKey.getCustomerNationalId(), requestedKey.getAccountActivityId());
 
-        Survey savedSurvey = surveyRepository.save(survey);
-        String entity = Entity.SURVEY.getValue();
-        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedSurvey.getKey());
+        AccountActivityDto requestedAccountActivity = accountActivityService.getAccountActivity(requestedKey.getAccountActivityId());
+        LocalDateTime now = TimeUtil.getTurkeyDateTime();
 
-        NotificationDto notificationDto = new NotificationDto(
-                savedSurvey.getKey().getCustomerNationalId(),
-                String.format("Please evaluate your %s activity at %s in the %s", savedSurvey.getAccountActivityType().getValue(), accountActivityDto.createdAt(), entity)
+        SurveyCompositeKey key = new SurveyCompositeKey(
+                requestedKey.getCustomerNationalId(),
+                requestedAccountActivity.id(),
+                now,
+                requestedKey.getSurveyType()
         );
 
-        notificationService.createNotification(notificationDto);
+        request.ratings().forEach(rating -> rating.setRate(null)); // Reset the rates
+
+        Survey survey = Survey.builder()
+                .key(key)
+                .title(request.title())
+                .validUntil(request.validUntil())
+                .updatedAt(now)
+                .accountActivityType(requestedAccountActivity.type())
+                .ratings(request.ratings())
+                .build();
+
+        Survey savedSurvey = surveyRepository.save(survey);
+
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.SURVEY.getValue(), key);
+
+        NotificationDto notificationDto = new NotificationDto(
+                survey.getKey().getCustomerNationalId(),
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt(), Entity.SURVEY.getValue(), survey.getValidUntil())
+        );
+
+        notificationService.sendNotification(notificationDto);
 
         return surveyMapper.entityToDto(savedSurvey);
     }
@@ -109,12 +128,21 @@ public class SurveyServiceImpl implements SurveyService {
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
 
-        validateSurvey(survey, request);
+        AccountActivityDto requestedAccountActivity = accountActivityService.getAccountActivity(request.key().getAccountActivityId());
+
+        request.ratings().forEach(rating -> rating.setRate(null)); // Reset the rates
 
         survey.setTitle(request.title());
         survey.setRatings(request.ratings());
         survey.setCustomerSuggestion(request.customerSuggestion());
         survey.setUpdatedAt(TimeUtil.getTurkeyDateTime());
+
+        NotificationDto notificationDto = new NotificationDto(
+                survey.getKey().getCustomerNationalId(),
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt(), Entity.SURVEY.getValue(), survey.getValidUntil())
+        );
+
+        notificationService.sendNotification(notificationDto);
 
         return surveyMapper.entityToDto(surveyRepository.save(survey));
     }
@@ -171,14 +199,12 @@ public class SurveyServiceImpl implements SurveyService {
         }
 
         List<Rating> ratings = survey.getRatings();
-        List<Integer> rates = ratings
-                .stream()
+        List<Integer> rates = ratings.stream()
                 .map(Rating::getRate)
                 .toList();
 
         FrequencyStatisticsResponse<Integer, Integer> frequencyStatisticsResponse = new FrequencyStatisticsResponse<>(StatisticsUtil.getFrequencies(rates, minimumFrequency));
-        Double average = ratings
-                .stream()
+        Double average = ratings.stream()
                 .mapToDouble(Rating::getRate)
                 .average()
                 .orElse(0);
@@ -214,30 +240,5 @@ public class SurveyServiceImpl implements SurveyService {
             log.error(LogMessage.RESOURCE_NOT_FOUND + " in {}", entity, customerEntity);
             throw new ResourceExpectationFailedException(entity + " is not related with " + customerEntity);
         }
-    }
-
-    private static void validateSurvey(Survey survey, SurveyDto request) {
-        checkExpiration(survey);
-        String entity = Entity.SURVEY.getValue();
-
-        /* Rates should not be null after updated by customer */
-        for (Rating rating : request.ratings()) {
-            if (Optional.ofNullable(rating.getRate()).isEmpty()) {
-                log.error("Rate is null in {}", entity);
-                throw new ResourceConflictException("Rate cannot be null");
-            }
-        }
-
-        log.info("Rates are not null in {}", entity);
-    }
-
-    private static void checkExpiration(Survey survey) {
-        String entity = Entity.SURVEY.getValue();
-
-        if (survey.getValidUntil().isBefore(TimeUtil.getTurkeyDateTime())) {
-            throw new ResourceConflictException(entity + " expired");
-        }
-
-        log.info("{} has not expired", entity);
     }
 }
