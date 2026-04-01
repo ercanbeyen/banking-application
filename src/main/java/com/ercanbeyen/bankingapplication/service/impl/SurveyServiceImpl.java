@@ -24,7 +24,6 @@ import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.StatisticsUtil;
-import com.ercanbeyen.bankingapplication.util.SurveyUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -113,7 +112,7 @@ public class SurveyServiceImpl implements SurveyService {
 
         NotificationDto notificationDto = new NotificationDto(
                 survey.getKey().getCustomerNationalId(),
-                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt(), Entity.SURVEY.getValue(), survey.getValidUntil())
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt().toLocalDate(), Entity.SURVEY.getValue(), survey.getValidUntil())
         );
 
         notificationService.sendNotification(notificationDto);
@@ -134,12 +133,12 @@ public class SurveyServiceImpl implements SurveyService {
 
         survey.setTitle(request.title());
         survey.setRatings(request.ratings());
-        survey.setCustomerSuggestion(request.customerSuggestion());
+        survey.setValidUntil(request.validUntil());
         survey.setUpdatedAt(TimeUtil.getTurkeyDateTime());
 
         NotificationDto notificationDto = new NotificationDto(
                 survey.getKey().getCustomerNationalId(),
-                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt(), Entity.SURVEY.getValue(), survey.getValidUntil())
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt().toLocalDate(), Entity.SURVEY.getValue(), survey.getValidUntil())
         );
 
         notificationService.sendNotification(notificationDto);
@@ -167,24 +166,26 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public SurveyDto updateValidationTime(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, LocalDateTime request) {
+    public String fillOutSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, SurveyDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
         Survey survey = findByKey(key);
-        LocalDateTime now = TimeUtil.getTurkeyDateTime();
-        LocalDateTime nearestValidationTime = SurveyUtil.getNearestValidationTime();
 
-        if (request.isBefore(nearestValidationTime)) {
-            throw new ResourceConflictException(String.format("Validation time cannot be before %s", nearestValidationTime));
+        if (survey.getValidUntil().isBefore(TimeUtil.getTurkeyDateTime())) {
+            throw new ResourceConflictException(Entity.SURVEY.getValue() + " has expired");
         }
 
-        log.info("Requested validation time is appropriate");
+        /* Fill the rates */
+        for (int i = 0; i < survey.getRatings().size(); i++) {
+            Rating rating = survey.getRatings().get(i);
+            Integer rate = request.ratings().get(i).getRate();
+            rating.setRate(rate);
+        }
 
-        survey.setUpdatedAt(now);
-        survey.setValidUntil(request);
+        survey.setCustomerSuggestion(request.customerSuggestion());
 
-        return surveyMapper.entityToDto(surveyRepository.save(survey));
+        return "Thank you for participating in the survey";
     }
 
     @Override
@@ -225,20 +226,19 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     private void checkCustomerAndAccountActivity(String customerNationalId, String accountActivityId) {
-        String entity = Entity.CUSTOMER.getValue();
+        String customerEntity = Entity.CUSTOMER.getValue();
+        String accountActivityEntity = Entity.ACCOUNT_ACTIVITY.getValue();
 
         if (!customerService.existsByNationalId(customerNationalId)) {
-            log.error(LogMessage.RESOURCE_NOT_FOUND, entity);
-            throw new ResourceExpectationFailedException(String.format(ResponseMessage.NOT_FOUND, entity));
+            throw new ResourceExpectationFailedException(String.format(ResponseMessage.NOT_FOUND, customerEntity));
         }
 
-        log.info(LogMessage.RESOURCE_FOUND, entity);
-        entity = Entity.ACCOUNT_ACTIVITY.getValue();
+        log.info(LogMessage.RESOURCE_FOUND, customerEntity);
 
         if (!accountActivityService.existsByIdAndCustomerNationalId(accountActivityId, customerNationalId)) {
-            String customerEntity = Entity.CUSTOMER.getValue();
-            log.error(LogMessage.RESOURCE_NOT_FOUND + " in {}", entity, customerEntity);
-            throw new ResourceExpectationFailedException(entity + " is not related with " + customerEntity);
+            throw new ResourceExpectationFailedException(accountActivityEntity + " is not related with " + customerEntity);
         }
+
+        log.info(LogMessage.RESOURCE_FOUND, accountActivityEntity);
     }
 }

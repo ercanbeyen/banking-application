@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
+import com.ercanbeyen.bankingapplication.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,11 +19,13 @@ public class AgreementController {
 
     @PostMapping
     public ResponseEntity<AgreementDto> createAgreement(@RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
+        FileUtil.checkFile(request);
         return ResponseEntity.ok(agreementService.createAgreement(title, subject, request));
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
+        FileUtil.checkFile(request);
         return ResponseEntity.ok(agreementService.updateAgreement(id, title, subject, request));
     }
 

@@ -70,15 +70,16 @@ public class SurveyController {
         return ResponseEntity.noContent().build();
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @PatchMapping("/customers/{customer-national-id}/account-activities/{account-activity-id}")
-    public ResponseEntity<SurveyDto> updateValidationTime(
-            @PathVariable("customer-national-id") String customerNationalId,
+    @PreAuthorize("#customerNationalId == authentication.principal.username")
+    @PatchMapping("/customers/{customer-national-id}/account-activities/{account-activity-id}/evaluation")
+    public ResponseEntity<String> fillOutSurvey(
+            @PathVariable("customer-national-id") @P("customerNationalId") String customerNationalId,
             @PathVariable("account-activity-id") String accountActivityId,
             @RequestParam("type") SurveyType surveyType,
             @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
-            @RequestParam("valid-until") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime request) {
-        return ResponseEntity.ok(surveyService.updateValidationTime(customerNationalId, accountActivityId, createdAt, surveyType, request));
+            @RequestBody @Valid SurveyDto request) {
+        SurveyUtil.checkEvaluation(request);
+        return ResponseEntity.ok(surveyService.fillOutSurvey(customerNationalId, accountActivityId, createdAt, surveyType, request));
     }
 
     @PreAuthorize("hasAuthority('READ-DATA')")
