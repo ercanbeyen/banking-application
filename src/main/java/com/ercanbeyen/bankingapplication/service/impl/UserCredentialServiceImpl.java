@@ -16,8 +16,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import java.util.HashSet;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -36,14 +36,9 @@ public class UserCredentialServiceImpl implements UserCredentialService {
         userCredential.setUsername(requestedCustomer.getNationalId());
         userCredential.setPassword(passwordEncoder.encode(request.password()));
 
-        Set<Role> roles = new HashSet<>();
-
-        request.roles().forEach(requestedRole -> {
-            Role role = roleService.findByName(ERole.valueOf(requestedRole));
-            roles.add(role);
-        });
-
+        Set<Role> roles = getRequestedRoles(request.roles());
         userCredential.setRoles(roles);
+
         userCredentialRepository.save(userCredential);
     }
 
@@ -54,7 +49,30 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     }
 
     @Override
+    public Set<ERole> getRoles(String username) {
+        return findByUsername(username)
+                .getRoles()
+                .stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public void updateRoles(String username, Set<String> request) {
+        Set<Role> roles = getRequestedRoles(request);
+        UserCredential userCredential = findByUsername(username);
+        userCredential.setRoles(roles);
+        userCredentialRepository.save(userCredential);
+    }
+
+    @Override
     public boolean existsByUsername(String username) {
         return userCredentialRepository.existsByUsername(username);
+    }
+
+    private Set<Role> getRequestedRoles(Set<String> requestedRoles) {
+        return requestedRoles.stream()
+                .map(requestedRole -> roleService.findByName(ERole.valueOf(requestedRole)))
+                .collect(Collectors.toSet());
     }
 }

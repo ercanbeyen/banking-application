@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
@@ -13,6 +14,7 @@ import com.ercanbeyen.bankingapplication.service.AuthService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.service.RefreshTokenService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -25,6 +27,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -40,6 +43,8 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public Map<String, String> loginUser(LoginRequest request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                         request.username(),
@@ -61,6 +66,8 @@ public class AuthServiceImpl implements AuthService {
     @Transactional
     @Override
     public void registerUser(RegistrationRequest request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         if (userCredentialService.existsByUsername(request.customerDto().getNationalId())) {
             throw new ResourceConflictException("User is already registered!");
         }
@@ -73,6 +80,8 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public Map<String, String> refreshToken(String token) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         String username;
 
         try {
@@ -89,5 +98,20 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
 
         return tokens;
+    }
+
+    @Override
+    public Set<ERole> getRoles(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return userCredentialService.getRoles(username);
+    }
+
+    @Transactional
+    @Override
+    public void updateRoles(String username, Set<String> roles) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        userCredentialService.updateRoles(username, roles);
+        refreshTokenService.revokeAllRefreshTokens(username);
     }
 }
