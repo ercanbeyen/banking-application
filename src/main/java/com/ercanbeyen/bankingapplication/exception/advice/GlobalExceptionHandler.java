@@ -43,7 +43,14 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(MissingServletRequestParameterException.class)
     public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(Exception exception) {
-        return generateErrorResponse(exception, HttpStatus.BAD_REQUEST);
+        String message = exception.getMessage();
+        int beginIndex = message.indexOf("'") + 1;
+        String remainingMessage = message.substring(beginIndex);
+        int endIndex = beginIndex + remainingMessage.indexOf("'");
+        String missingRequestParameter = message.substring(beginIndex, endIndex);
+
+        Exception modifiedException = new Exception(missingRequestParameter + " is missing");
+        return generateErrorResponse(modifiedException, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
@@ -68,12 +75,12 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ErrorResponse> handleAuthenticationExceptions(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(Exception exception) {
         return generateErrorResponse(exception, HttpStatus.UNAUTHORIZED);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ErrorResponse> handleAuthorizationExceptions(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(Exception exception) {
         return generateErrorResponse(exception, HttpStatus.FORBIDDEN);
     }
 

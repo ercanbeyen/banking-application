@@ -55,8 +55,7 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
     @Override
     public MoneyTransferOrderDto getEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        MoneyTransferOrder moneyTransferOrder = findById(id);
-        return moneyTransferOrderMapper.entityToDto(moneyTransferOrder);
+        return moneyTransferOrderMapper.entityToDto(findById(id));
     }
 
     @Override

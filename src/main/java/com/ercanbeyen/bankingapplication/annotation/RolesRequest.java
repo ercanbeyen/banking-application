@@ -16,5 +16,4 @@ public @interface RolesRequest {
     String message() default "Invalid roles";
     Class<?>[] groups() default {};
     Class<? extends Payload>[] payload() default {};
-
 }
