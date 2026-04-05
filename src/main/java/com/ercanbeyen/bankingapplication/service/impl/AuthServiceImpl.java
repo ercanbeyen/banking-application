@@ -114,4 +114,12 @@ public class AuthServiceImpl implements AuthService {
         userCredentialService.updateRoles(username, roles);
         refreshTokenService.revokeAllRefreshTokens(username);
     }
+
+    @Override
+    public void updatePassword(String username, String password) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        userCredentialService.updatePassword(username, password);
+        refreshTokenService.revokeAllRefreshTokens(username);
+    }
 }

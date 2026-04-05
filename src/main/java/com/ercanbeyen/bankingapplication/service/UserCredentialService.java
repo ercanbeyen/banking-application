@@ -11,5 +11,6 @@ public interface UserCredentialService {
     UserCredential findByUsername(String username);
     Set<ERole> getRoles(String username);
     void updateRoles(String username, Set<String> roles);
+    void updatePassword(String username, String password);
     boolean existsByUsername(String username);
 }

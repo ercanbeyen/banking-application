@@ -14,10 +14,13 @@ import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -66,9 +69,16 @@ public class AuthController {
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/roles/users/{username}")
-    public ResponseEntity<MessageResponse<String>> updateRoles(@PathVariable("username") String username, @RequestParam("roles") @RolesRequest Set<String> roles) {
+    @PatchMapping("/users/{username}/roles")
+    public ResponseEntity<MessageResponse<String>> updateRoles(@PathVariable("username") String username, @RequestBody @RolesRequest Set<String> roles) {
         authService.updateRoles(username, roles);
-        return ResponseEntity.ok(new MessageResponse<>("Roles of user are successfully updated!"));
+        return ResponseEntity.ok(new MessageResponse<>("Roles are successfully updated!"));
+    }
+
+    @PreAuthorize("hasAuthority('ADMIN') OR #username == authentication.principal.username")
+    @PatchMapping(value = "/users/{username}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
+    public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @NotBlank(message = "Password should not be blank") String password) {
+        authService.updatePassword(username, password);
+        return ResponseEntity.ok(new MessageResponse<>("Password is successfully updated!"));
     }
 }

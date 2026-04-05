@@ -13,4 +13,5 @@ public interface AuthService {
     Map<String, String> refreshToken(String token);
     Set<ERole> getRoles(String username);
     void updateRoles(String username, Set<String> roles);
+    void updatePassword(String username, String password);
 }

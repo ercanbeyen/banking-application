@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
@@ -11,6 +12,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.UserCredentialRepository;
 import com.ercanbeyen.bankingapplication.service.RoleService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialService;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,8 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     @Override
     public void createUserCredential(RegistrationRequest request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         CustomerDto requestedCustomer = request.customerDto();
 
         UserCredential userCredential = new UserCredential();
@@ -44,12 +48,14 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     @Override
     public UserCredential findByUsername(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return userCredentialRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.USER_CREDENTIAL.getValue())));
     }
 
     @Override
     public Set<ERole> getRoles(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return findByUsername(username)
                 .getRoles()
                 .stream()
@@ -59,14 +65,28 @@ public class UserCredentialServiceImpl implements UserCredentialService {
 
     @Override
     public void updateRoles(String username, Set<String> request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         Set<Role> roles = getRequestedRoles(request);
         UserCredential userCredential = findByUsername(username);
         userCredential.setRoles(roles);
+
+        userCredentialRepository.save(userCredential);
+    }
+
+    @Override
+    public void updatePassword(String username, String password) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        UserCredential userCredential = findByUsername(username);
+        userCredential.setPassword(passwordEncoder.encode(password));
+
         userCredentialRepository.save(userCredential);
     }
 
     @Override
     public boolean existsByUsername(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return userCredentialRepository.existsByUsername(username);
     }
 

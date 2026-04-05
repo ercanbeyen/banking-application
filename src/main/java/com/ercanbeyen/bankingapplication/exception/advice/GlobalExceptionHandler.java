@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
@@ -51,6 +52,11 @@ public class GlobalExceptionHandler {
 
         Exception modifiedException = new Exception(missingRequestParameter + " is missing");
         return generateErrorResponse(modifiedException, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception) {
+        return generateErrorResponse(exception, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
