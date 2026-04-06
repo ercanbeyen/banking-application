@@ -30,10 +30,10 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Async
     @Override
-    public void sendNotification(NotificationDto request) {
+    public CompletableFuture<NotificationDto> sendNotification(NotificationDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        CompletableFuture.supplyAsync(() -> {
+        return CompletableFuture.supplyAsync(() -> {
             Notification notification = notificationMapper.dtoToEntity(request);
             Customer customer = customerService.findByNationalId(request.customerNationalId());
             notification.setCustomer(customer);
@@ -43,6 +43,11 @@ public class NotificationServiceImpl implements NotificationService {
 
             return notificationMapper.entityToDto(savedNotification);
         });
+    }
+
+    @Override
+    public NotificationDto getNotification(String id) {
+        return notificationMapper.entityToDto(findById(id));
     }
 
     @Override
@@ -74,5 +79,10 @@ public class NotificationServiceImpl implements NotificationService {
         log.info(LogMessage.RESOURCE_FOUND, Entity.CUSTOMER.getValue());
 
         notificationRepository.deleteAllByCustomer(customer);
+    }
+
+    private Notification findById(String id) {
+        return notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.NOTIFICATION.getValue())));
     }
 }
