@@ -111,7 +111,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication)")
+    @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication) OR hasRole('ADMIN')")
     @PutMapping("/transfer")
     public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request) {
         AccountUtil.checkMoneyTransferRequest(request);

@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
+import com.ercanbeyen.bankingapplication.dto.UserCredentialDto;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -73,9 +74,9 @@ public class AuthServiceImpl implements AuthService {
         }
 
         CustomerDto registeredCustomer = customerService.createEntity(request.customerDto());
-        RegistrationRequest registrationRequestForUserCredential = new RegistrationRequest(registeredCustomer, request.password(), request.roles());
+        UserCredentialDto userCredentialRequest = new UserCredentialDto(registeredCustomer.getNationalId(), registeredCustomer.getId(), request.password(), request.roles());
 
-        userCredentialService.createUserCredential(registrationRequestForUserCredential);
+        userCredentialService.createUserCredential(userCredentialRequest);
     }
 
     @Override

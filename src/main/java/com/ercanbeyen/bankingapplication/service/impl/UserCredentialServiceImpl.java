@@ -4,8 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
-import com.ercanbeyen.bankingapplication.dto.CustomerDto;
-import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
+import com.ercanbeyen.bankingapplication.dto.UserCredentialDto;
 import com.ercanbeyen.bankingapplication.model.Role;
 import com.ercanbeyen.bankingapplication.model.UserCredential;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -30,14 +29,12 @@ public class UserCredentialServiceImpl implements UserCredentialService {
     private final RoleService roleService;
 
     @Override
-    public void createUserCredential(RegistrationRequest request) {
+    public void createUserCredential(UserCredentialDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        CustomerDto requestedCustomer = request.customerDto();
-
         UserCredential userCredential = new UserCredential();
-        userCredential.setCustomerId(requestedCustomer.getId());
-        userCredential.setUsername(requestedCustomer.getNationalId());
+        userCredential.setCustomerId(request.customerId());
+        userCredential.setUsername(request.username());
         userCredential.setPassword(passwordEncoder.encode(request.password()));
 
         Set<Role> roles = getRequestedRoles(request.roles());

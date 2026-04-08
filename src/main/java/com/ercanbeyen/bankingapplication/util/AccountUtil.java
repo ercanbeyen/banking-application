@@ -89,11 +89,7 @@ public class AccountUtil {
 
     public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositPeriod) {
         checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(accountType, depositPeriod);
-
-        LocalDate isGoingToBeUpdatedAt = updatedAt
-                .toLocalDate()
-                .plusMonths(depositPeriod);
-
+        LocalDate isGoingToBeUpdatedAt = updatedAt.toLocalDate().plusMonths(depositPeriod);
         return isGoingToBeUpdatedAt.isEqual(LocalDate.now());
     }
 

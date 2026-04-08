@@ -15,9 +15,13 @@ public class JwtUtil {
 
     public Optional<String> extractToken(HttpServletRequest request) {
         String authHeader = request.getHeader(HttpHeaders.AUTHORIZATION);
-        return Optional.ofNullable(authHeader).isPresent() && authHeader.startsWith(JwtUtil.TOKEN_TYPE + " ")
+        return Optional.ofNullable(authHeader).isPresent() && authHeader.startsWith(authorizationHeaderStartsWith())
                 ? Optional.of(authHeader.substring(JwtUtil.TOKEN_TYPE.length() + 1))
                 : Optional.empty();
+    }
+
+    public String generateAuthorizationHeaderValue(String token) {
+        return authorizationHeaderStartsWith() + token;
     }
 
     public Map<String, Date> generateTimes(int tokenDuration) {
@@ -28,6 +32,10 @@ public class JwtUtil {
                 Claims.ISSUED_AT, issuedAt,
                 Claims.EXPIRATION, expiration
         );
+    }
+
+    private String authorizationHeaderStartsWith() {
+        return JwtUtil.TOKEN_TYPE + " ";
     }
 
     private Date calculateExpiration(Date issuedAt, int tokenDuration) {

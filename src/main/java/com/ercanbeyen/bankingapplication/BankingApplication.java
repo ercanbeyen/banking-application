@@ -6,17 +6,15 @@ import io.swagger.v3.oas.annotations.info.Info;
 import io.swagger.v3.oas.annotations.info.License;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
-@EnableAsync
 @OpenAPIDefinition(
 		info = @Info(
 				title = "Banking Application",
 				version = "1.0",
-				description = "Banking API",
+				description = "Bank API",
 				contact = @Contact(
-						name = "Banking API Support",
+						name = "Bank API Support",
 						email = "support@email.com"
 				),
 				license = @License(
@@ -26,7 +24,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 		))
 public class BankingApplication {
 
-	public static void main(String[] args) {
+	static void main(String[] args) {
 		SpringApplication.run(BankingApplication.class, args);
 	}
 
