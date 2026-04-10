@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.config;
 
-import com.ercanbeyen.bankingapplication.model.BankNews;
-import com.ercanbeyen.bankingapplication.model.NewsReport;
-import com.ercanbeyen.bankingapplication.model.OfferNews;
+import com.ercanbeyen.bankingapplication.entity.BankNews;
+import com.ercanbeyen.bankingapplication.entity.NewsReport;
+import com.ercanbeyen.bankingapplication.entity.OfferNews;
 import com.ercanbeyen.bankingapplication.job.processor.BankNewsProcessor;
 import com.ercanbeyen.bankingapplication.job.processor.OfferNewsProcessor;
 import com.ercanbeyen.bankingapplication.listener.JobCompletionNotificationListener;

@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.repository;
 
-import com.ercanbeyen.bankingapplication.model.MoneyTransferOrder;
+import com.ercanbeyen.bankingapplication.entity.MoneyTransferOrder;
 import org.springframework.stereotype.Repository;
 
 @Repository

@@ -2,15 +2,17 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
 import com.ercanbeyen.bankingapplication.dto.response.ReceiptPreview;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
-import com.ercanbeyen.bankingapplication.model.Customer;
-import com.ercanbeyen.bankingapplication.model.File;
+import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.util.*;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
@@ -91,8 +93,8 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PreAuthorize("#customerId == authentication.principal.id")
     @PostMapping("/{id}/agreements/{title}")
     public ResponseEntity<MessageResponse<String>> approveAgreement(@PathVariable("id") @P("customerId") Integer id, @PathVariable("title") String title) {
-        String message = customerService.approveAgreement(id, title);
-        MessageResponse<String> response = new MessageResponse<>(message);
+        customerService.approveAgreement(id, title);
+        MessageResponse<String> response = new MessageResponse<>(Entity.AGREEMENT.getValue() + " is successfully approved!");
         return ResponseEntity.ok(response);
     }
 
@@ -109,15 +111,16 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PreAuthorize("#customerId == authentication.principal.id")
-    @PostMapping("/{id}")
+    @PostMapping("/{id}/photo/upload")
     public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") @P("customerId") Integer id, @RequestParam("file") MultipartFile request) {
         PhotoUtil.checkPhoto(request);
-        MessageResponse<String> response = new MessageResponse<>(customerService.uploadProfilePhoto(id, request));
+        customerService.uploadProfilePhoto(id, request);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_UPLOAD_SUCCESS);
         return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("#customerId == authentication.principal.id")
-    @GetMapping("/{id}/photo")
+    @GetMapping("/{id}/photo/download")
     public ResponseEntity<byte[]> downloadProfilePhoto(@PathVariable("id") @P("customerId") Integer id) {
         File file = customerService.downloadProfilePhoto(id);
 
@@ -139,7 +142,8 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PreAuthorize("#customerId == authentication.principal.id")
     @DeleteMapping("/{id}/photo")
     public ResponseEntity<MessageResponse<String>> deleteProfilePhoto(@PathVariable("id") @P("customerId") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(customerService.deleteProfilePhoto(id));
+        customerService.deleteProfilePhoto(id);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_DELETE_SUCCESS);
         return ResponseEntity.ok(response);
     }
 
@@ -223,13 +227,13 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PostMapping("/{nationalId}/financial-status/report/pdf")
     public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") @P("customerNationalId") String nationalId) {
         Customer customer = customerService.findByNationalId(nationalId);
-        Double netBalanceOfCustomer = customerService.calculateNetBalance(nationalId, null, Currency.getChargeCurrency());
+        Double netBalanceOfCustomer = customerService.calculateNetBalance(nationalId, null, Currency.getDeductionCurrency());
         Map<AccountType, List<List<AccountFinancialStatus>>> accountFinancialStatusesWithConvertedCurrencies = customerService.calculateFinancialStatus(nationalId);
         Map<AccountType, Double> accountTypeNetBalancesWithConvertedCurrencies = new EnumMap<>(AccountType.class);
 
         for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrency : accountFinancialStatusesWithConvertedCurrencies.entrySet()) {
             AccountType accountType = financialStatusOfAccountTypesWithConvertedCurrency.getKey();
-            Double balance = customerService.calculateNetBalance(nationalId, accountType, Currency.getChargeCurrency());
+            Double balance = customerService.calculateNetBalance(nationalId, accountType, Currency.getDeductionCurrency());
             accountTypeNetBalancesWithConvertedCurrencies.put(accountType, balance);
         }
 

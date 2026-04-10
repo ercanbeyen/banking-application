@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
-import com.ercanbeyen.bankingapplication.dto.UserCredentialDto;
+import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -14,7 +14,7 @@ import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.service.AuthService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.ercanbeyen.bankingapplication.service.RefreshTokenService;
-import com.ercanbeyen.bankingapplication.service.UserCredentialService;
+import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +36,7 @@ import java.util.Set;
 public class AuthServiceImpl implements AuthService {
     private final AuthenticationManager authenticationManager;
     private final CustomerService customerService;
-    private final UserCredentialService userCredentialService;
+    private final UserCredentialsService userCredentialsService;
     private final UserDetailsService userDetailsService;
     private final RefreshTokenService refreshTokenService;
     private final JwtService jwtService;
@@ -69,14 +69,14 @@ public class AuthServiceImpl implements AuthService {
     public void registerUser(RegistrationRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        if (userCredentialService.existsByUsername(request.customerDto().getNationalId())) {
+        if (userCredentialsService.existsByUsername(request.customerDto().getNationalId())) {
             throw new ResourceConflictException("User is already registered!");
         }
 
         CustomerDto registeredCustomer = customerService.createEntity(request.customerDto());
-        UserCredentialDto userCredentialRequest = new UserCredentialDto(registeredCustomer.getNationalId(), registeredCustomer.getId(), request.password(), request.roles());
+        UserCredentialsDto userCredentialRequest = new UserCredentialsDto(registeredCustomer.getNationalId(), registeredCustomer.getId(), request.password(), request.roles());
 
-        userCredentialService.createUserCredential(userCredentialRequest);
+        userCredentialsService.createUserCredentials(userCredentialRequest);
     }
 
     @Override
@@ -104,7 +104,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public Set<ERole> getRoles(String username) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return userCredentialService.getRoles(username);
+        return userCredentialsService.getRoles(username);
     }
 
     @Transactional
@@ -112,7 +112,7 @@ public class AuthServiceImpl implements AuthService {
     public void updateRoles(String username, Set<String> roles) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        userCredentialService.updateRoles(username, roles);
+        userCredentialsService.updateRoles(username, roles);
         refreshTokenService.revokeAllRefreshTokens(username);
     }
 
@@ -120,7 +120,7 @@ public class AuthServiceImpl implements AuthService {
     public void updatePassword(String username, String password) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        userCredentialService.updatePassword(username, password);
+        userCredentialsService.updatePassword(username, password);
         refreshTokenService.revokeAllRefreshTokens(username);
     }
 }

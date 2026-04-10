@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.repository;
 
-import com.ercanbeyen.bankingapplication.model.OfferNews;
+import com.ercanbeyen.bankingapplication.entity.OfferNews;
 import org.springframework.stereotype.Repository;
 
 @Repository

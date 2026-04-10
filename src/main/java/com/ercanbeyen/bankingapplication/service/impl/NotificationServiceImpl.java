@@ -4,8 +4,8 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
-import com.ercanbeyen.bankingapplication.model.Customer;
-import com.ercanbeyen.bankingapplication.model.Notification;
+import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.entity.Notification;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.NotificationMapper;
 import com.ercanbeyen.bankingapplication.repository.NotificationRepository;
@@ -51,7 +51,7 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public String deleteNotification(String id) {
+    public void deleteNotification(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.NOTIFICATION.getValue();
@@ -66,8 +66,6 @@ public class NotificationServiceImpl implements NotificationService {
                 });
 
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
-
-        return entity + " " + id + " is successfully deleted";
     }
 
     @Transactional

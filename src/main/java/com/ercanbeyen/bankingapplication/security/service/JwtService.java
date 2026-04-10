@@ -1,11 +1,11 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
-import com.ercanbeyen.bankingapplication.model.Permission;
-import com.ercanbeyen.bankingapplication.model.Role;
+import com.ercanbeyen.bankingapplication.entity.Permission;
+import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
-import com.ercanbeyen.bankingapplication.model.UserCredential;
+import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.service.UserCredentialService;
+import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.MacAlgorithm;
@@ -35,7 +35,7 @@ public class JwtService {
     @Value("${jwt.refreshExpiration}")
     private int refreshTokenDuration;
     private SecretKey key;
-    private final UserCredentialService userCredentialService;
+    private final UserCredentialsService userCredentialsService;
 
     @PostConstruct
     public void init() {
@@ -44,8 +44,8 @@ public class JwtService {
 
     public Map<String, String> generateTokens(UserDetails userDetails) {
         String username = userDetails.getUsername();
-        UserCredential userCredential = userCredentialService.findByUsername(username);
-        Set<Role> userCredentialRoles = userCredential.getRoles();
+        UserCredentials userCredentials = userCredentialsService.findByUsername(username);
+        Set<Role> userCredentialRoles = userCredentials.getRoles();
         Map<String, Object> claims = new HashMap<>();
 
         Set<String> roles = userCredentialRoles.stream()

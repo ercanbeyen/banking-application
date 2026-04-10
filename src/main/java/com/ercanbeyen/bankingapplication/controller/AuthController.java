@@ -46,8 +46,9 @@ public class AuthController {
     public ResponseEntity<MessageResponse<String>> registerUser(@RequestBody @Valid RegistrationRequest request) {
         CustomerUtil.checkRequest(request.customerDto());
         authService.registerUser(request);
+        MessageResponse<String> response = new MessageResponse<>("User registered successfully!");
 
-        return ResponseEntity.ok(new MessageResponse<>("User registered successfully!"));
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
@@ -72,13 +73,15 @@ public class AuthController {
     @PatchMapping("/users/{username}/roles")
     public ResponseEntity<MessageResponse<String>> updateRoles(@PathVariable("username") String username, @RequestBody @RolesRequest Set<String> roles) {
         authService.updateRoles(username, roles);
-        return ResponseEntity.ok(new MessageResponse<>("Roles are successfully updated!"));
+        MessageResponse<String> response = new MessageResponse<>("Roles are successfully updated!");
+        return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasAuthority('ADMIN') OR #username == authentication.principal.username")
     @PatchMapping(value = "/users/{username}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @NotBlank(message = "Password should not be blank") String password) {
         authService.updatePassword(username, password);
-        return ResponseEntity.ok(new MessageResponse<>("Password is successfully updated!"));
+        MessageResponse<String> response = new MessageResponse<>("Password is successfully updated!");
+        return ResponseEntity.ok(response);
     }
 }

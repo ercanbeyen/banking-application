@@ -16,12 +16,12 @@ public enum Entity {
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
     BRANCH("Branch"),
-    FEE("Fee"),
-    CHARGE("Charge"),
+    TERM_DEPOSIT_INTEREST_RATE("Term Deposit Interest Rate"),
+    DEDUCTION("Deduction"),
     AGREEMENT("Agreement"),
     DAILY_ACTIVITY_LIMIT("Daily Activity Limit"),
     CASH_FLOW_CALENDAR("Cash Flow Calendar"),
-    USER_CREDENTIAL("User Credential"),
+    USER_CREDENTIALS("User Credentials"),
     ROLE("Role"),
     REFRESH_TOKEN("Refresh Token");
 
@@ -37,7 +37,8 @@ public enum Entity {
             case MONEY_TRANSFER_ORDER -> "money-transfer-order";
             case ACCOUNT_ACTIVITY -> "account-activitie";
             case BRANCH -> "branche";
-            case USER_CREDENTIAL, ROLE, REFRESH_TOKEN -> throw new ResourceNotFoundException("Resource is not found");
+            case TERM_DEPOSIT_INTEREST_RATE -> "term-deposit-interest-rate";
+            case USER_CREDENTIALS, ROLE, REFRESH_TOKEN -> throw new ResourceNotFoundException("Resource is not found");
             default -> value.toLowerCase();
         };
     }

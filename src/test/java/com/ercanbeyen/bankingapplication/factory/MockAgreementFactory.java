@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.factory;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
-import com.ercanbeyen.bankingapplication.model.Agreement;
+import com.ercanbeyen.bankingapplication.entity.Agreement;
 
 import java.util.HashSet;
 

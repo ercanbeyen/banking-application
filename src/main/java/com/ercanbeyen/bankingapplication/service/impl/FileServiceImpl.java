@@ -4,7 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.FilePreviewInfo;
-import com.ercanbeyen.bankingapplication.model.File;
+import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.FileRepository;
@@ -52,7 +52,7 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
-    public String deleteFile(String id) {
+    public void deleteFile(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.FILE.getValue();
@@ -74,8 +74,6 @@ public class FileServiceImpl implements FileService {
                 });
 
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
-
-        return ResponseMessage.FILE_DELETE_SUCCESS;
     }
 
     @Override

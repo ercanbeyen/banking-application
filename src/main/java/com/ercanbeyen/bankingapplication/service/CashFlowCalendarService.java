@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.service;
 
-import com.ercanbeyen.bankingapplication.model.AccountActivity;
-import com.ercanbeyen.bankingapplication.model.CashFlowCalendar;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
+import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 
 public interface CashFlowCalendarService {
     CashFlowCalendar createCashFlowCalendar();

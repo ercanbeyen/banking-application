@@ -73,23 +73,23 @@ public class AccountUtil {
         log.info("Account Type {} can apply account activity {}", givenAccountType.getValue(), activityType.getValue());
     }
 
-    public double calculateInterest(Double balance, Integer depositPeriod, Double interestRatio) {
-        checkValidityOfBalanceAndInterestRatio(balance, interestRatio);
-        double interest = (balance / 100) * (interestRatio / 12) * depositPeriod;
-        log.info("Interest after calculation with balance ({}), interest ratio ({}) and deposit period ({}): {}", balance, interestRatio, depositPeriod, interest);
-        return interest;
+    public double calculateInterestIncome(Double balance, Integer depositMaturity, Double interestRate) {
+        checkValidityOfBalanceAndInterestRate(balance, interestRate);
+        double interestIncome = (balance / 100) * (interestRate / 12) * depositMaturity;
+        log.info("Interest after calculation with balance ({}), interest rate ({}) and deposit maturity ({}): {}", balance, interestRate, depositMaturity, interestIncome);
+        return interestIncome;
     }
 
-    public double calculateBalanceAfterNextFee(Double balance, Integer depositPeriod, Double interestRatio) {
-        double interest = AccountUtil.calculateInterest(balance, depositPeriod, interestRatio);
-        double balanceAfterNextFee = balance + interest;
-        log.info("Balance after fee: {}", balanceAfterNextFee);
-        return balanceAfterNextFee;
+    public double calculateBalanceAfterNextInterestIncome(Double balance, Integer depositMaturity, Double interestRate) {
+        double interestIncome = AccountUtil.calculateInterestIncome(balance, depositMaturity, interestRate);
+        double balanceAfterNextInterestIncome = balance + interestIncome;
+        log.info("Balance after interest income: {}", balanceAfterNextInterestIncome);
+        return balanceAfterNextInterestIncome;
     }
 
-    public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositPeriod) {
-        checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(accountType, depositPeriod);
-        LocalDate isGoingToBeUpdatedAt = updatedAt.toLocalDate().plusMonths(depositPeriod);
+    public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositMaturity) {
+        checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(accountType, depositMaturity);
+        LocalDate isGoingToBeUpdatedAt = updatedAt.toLocalDate().plusMonths(depositMaturity);
         return isGoingToBeUpdatedAt.isEqual(LocalDate.now());
     }
 
@@ -110,17 +110,17 @@ public class AccountUtil {
 
     public final BiPredicate<AccountType, AccountType> checkAccountTypeMatch = (givenAccountType, expectedAccountType) -> givenAccountType == expectedAccountType;
 
-    private void checkAccountTypeAndDepositPeriodForPeriodBalanceUpdate(AccountType accountType, Integer depositPeriod) {
-        checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, AccountActivityType.FEE);
-        FeeUtil.checkValidityOfDepositPeriod(depositPeriod);
+    private void checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(AccountType accountType, Integer depositMaturity) {
+        checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, AccountActivityType.INTEREST_INCOME);
+        TermDepositInterestRateUtil.checkValidityOfDepositMaturity(depositMaturity);
     }
 
-    private void checkValidityOfBalanceAndInterestRatio(Double balance, Double interestRatio) {
+    private void checkValidityOfBalanceAndInterestRate(Double balance, Double interestRate) {
         boolean isBalanceValid = balance >= 0;
-        boolean isInterestRatioValid = interestRatio >= 0;
+        boolean isInterestRateValid = interestRate >= 0;
 
-        if (!isBalanceValid || !isInterestRatioValid) {
-            throw new BadRequestException(String.format("Balance and interest ratio must be greater than or equal to %s", 0));
+        if (!isBalanceValid || !isInterestRateValid) {
+            throw new BadRequestException(String.format("Balance and interest rate must be greater than or equal to %s", 0));
         }
     }
 
@@ -128,19 +128,19 @@ public class AccountUtil {
         checkOptionalFieldsOfAccount(accountDto);
 
         if (accountDto.getType() == AccountType.DEPOSIT) {
-            FeeUtil.checkValidityOfDepositPeriod(accountDto.getDepositPeriod());
-            accountDto.setBalanceAfterNextFee(0D);
+            TermDepositInterestRateUtil.checkValidityOfDepositMaturity(accountDto.getDepositMaturity());
+            accountDto.setBalanceAfterNextInterestIncome(0D);
         } else {
-            log.warn("{} account does not have deposit period", accountDto.getType().getValue());
+            log.warn("{} account does not have deposit maturity", accountDto.getType().getValue());
         }
     }
 
     private void checkOptionalFieldsOfAccount(AccountDto accountDto) {
-        boolean isInterestNull = isNull.test(accountDto.getInterestRatio());
-        boolean isDepositPeriodNull = isNull.test(accountDto.getDepositPeriod());
+        boolean isInterestNull = isNull.test(accountDto.getInterestRate());
+        boolean isDepositPeriodNull = isNull.test(accountDto.getDepositMaturity());
 
         AccountType accountType = accountDto.getType();
-        String message = "have interest and deposit period values";
+        String message = "have interest and deposit maturity values";
 
         if ((accountType == AccountType.DEPOSIT) && (isInterestNull || isDepositPeriodNull)) {
             String exceptionMessage = accountType.getValue() + " must " + message;

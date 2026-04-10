@@ -2,10 +2,10 @@ package com.ercanbeyen.bankingapplication.factory;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Gender;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
-import com.ercanbeyen.bankingapplication.model.Agreement;
-import com.ercanbeyen.bankingapplication.model.CashFlowCalendar;
-import com.ercanbeyen.bankingapplication.model.Customer;
-import com.ercanbeyen.bankingapplication.model.CustomerAgreement;
+import com.ercanbeyen.bankingapplication.entity.Agreement;
+import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
+import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 
 import java.time.LocalDate;

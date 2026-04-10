@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.repository;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
-import com.ercanbeyen.bankingapplication.model.Role;
+import com.ercanbeyen.bankingapplication.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

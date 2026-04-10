@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
-import com.ercanbeyen.bankingapplication.model.Customer;
+import com.ercanbeyen.bankingapplication.entity.Customer;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
@@ -14,5 +14,5 @@ public interface AgreementService {
     AgreementDto getAgreement(String id);
     void approveAgreement(String title, Customer customer);
     void approveAgreements(AgreementSubject subject, Customer customer);
-    String deleteAgreement(String id);
+    void deleteAgreement(String id);
 }

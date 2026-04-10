@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.repository;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
-import com.ercanbeyen.bankingapplication.model.Agreement;
+import com.ercanbeyen.bankingapplication.entity.Agreement;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

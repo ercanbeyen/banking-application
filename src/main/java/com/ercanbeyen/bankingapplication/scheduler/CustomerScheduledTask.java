@@ -4,9 +4,9 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
-import com.ercanbeyen.bankingapplication.util.UserCredentialUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +33,7 @@ import java.util.Map;
 public class CustomerScheduledTask {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final SystemAdminProperties systemAdminProperties;
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
 
@@ -48,7 +49,7 @@ public class CustomerScheduledTask {
 
         String notificationMessage = "happy birthday";
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(UserCredentialUtil.getSystemAdminUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
         Map<String, String> tokens = jwtService.generateTokens(userDetails);
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));

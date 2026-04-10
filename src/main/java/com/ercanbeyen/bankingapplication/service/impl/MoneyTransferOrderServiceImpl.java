@@ -7,8 +7,8 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.MoneyTransferOrderDto;
 import com.ercanbeyen.bankingapplication.dto.RegularMoneyTransferDto;
 import com.ercanbeyen.bankingapplication.embeddable.RegularMoneyTransfer;
-import com.ercanbeyen.bankingapplication.model.Account;
-import com.ercanbeyen.bankingapplication.model.MoneyTransferOrder;
+import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.MoneyTransferOrder;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.MoneyTransferOrderMapper;
 import com.ercanbeyen.bankingapplication.dto.option.MoneyTransferOrderOption;
@@ -77,7 +77,7 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
 
         List<Account> accounts = getAccountsFromRegularTransferDto(request);
         moneyTransferOrder.setSenderAccount(accounts.getFirst());
-        moneyTransferOrder.setChargedAccount(accounts.getLast());
+        moneyTransferOrder.setDeducteeAccount(accounts.getLast());
 
         RegularMoneyTransfer regularMoneyTransfer = moneyTransferOrder.getRegularMoneyTransfer();
         regularMoneyTransfer.setRecipientAccount(accounts.get(1));
@@ -115,7 +115,7 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
         MoneyTransferOrder moneyTransferOrder = new MoneyTransferOrder();
 
         moneyTransferOrder.setSenderAccount(accounts.getFirst());
-        moneyTransferOrder.setChargedAccount(accounts.getLast());
+        moneyTransferOrder.setDeducteeAccount(accounts.getLast());
         moneyTransferOrder.setRegularMoneyTransfer(regularMoneyTransfer);
         moneyTransferOrder.setTransferDate(request.getTransferDate());
 
@@ -136,7 +136,7 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
     /***
      *
      * @param request is MoneyTransferOrderDto object
-     * @return list contains sender, recipient and charged accounts respectively
+     * @return list contains sender, recipient and deductee accounts respectively
      */
     private List<Account> getAccountsFromRegularTransferDto(MoneyTransferOrderDto request) {
         Account senderAccount = accountService.findActiveAccountById(request.getSenderAccountId());
@@ -144,9 +144,9 @@ public class MoneyTransferOrderServiceImpl implements MoneyTransferOrderService 
 
         accountService.checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
-        Account chargedAccount = accountService.getChargedAccount(AccountActivityType.MONEY_TRANSFER, request.getChargedAccountId(), List.of(senderAccount, recipientAccount));
+        Account deducteeAccount = accountService.getDeducteeAccount(AccountActivityType.MONEY_TRANSFER, request.getDeducteeAccountId(), List.of(senderAccount, recipientAccount));
 
-        return List.of(senderAccount, recipientAccount, chargedAccount);
+        return List.of(senderAccount, recipientAccount, deducteeAccount);
     }
 
     private MoneyTransferOrder findById(Integer id) {

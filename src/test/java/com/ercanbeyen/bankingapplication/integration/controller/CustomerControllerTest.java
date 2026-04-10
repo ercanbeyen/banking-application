@@ -2,8 +2,8 @@ package com.ercanbeyen.bankingapplication.integration.controller;
 
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
-import com.ercanbeyen.bankingapplication.model.Agreement;
-import com.ercanbeyen.bankingapplication.model.File;
+import com.ercanbeyen.bankingapplication.entity.Agreement;
+import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.factory.MockAgreementFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.factory.MockFileFactory;

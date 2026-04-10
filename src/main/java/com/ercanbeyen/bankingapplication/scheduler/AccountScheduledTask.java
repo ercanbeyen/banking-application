@@ -5,9 +5,9 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
-import com.ercanbeyen.bankingapplication.util.UserCredentialUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,6 +36,7 @@ public class AccountScheduledTask {
     private static final String ID = "id";
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final SystemAdminProperties systemAdminProperties;
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
 
@@ -44,7 +45,7 @@ public class AccountScheduledTask {
         final String task = "periodic money deposit to deposit account";
         log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(UserCredentialUtil.getSystemAdminUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
         Map<String, String> tokens = jwtService.generateTokens(userDetails);
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
@@ -64,12 +65,12 @@ public class AccountScheduledTask {
             return;
         }
 
-        payInterests(accountDtos, headers);
+        payInterestIncomes(accountDtos, headers);
 
         log.info(LogMessage.SCHEDULED_TASK_ENDED, task);
     }
 
-    private void payInterests(List<AccountDto> accountDtos, HttpHeaders headers) {
+    private void payInterestIncomes(List<AccountDto> accountDtos, HttpHeaders headers) {
         accountDtos.stream()
                 .map(AccountDto::getId)
                 .toList()
@@ -78,7 +79,7 @@ public class AccountScheduledTask {
 
                     try {
                         Map<String, Integer> parameters = Map.of(ID, accountId);
-                        String url = Entity.ACCOUNT.getCollectionUrl() + "/pay/interest/{" + ID + "}";
+                        String url = Entity.ACCOUNT.getCollectionUrl() + "/{" + ID + "}/pay/interest-income";
                         HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
 
                         ResponseEntity<MessageResponse> responseEntity = restTemplate.exchange(

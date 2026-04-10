@@ -1,0 +1,95 @@
+package com.ercanbeyen.bankingapplication.service.impl;
+
+import com.ercanbeyen.bankingapplication.constant.enums.ERole;
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
+import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
+import com.ercanbeyen.bankingapplication.entity.Role;
+import com.ercanbeyen.bankingapplication.entity.UserCredentials;
+import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.repository.UserCredentialsRepository;
+import com.ercanbeyen.bankingapplication.service.RoleService;
+import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.Set;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+@Slf4j
+public class UserCredentialsServiceImpl implements UserCredentialsService {
+    private final UserCredentialsRepository userCredentialsRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final RoleService roleService;
+
+    @Override
+    public void createUserCredentials(UserCredentialsDto request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        UserCredentials userCredentials = new UserCredentials();
+        userCredentials.setCustomerId(request.customerId());
+        userCredentials.setUsername(request.username());
+        userCredentials.setPassword(passwordEncoder.encode(request.password()));
+
+        Set<Role> roles = getRequestedRoles(request.roles());
+        userCredentials.setRoles(roles);
+
+        userCredentialsRepository.save(userCredentials);
+    }
+
+    @Override
+    public UserCredentials findByUsername(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return userCredentialsRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.USER_CREDENTIALS.getValue())));
+    }
+
+    @Override
+    public Set<ERole> getRoles(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return findByUsername(username)
+                .getRoles()
+                .stream()
+                .map(Role::getName)
+                .collect(Collectors.toSet());
+    }
+
+    @Override
+    public void updateRoles(String username, Set<String> request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Set<Role> roles = getRequestedRoles(request);
+        UserCredentials userCredentials = findByUsername(username);
+        userCredentials.setRoles(roles);
+
+        userCredentialsRepository.save(userCredentials);
+    }
+
+    @Override
+    public void updatePassword(String username, String password) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        UserCredentials userCredentials = findByUsername(username);
+        userCredentials.setPassword(passwordEncoder.encode(password));
+
+        userCredentialsRepository.save(userCredentials);
+    }
+
+    @Override
+    public boolean existsByUsername(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return userCredentialsRepository.existsByUsername(username);
+    }
+
+    private Set<Role> getRequestedRoles(Set<String> requestedRoles) {
+        return requestedRoles.stream()
+                .map(requestedRole -> roleService.findByName(ERole.valueOf(requestedRole)))
+                .collect(Collectors.toSet());
+    }
+}

@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto.request;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
-import com.ercanbeyen.bankingapplication.model.Permission;
+import com.ercanbeyen.bankingapplication.entity.Permission;
 
 import java.util.Set;
 

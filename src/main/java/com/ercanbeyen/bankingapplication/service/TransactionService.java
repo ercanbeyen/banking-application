@@ -4,16 +4,16 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
-import com.ercanbeyen.bankingapplication.dto.FeeDto;
+import com.ercanbeyen.bankingapplication.dto.TermDepositInterestRateDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
-import com.ercanbeyen.bankingapplication.model.Account;
-import com.ercanbeyen.bankingapplication.model.AccountActivity;
+import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.dto.option.FeeFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.TermDepositInterestRateFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
@@ -38,8 +38,8 @@ public class TransactionService {
     private final AccountRepository accountRepository;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
-    private final ChargeService chargeService;
-    private final FeeService feeService;
+    private final DeductionService deductionService;
+    private final TermDepositInterestRateService termDepositInterestRateService;
     private final CashFlowCalendarService cashFlowCalendarService;
 
     public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation) {
@@ -53,7 +53,7 @@ public class TransactionService {
         DoublePredicate validBalancePredicate = balance -> balance >= 0;
 
         double newBalance = switch (activityType) {
-            case MONEY_DEPOSIT, FEE -> {
+            case MONEY_DEPOSIT, INTEREST_INCOME -> {
                 double updatedBalance = previousBalance + amount - transactionFee;
 
                 if (!validBalancePredicate.test(updatedBalance)) {
@@ -95,32 +95,32 @@ public class TransactionService {
         summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
-        createAccountActivityForCharge(transactionFee, summary, account);
+        createAccountActivityForDeduction(transactionFee, summary, account);
 
         cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, cashFlowExplanation);
     }
 
-    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account chargedAccount) {
+    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
         List<Account> accountsInMoneyTransfer = List.of(senderAccount, recipientAccount);
         double transactionFee = getTransactionFee(activityType, accountsInMoneyTransfer);
-        checkBalanceBeforeMoneyTransferAndExchange(chargedAccount, accountsInMoneyTransfer, amount, transactionFee, activityType);
+        checkBalanceBeforeMoneyTransferAndExchange(deducteeAccount, accountsInMoneyTransfer, amount, transactionFee, activityType);
 
         /* Balance update of sender account */
         double newBalance = senderAccount.getBalance() - amount;
         updateBalance(senderAccount, newBalance);
 
-        /* Balance update of charged account */
-        newBalance = chargedAccount.getBalance() - transactionFee;
-        updateBalance(chargedAccount, newBalance);
+        /* Balance update of deductee account */
+        newBalance = deducteeAccount.getBalance() - transactionFee;
+        updateBalance(deducteeAccount, newBalance);
 
         /* Balance update of recipient account */
         newBalance = recipientAccount.getBalance() + amount;
         updateBalance(recipientAccount, newBalance);
 
-        accountRepository.saveAllAndFlush(List.of(senderAccount, chargedAccount, recipientAccount));
+        accountRepository.saveAllAndFlush(List.of(senderAccount, deducteeAccount, recipientAccount));
 
         Account[] accounts = {senderAccount, recipientAccount};
         String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
@@ -139,15 +139,14 @@ public class TransactionService {
         summary.put(senderWord + SummaryField.ACCOUNT_IDENTITY, senderAccount.getId());
         summary.put(recipientWord + SummaryField.ACCOUNT_IDENTITY, recipientAccount.getId());
 
-
-        putChargedAccountInformationIntoSummary(senderAccount, chargedAccount, summary);
+        putDeducteeAccountInformationIntoSummary(senderAccount, deducteeAccount, summary);
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
-        summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
+        summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
         summary.put(SummaryField.PAYMENT_TYPE, request.paymentType());
         summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
-        createAccountActivityForCharge(transactionFee, summary, chargedAccount);
+        createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
 
         if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue();
@@ -158,14 +157,14 @@ public class TransactionService {
         }
     }
 
-    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account chargedAccount) {
+    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
 
         List<Account> accountsInMoneyExchange = List.of(sellerAccount, buyerAccount);
         double transactionFee = getTransactionFee(activityType, accountsInMoneyExchange);
-        checkBalanceBeforeMoneyTransferAndExchange(chargedAccount, accountsInMoneyExchange, request.amount(), transactionFee, activityType);
+        checkBalanceBeforeMoneyTransferAndExchange(deducteeAccount, accountsInMoneyExchange, request.amount(), transactionFee, activityType);
 
         Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
         Double spentAmount = request.amount();
@@ -175,15 +174,15 @@ public class TransactionService {
         double newBalance = sellerAccount.getBalance() - spentAmount;
         updateBalance(sellerAccount, newBalance);
 
-        /* Balance update of charged account */
-        newBalance = chargedAccount.getBalance() - transactionFee;
-        updateBalance(chargedAccount, newBalance);
+        /* Balance update of deductee account */
+        newBalance = deducteeAccount.getBalance() - transactionFee;
+        updateBalance(deducteeAccount, newBalance);
 
         /* Balance update of recipient account */
         newBalance = buyerAccount.getBalance() + earnedAmount;
         updateBalance(buyerAccount, newBalance);
 
-        accountRepository.saveAllAndFlush(List.of(sellerAccount, chargedAccount, buyerAccount));
+        accountRepository.saveAllAndFlush(List.of(sellerAccount, deducteeAccount, buyerAccount));
 
         String spentAmountInSummary = FormatterUtil.convertNumberToFormalExpression(spentAmount);
         log.info(LogMessage.PROCESSED_AMOUNT, spentAmountInSummary, "Spent");
@@ -199,26 +198,26 @@ public class TransactionService {
         summary.put(SummaryField.NATIONAL_IDENTITY, sellerAccount.getCustomer().getNationalId());
         summary.put("Seller " + SummaryField.ACCOUNT_IDENTITY, sellerAccount.getId());
         summary.put("Buyer " + SummaryField.ACCOUNT_IDENTITY, buyerAccount.getId());
-        putChargedAccountInformationIntoSummary(sellerAccount, chargedAccount, summary);
+        putDeducteeAccountInformationIntoSummary(sellerAccount, deducteeAccount, summary);
         summary.put("Spent " + SummaryField.AMOUNT, spentAmountInSummary + " " + sellerAccount.getCurrency());
         summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
         summary.put(SummaryField.RATE, FormatterUtil.convertNumberToFormalExpression(rate));
-        summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getChargeCurrency());
+        summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
         summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null);
-        createAccountActivityForCharge(transactionFee, summary, chargedAccount);
+        createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
     }
 
-    public void updateDepositAccountFields(Account account, double balance, int depositPeriod) {
+    public void updateDepositAccountFields(Account account, double balance, int depositMaturity) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        double interestRatio = getInterestRatio(account.getCurrency(), balance, depositPeriod);
-        double balanceAfterNextFee = AccountUtil.calculateBalanceAfterNextFee(balance, depositPeriod, interestRatio);
+        double interestRate = getInterestRate(account.getCurrency(), balance, depositMaturity);
+        double balanceAfterNextInterestIncome = AccountUtil.calculateBalanceAfterNextInterestIncome(balance, depositMaturity, interestRate);
 
-        account.setInterestRatio(interestRatio);
-        account.setDepositPeriod(depositPeriod);
-        account.setBalanceAfterNextFee(balanceAfterNextFee);
+        account.setInterestRate(interestRate);
+        account.setDepositMaturity(depositMaturity);
+        account.setBalanceAfterNextInterestIncome(balanceAfterNextInterestIncome);
 
         log.info("{} {} related fields are updated", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
     }
@@ -226,57 +225,57 @@ public class TransactionService {
     private void updateBalance(Account account, double balance) {
         if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT)) {
             log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
-            updateDepositAccountFields(account, balance, account.getDepositPeriod());
+            updateDepositAccountFields(account, balance, account.getDepositMaturity());
         }
 
         account.setBalance(balance);
-        log.info("Account balance is updated");
+        log.info("{} balance is updated", Entity.ACCOUNT.getValue());
     }
 
-    private double getInterestRatio(Currency currency, double balance, int depositPeriod) {
-        double interestRatio = 0;
+    private double getInterestRate(Currency currency, double balance, int depositMaturity) {
+        double interestRate = 0;
 
-        /* Match interest ratio for the given currency, balance and deposit period */
+        /* Match interest rate for the given currency, balance and deposit maturity */
         try {
-            interestRatio = feeService.getInterestRatio(currency, depositPeriod, balance);
+            interestRate = termDepositInterestRateService.getInterestRate(currency, depositMaturity, balance);
         } catch (ResourceNotFoundException _) {
-            FeeFilteringOption filteringOption = new FeeFilteringOption();
+            TermDepositInterestRateFilteringOption filteringOption = new TermDepositInterestRateFilteringOption();
             filteringOption.setCurrency(currency);
-            filteringOption.setDepositPeriod(depositPeriod);
+            filteringOption.setDepositMaturity(depositMaturity);
 
-            String entity = Entity.FEE.getValue();
-            String exceptionMessage = "No %s amount in the " + entity.toLowerCase();
+            String entity = Entity.TERM_DEPOSIT_INTEREST_RATE.getValue();
+            String exceptionMessage = "No %s balance in the " + entity.toLowerCase();
 
-            /* Less than Minimum Fee Amount */
-            double minimumAmount = feeService.getEntities(filteringOption)
+            /* Less than minimum balance of Term Deposit Interest Rate */
+            double minimumBalance = termDepositInterestRateService.getEntities(filteringOption)
                     .stream()
-                    .mapToDouble(FeeDto::getMinimumAmount)
+                    .mapToDouble(TermDepositInterestRateDto::getMinimumBalance)
                     .min()
                     .orElseThrow(() -> new ResourceNotFoundException(String.format(exceptionMessage, "minimum")));
 
-            if (balance < minimumAmount) {
-                log.info("Balance is less than the minimum {} amount for deposit period {}. Therefore, interest ratio is {}", entity.toLowerCase(), depositPeriod, interestRatio);
-                return interestRatio;
+            if (balance < minimumBalance) {
+                log.info("Balance is less than the minimum {} balance for deposit maturity {}. Therefore, interest rate is {}", entity.toLowerCase(), depositMaturity, interestRate);
+                return interestRate;
             }
 
-            /* Greater than Maximum Fee Amount */
-            double maximumAmount = feeService.getEntities(filteringOption)
+            /* Greater than maximum balance of Term Deposit Interest Rate */
+            double maximumBalance = termDepositInterestRateService.getEntities(filteringOption)
                     .stream()
-                    .mapToDouble(FeeDto::getMaximumAmount)
+                    .mapToDouble(TermDepositInterestRateDto::getMaximumBalance)
                     .max()
                     .orElseThrow(() -> new ResourceNotFoundException(String.format(exceptionMessage, "maximum")));
 
-            if (balance > maximumAmount) {
-                log.info("Balance is greater than or equal to the maximum amount for deposit period {}. Therefore, interest ratio of the maximum {} amount", depositPeriod, entity.toLowerCase());
-                return feeService.getInterestRatio(currency, depositPeriod, maximumAmount);
+            if (balance > maximumBalance) {
+                log.info("Balance is greater than or equal to the maximum balance for deposit maturity {}. Therefore, interest rate of the maximum {} balance", depositMaturity, entity.toLowerCase());
+                return termDepositInterestRateService.getInterestRate(currency, depositMaturity, maximumBalance);
             }
 
-            /* Unmatched Fee Amount Case */
-            log.error("Unexpected condition! There are unmatched {} amounts. Amount: {} & Deposit period {}", entity.toLowerCase(), balance, depositPeriod);
-            throw new ResourceNotFoundException(entity + " amount is not found for " + balance);
+            /* Unmatched Term Deposit Interest Rate Balance Case */
+            log.error("Unexpected condition! There are unmatched {} balances. Balance: {} & Deposit Maturity: {}", entity.toLowerCase(), balance, depositMaturity);
+            throw new ResourceNotFoundException(entity + " balance is not found for " + balance);
         }
 
-        return interestRatio;
+        return interestRate;
     }
 
     private double getTransactionFee(AccountActivityType activityType, List<Account> accounts) {
@@ -288,19 +287,19 @@ public class TransactionService {
             return 0;
         }
 
-        return chargeService.getCharge(activityType).amount();
+        return deductionService.getDeduction(activityType).amount();
     }
 
-    private void createAccountActivityForCharge(Double transactionFee, Map<String, Object> summary, Account chargedAccount) {
+    private void createAccountActivityForDeduction(Double transactionFee, Map<String, Object> summary, Account deducteeAccount) {
         if (transactionFee == 0) {
             log.warn("There is no transaction fee");
             return;
         }
 
         Account[] accounts = new Account[2];
-        accounts[0] = chargedAccount;
+        accounts[0] = deducteeAccount;
 
-        createAccountActivity(AccountActivityType.CHARGE, transactionFee, summary, accounts, null);
+        createAccountActivity(AccountActivityType.DEDUCTION, transactionFee, summary, accounts, null);
     }
 
     private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
@@ -308,20 +307,20 @@ public class TransactionService {
         return accountActivityService.createAccountActivity(accountActivityRequest);
     }
 
-    private void checkBalanceBeforeMoneyTransferAndExchange(Account chargedAccount, List<Account> relatedAccounts, Double amount, Double transactionFee, AccountActivityType activityType) {
+    private void checkBalanceBeforeMoneyTransferAndExchange(Account deducteeAccount, List<Account> relatedAccounts, Double amount, Double transactionFee, AccountActivityType activityType) {
         log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType.getValue(), amount, transactionFee);
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
-        if (Objects.equals(chargedAccount.getId(), relatedAccounts.getFirst().getId())) {
-            log.info("Extra charged {} does not exist", entity);
+        if (Objects.equals(deducteeAccount.getId(), relatedAccounts.getFirst().getId())) {
+            log.info("Extra deductee {} does not exist", entity);
 
-            if (chargedAccount.getBalance() < (amount + transactionFee)) {
+            if (deducteeAccount.getBalance() < (amount + transactionFee)) {
                 throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
             }
         } else {
-            log.info("Extra charged {} exists", entity);
+            log.info("Extra deductee {} exists", entity);
 
-            if (chargedAccount.getBalance() < transactionFee) {
+            if (deducteeAccount.getBalance() < transactionFee) {
                 throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
             }
 
@@ -333,15 +332,15 @@ public class TransactionService {
         log.info(LogMessage.ENOUGH_BALANCE, activityType.getValue());
     }
 
-    private static void putChargedAccountInformationIntoSummary(Account relatedAccount, Account chargedAccount, Map<String, Object> summary) {
+    private static void putDeducteeAccountInformationIntoSummary(Account relatedAccount, Account deducteeAccount, Map<String, Object> summary) {
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
-        if (chargedAccount.getId().equals(relatedAccount.getId())) {
-            log.warn("Charge and related {}s are same, so no need to add it into summary", entity);
+        if (deducteeAccount.getId().equals(relatedAccount.getId())) {
+            log.warn("Deduction and related {}s are same, so no need to add it into summary", entity);
             return;
         }
 
-        log.info("There is a separate charged {}, so add it into summary", entity);
-        summary.put("Charged " + SummaryField.ACCOUNT_IDENTITY, chargedAccount.getId());
+        log.info("There is a separate deductee {}, so add it into summary", entity);
+        summary.put("Deductee " + SummaryField.ACCOUNT_IDENTITY, deducteeAccount.getId());
     }
 }

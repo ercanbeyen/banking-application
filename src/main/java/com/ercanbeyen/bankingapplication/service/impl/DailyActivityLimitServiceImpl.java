@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.DailyActivityLimitDto;
-import com.ercanbeyen.bankingapplication.model.DailyActivityLimit;
+import com.ercanbeyen.bankingapplication.entity.DailyActivityLimit;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.DailyActivityLimitMapper;

@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
@@ -41,7 +43,8 @@ public class AgreementController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> deleteAgreement(@PathVariable("id") String id) {
-        MessageResponse<String> response = new MessageResponse<>(agreementService.deleteAgreement(id));
+        agreementService.deleteAgreement(id);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.DELETE_SUCCESS, Entity.AGREEMENT.getValue()));
         return ResponseEntity.ok(response);
     }
 }

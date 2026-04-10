@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.service;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
-import com.ercanbeyen.bankingapplication.model.AccountActivity;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 

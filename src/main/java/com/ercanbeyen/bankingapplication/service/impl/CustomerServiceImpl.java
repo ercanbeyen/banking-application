@@ -9,7 +9,7 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryRe
 import com.ercanbeyen.bankingapplication.embeddable.CashFlow;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
-import com.ercanbeyen.bankingapplication.model.*;
+import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -130,10 +130,9 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public String approveAgreement(Integer id, String title) {
+    public void approveAgreement(Integer id, String title) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         agreementService.approveAgreement(title, findById(id));
-        return "Agreement is successfully approved";
     }
 
     @Override
@@ -183,7 +182,7 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public String uploadProfilePhoto(Integer id, MultipartFile request) {
+    public void uploadProfilePhoto(Integer id, MultipartFile request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
@@ -193,8 +192,6 @@ public class CustomerServiceImpl implements CustomerService {
         customer.setProfilePhoto(fileCompletableFuture.join()); // Profile photo upload
 
         customerRepository.save(customer);
-
-        return ResponseMessage.FILE_UPLOAD_SUCCESS;
     }
 
     @Override
@@ -203,18 +200,16 @@ public class CustomerServiceImpl implements CustomerService {
 
         return findById(id)
                 .getProfilePhoto()
-                .orElseThrow(() -> new ResourceNotFoundException(ResponseMessage.NOT_FOUND));
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Profile Photo")));
     }
 
     @Override
-    public String deleteProfilePhoto(Integer id) {
+    public void deleteProfilePhoto(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
         customer.setProfilePhoto(null); // Profile photo deletion
         customerRepository.save(customer);
-
-        return ResponseMessage.FILE_DELETE_SUCCESS;
     }
 
     @Override
@@ -341,13 +336,13 @@ public class CustomerServiceImpl implements CustomerService {
             String entity = Entity.ACCOUNT.getValue();
 
             if (accountType == AccountType.DEPOSIT) {
-                log.info("Only expected fees are going to be processed for {} {}", accountType.getValue(), entity);
-                LocalDate nextPaymentDate = account.getUpdatedAt().plusMonths(account.getDepositPeriod()).toLocalDate();
+                log.info("Only expected interest income payments are going to be processed for {} {}", accountType.getValue(), entity);
+                LocalDate nextPaymentDate = account.getUpdatedAt().plusMonths(account.getDepositMaturity()).toLocalDate();
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
-                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.FEE, account.getInterestRatio(), nextPaymentDate);
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.INTEREST_INCOME, account.getInterestRate(), nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
-                    nextPaymentDate = nextPaymentDate.plusMonths(account.getDepositPeriod());
+                    nextPaymentDate = nextPaymentDate.plusMonths(account.getDepositMaturity());
                 }
 
                 continue;
@@ -424,8 +419,8 @@ public class CustomerServiceImpl implements CustomerService {
             List<List<AccountFinancialStatus>> accountFinancialStatusesWithConvertedCurrencies = new ArrayList<>();
 
             for (AccountFinancialStatus accountFinancialStatus : financialStatusOfAccountType.getValue()) {
-                Double balanceOfConvertedCurrency = exchangeService.convertMoneyBetweenCurrencies(accountFinancialStatus.currency(), Currency.getChargeCurrency(), accountFinancialStatus.balance());
-                AccountFinancialStatus accountFinancialStatusOfConvertedExchange = new AccountFinancialStatus(accountType, Currency.getChargeCurrency(), balanceOfConvertedCurrency);
+                Double balanceOfConvertedCurrency = exchangeService.convertMoneyBetweenCurrencies(accountFinancialStatus.currency(), Currency.getDeductionCurrency(), accountFinancialStatus.balance());
+                AccountFinancialStatus accountFinancialStatusOfConvertedExchange = new AccountFinancialStatus(accountType, Currency.getDeductionCurrency(), balanceOfConvertedCurrency);
                 accountFinancialStatusesWithConvertedCurrencies.add(List.of(accountFinancialStatus, accountFinancialStatusOfConvertedExchange));
             }
 
@@ -497,8 +492,8 @@ public class CustomerServiceImpl implements CustomerService {
             String entity = Entity.ACCOUNT.getValue();
 
             if (accountType == AccountType.DEPOSIT) {
-                log.info(LogMessage.ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED, Entity.FEE.getValue(), accountType.getValue(), entity);
-                addFutureCashFlowsForFees(cashFlows, account, year, month);
+                log.info(LogMessage.ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED, Entity.TERM_DEPOSIT_INTEREST_RATE.getValue(), accountType.getValue(), entity);
+                addFutureCashFlowsForInterestIncomePayments(cashFlows, account, year, month);
             } else { // Account type is current
                 log.info(LogMessage.ONLY_ENTITIES_ARE_GOING_TO_BE_PROCESSED, Entity.MONEY_TRANSFER_ORDER.getValue(), accountType.getValue(), entity);
                 addFutureCashFlowsForMoneyTransferOrders(cashFlows, account, year, month);
@@ -548,32 +543,32 @@ public class CustomerServiceImpl implements CustomerService {
         }
     }
 
-    private static void addFutureCashFlowsForFees(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
+    private static void addFutureCashFlowsForInterestIncomePayments(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
         LocalDate paymentDate = account.getUpdatedAt().toLocalDate();
         LocalDate counterDate = LocalDate.now();
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
-            AccountActivityType activityType = AccountActivityType.FEE;
+            AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
             if (doesDateMatchesWithYearAndMonth(paymentDate, counterDate.getYear(), counterDate.getMonthValue())) {
                 log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, activityType.getValue());
                 String entity = Entity.ACCOUNT.getValue();
 
                 if (doesDateMatchesWithYearAndMonth(account.getCreatedAt().toLocalDate(), counterDate.getYear(), counterDate.getMonthValue())) {
-                    log.info("Calendar shows for {} {} creating time, so no fee", AccountType.DEPOSIT.getValue(), entity);
+                    log.info("Calendar shows for {} {} creating time, so no interest income", AccountType.DEPOSIT.getValue(), entity);
                 } else {
-                    log.info("Add the {} to the balance", Entity.FEE.getValue());
+                    log.info("Add the interest income to the balance");
 
-                    account.setBalance(account.getBalanceAfterNextFee());
-                    double interest = AccountUtil.calculateInterest(account.getBalance(), account.getDepositPeriod(), account.getInterestRatio());
+                    account.setBalance(account.getBalanceAfterNextInterestIncome());
+                    double interest = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
                     double balanceAfterNextFee = account.getBalance() + interest;
-                    account.setBalanceAfterNextFee(balanceAfterNextFee);
+                    account.setBalanceAfterNextInterestIncome(balanceAfterNextFee);
 
                     String explanation = interest + " " + account.getCurrency() + " will be transferred to " + entity + " " + account.getId();
 
                     addCashFlow(cashFlows, paymentDate, activityType, year, month, explanation);
                 }
 
-                paymentDate = paymentDate.plusMonths(account.getDepositPeriod());
+                paymentDate = paymentDate.plusMonths(account.getDepositMaturity());
             }
 
             counterDate = counterDate.plusMonths(1);
@@ -603,8 +598,8 @@ public class CustomerServiceImpl implements CustomerService {
 
     private double calculateTotalAmount(Account account, BalanceActivity balanceActivity, Currency toCurrency) {
         AccountActivityFilteringOption filteringOption = balanceActivity == BalanceActivity.INCREASE
-                ? new AccountActivityFilteringOption(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.FEE), null, account.getId(), null, null, null)
-                : new AccountActivityFilteringOption(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.CHARGE), account.getId(), null, null, null, null);
+                ? new AccountActivityFilteringOption(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.INTEREST_INCOME), null, account.getId(), null, null, null)
+                : new AccountActivityFilteringOption(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.DEDUCTION), account.getId(), null, null, null, null);
 
         return accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency())
                 .stream()
@@ -619,7 +614,7 @@ public class CustomerServiceImpl implements CustomerService {
         Predicate<Customer> nationalIdPredicate = customer -> customer.getNationalId().equals(nationalId);
         Predicate<Customer> phoneNumberPredicate = customer -> customer.getPhoneNumber().equals(phoneNumber);
 
-        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateCharge case
+        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateDeduction case
             Predicate<Customer> customerInDbPredicate = _ -> !customerInDb.getNationalId().equals(nationalId);
             nationalIdPredicate = customerInDbPredicate.and(nationalIdPredicate);
 

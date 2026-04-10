@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.security.service.impl;
 
-import com.ercanbeyen.bankingapplication.model.Permission;
-import com.ercanbeyen.bankingapplication.model.Role;
-import com.ercanbeyen.bankingapplication.model.UserCredential;
+import com.ercanbeyen.bankingapplication.entity.Permission;
+import com.ercanbeyen.bankingapplication.entity.Role;
+import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -26,10 +26,10 @@ public class UserDetailsImpl implements UserDetails {
         this.authorities = authorities;
     }
 
-    public static UserDetailsImpl build(UserCredential userCredential) {
+    public static UserDetailsImpl build(UserCredentials userCredentials) {
         Set<GrantedAuthority> authorities = new HashSet<>();
 
-        for (Role role : userCredential.getRoles()) {
+        for (Role role : userCredentials.getRoles()) {
             authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
 
             for (Permission permission : role.getPermissions()) {
@@ -37,7 +37,7 @@ public class UserDetailsImpl implements UserDetails {
             }
         }
 
-        return new UserDetailsImpl(userCredential.getCustomerId(), userCredential.getUsername(), userCredential.getPassword(), authorities);
+        return new UserDetailsImpl(userCredentials.getCustomerId(), userCredentials.getUsername(), userCredentials.getPassword(), authorities);
     }
 
     @Override

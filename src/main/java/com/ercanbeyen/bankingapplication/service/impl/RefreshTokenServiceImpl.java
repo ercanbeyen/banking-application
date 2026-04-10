@@ -3,14 +3,14 @@ package com.ercanbeyen.bankingapplication.service.impl;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.enums.TokenStatus;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
-import com.ercanbeyen.bankingapplication.model.RefreshToken;
-import com.ercanbeyen.bankingapplication.model.UserCredential;
+import com.ercanbeyen.bankingapplication.entity.RefreshToken;
+import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.RefreshTokenRepository;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.service.RefreshTokenService;
-import com.ercanbeyen.bankingapplication.service.UserCredentialService;
+import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -25,15 +25,15 @@ import java.util.List;
 public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtService jwtService;
-    private final UserCredentialService userCredentialService;
+    private final UserCredentialsService userCredentialsService;
 
     @Override
     public void createRefreshToken(String token) {
         String username = jwtService.extractSubject(token);
-        UserCredential userCredential = userCredentialService.findByUsername(username);
+        UserCredentials userCredentials = userCredentialsService.findByUsername(username);
 
         RefreshToken refreshToken = new RefreshToken();
-        refreshToken.setUserCredential(userCredential);
+        refreshToken.setUserCredentials(userCredentials);
 
         Date expiryDate = jwtService.extractExpiration(token);
         refreshToken.setExpiryDate(expiryDate.toInstant());
@@ -67,8 +67,8 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
 
     @Override
     public void revokeAllRefreshTokens(String username) {
-        UserCredential userCredential = userCredentialService.findByUsername(username);
-        List<RefreshToken> refreshTokens = refreshTokenRepository.findAllByUserCredential(userCredential);
+        UserCredentials userCredentials = userCredentialsService.findByUsername(username);
+        List<RefreshToken> refreshTokens = refreshTokenRepository.findAllByUserCredentials(userCredentials);
 
         if (refreshTokens.isEmpty()) {
             log.info("There is no active {} for the user", Entity.REFRESH_TOKEN.getValue());

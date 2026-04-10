@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.mapper;
 
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
-import com.ercanbeyen.bankingapplication.model.AccountActivity;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 

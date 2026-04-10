@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.response.FilePreview;
-import com.ercanbeyen.bankingapplication.model.File;
+import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.util.FileUtil;
@@ -44,7 +44,8 @@ public class FileController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> deleteFile(@PathVariable("id") String id) {
-        MessageResponse<String> response = new MessageResponse<>(fileService.deleteFile(id));
+        fileService.deleteFile(id);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_DELETE_SUCCESS);
         return ResponseEntity.ok(response);
     }
 

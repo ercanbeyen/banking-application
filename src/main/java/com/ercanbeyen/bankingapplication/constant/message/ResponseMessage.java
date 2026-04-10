@@ -6,6 +6,7 @@ public final class ResponseMessage {
     public static final String NOT_FOUND = "%s is not found";
     public static final String ALREADY_EXISTS = "%s already exists";
     public static final String SUCCESS = "%s is successfully completed";
+    public static final String DELETE_SUCCESS = "%s is successfully completed";
     public static final String FILE_UPLOAD_SUCCESS = "File is successfully uploaded";
     public static final String FILE_DELETE_SUCCESS = "File is successfully deleted";
     public static final String FILE_UPLOAD_ERROR = "Error occurred while uploading the file";
@@ -18,8 +19,8 @@ public final class ResponseMessage {
     public static final String UNPAIRED_CURRENCIES = "Currencies must be %s";
     public static final String INSUFFICIENT_FUNDS = "Insufficient funds";
     public static final String TRANSACTION_FEE_CANNOT_BE_PAYED = "Transaction fee cannot be payed";
-    public static final String INVALID_CHARGED_ACCOUNT_CURRENCY = "Charged %s's currency should be %s";
-    public static final String IMPROPER_CHARGED_ACCOUNT = "Charged %s should not be indicated for %s account activities";
+    public static final String INVALID_DEDUCTEE_ACCOUNT_CURRENCY = "Deductee %s's currency should be %s";
+    public static final String IMPROPER_DEDUCTEE_ACCOUNT = "Deductee %s should not be indicated for %s account activities";
     public static final String ACCESS_DENIED = "{\"error\": \"Access Denied - %s\"}";
 
     private ResponseMessage() {}

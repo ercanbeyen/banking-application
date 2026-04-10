@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.repository;
 
 import com.ercanbeyen.bankingapplication.dto.FilePreviewInfo;
-import com.ercanbeyen.bankingapplication.model.File;
+import com.ercanbeyen.bankingapplication.entity.File;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;

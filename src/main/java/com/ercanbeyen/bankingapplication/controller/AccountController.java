@@ -1,12 +1,13 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
-import com.ercanbeyen.bankingapplication.model.Account;
+import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
@@ -87,27 +88,29 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     }
 
     @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
-    @PutMapping("/deposit/{id}")
+    @PutMapping("{id}/deposit")
     public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.depositMoney(id, amount));
+        accountService.depositMoney(id, amount);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_DEPOSIT.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
-    @PutMapping("/withdrawal/{id}")
+    @PutMapping("{id}/withdrawal")
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.withdrawMoney(id, amount));
+        accountService.withdrawMoney(id, amount);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.WITHDRAWAL.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @PutMapping("/pay/interest/{id}")
-    public ResponseEntity<MessageResponse<String>> payInterest(@PathVariable("id") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.payInterest(id));
+    @PutMapping("/{id}/pay/interest-income")
+    public ResponseEntity<MessageResponse<String>> payInterestIncome(@PathVariable("id") Integer id) {
+        MessageResponse<String> response = new MessageResponse<>(accountService.payInterestIncome(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -115,7 +118,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PutMapping("/transfer")
     public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request) {
         AccountUtil.checkMoneyTransferRequest(request);
-        MessageResponse<String> response = new MessageResponse<>(accountService.transferMoney(request));
+        accountService.transferMoney(request);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -123,21 +127,23 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PutMapping("/exchange")
     public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request) {
         AccountUtil.checkMoneyExchangeRequest(request);
-        MessageResponse<String> response = new MessageResponse<>(accountService.exchangeMoney(request));
+        accountService.exchangeMoney(request);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("hasRole('ADMIN')")
-    @PatchMapping("/block/{id}")
-    public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("block") Boolean status) {
+    @PatchMapping("/{id}/block")
+    public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("status") Boolean status) {
         MessageResponse<String> response = new MessageResponse<>(accountService.updateBlockStatus(id, status));
         return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
-    @PatchMapping("/close/{id}")
+    @PatchMapping("/{id}/close")
     public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") @P("accountId") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.closeAccount(id));
+        accountService.closeAccount(id);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.ACCOUNT_CLOSING.getValue()));
         return ResponseEntity.ok(response);
     }
 
@@ -147,7 +153,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestParam("type") AccountType type,
             @RequestParam("currency") Currency currency,
             @RequestParam(name = "city", required = false) City city) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.getTotalActiveAccounts(type, currency, city));
+        Integer count = accountService.getTotalActiveAccounts(type, currency, city);
+        MessageResponse<String> response = new MessageResponse<>(String.format("Total %s %s accounts is %d", type.getValue(), currency, count));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 

@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.repository;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.model.Exchange;
+import com.ercanbeyen.bankingapplication.entity.Exchange;
 import org.springframework.stereotype.Repository;
 
 @Repository

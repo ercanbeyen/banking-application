@@ -7,7 +7,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.BranchDto;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
-import com.ercanbeyen.bankingapplication.model.Branch;
+import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchMapper;
@@ -132,7 +132,7 @@ public class BranchServiceImpl implements BranchService {
             findByName(request.getName());
             log.error(LogMessage.RESOURCE_NOT_UNIQUE, entity);
             isUnique = false;
-        } catch (Exception exception) {
+        } catch (Exception _) {
             log.info(LogMessage.RESOURCE_UNIQUE, entity);
             isUnique = true;
         }

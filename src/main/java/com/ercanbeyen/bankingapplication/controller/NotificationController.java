@@ -1,5 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.security.service.NotificationSecurityService;
@@ -27,7 +29,8 @@ public class NotificationController {
     @PreAuthorize("@notificationSecurityService.isOwner(#notificationId, authentication)")
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> deleteNotification(@PathVariable("id") @P("notificationId") String id) {
-        MessageResponse<String> response = new MessageResponse<>(notificationService.deleteNotification(id));
+        notificationService.deleteNotification(id);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.DELETE_SUCCESS, Entity.NOTIFICATION.getValue()));
         return ResponseEntity.ok(response);
     }
 

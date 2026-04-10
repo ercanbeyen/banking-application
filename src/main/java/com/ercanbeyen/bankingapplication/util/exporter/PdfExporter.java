@@ -6,9 +6,9 @@ import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountFinancialStatus;
-import com.ercanbeyen.bankingapplication.model.Account;
-import com.ercanbeyen.bankingapplication.model.AccountActivity;
-import com.ercanbeyen.bankingapplication.model.Customer;
+import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
+import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.helper.event.BorderEvent;
 import com.ercanbeyen.bankingapplication.helper.event.PageNumerationEvent;
@@ -137,7 +137,7 @@ public class PdfExporter {
         writeHeaderRowOfTable.accept(List.of("Asset", "Balance"), table);
 
         Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD);
-        final Currency financialStatusReportCurrency = Currency.getChargeCurrency();
+        final Currency financialStatusReportCurrency = Currency.getDeductionCurrency();
 
         for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountType : financialStatusesOfAccountTypesWithConvertedCurrencies.entrySet()) {
             /* Header row */

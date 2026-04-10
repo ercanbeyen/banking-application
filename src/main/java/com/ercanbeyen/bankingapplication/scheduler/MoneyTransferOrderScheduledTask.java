@@ -6,10 +6,10 @@ import com.ercanbeyen.bankingapplication.dto.MoneyTransferOrderDto;
 import com.ercanbeyen.bankingapplication.dto.RegularMoneyTransferDto;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.util.MoneyTransferOrderUtil;
-import com.ercanbeyen.bankingapplication.util.UserCredentialUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +34,7 @@ import java.util.function.Consumer;
 public class MoneyTransferOrderScheduledTask {
     private final RestTemplate restTemplate;
     private final ObjectMapper objectMapper;
+    private final SystemAdminProperties systemAdminProperties;
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
 
@@ -42,7 +43,7 @@ public class MoneyTransferOrderScheduledTask {
         final String task = "apply transfer orders";
         log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(UserCredentialUtil.getSystemAdminUsername());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
         Map<String, String> tokens = jwtService.generateTokens(userDetails);
         HttpHeaders headers = new HttpHeaders();
         headers.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
@@ -75,17 +76,16 @@ public class MoneyTransferOrderScheduledTask {
 
     private Consumer<MoneyTransferOrderDto> transferMoneyConsumer(HttpHeaders headers) {
         return moneyTransferOrderDto -> {
-            Integer senderAccountId = moneyTransferOrderDto.getSenderAccountId();
             RegularMoneyTransferDto regularMoneyTransferDto = moneyTransferOrderDto.getRegularMoneyTransferDto();
-            Integer recipientAccountId = regularMoneyTransferDto.recipientAccountId();
             MoneyTransferRequest moneyTransferRequest = new MoneyTransferRequest(
-                    senderAccountId,
-                    recipientAccountId,
-                    regularMoneyTransferDto.chargedAccountId(),
+                    moneyTransferOrderDto.getSenderAccountId(),
+                    regularMoneyTransferDto.recipientAccountId(),
+                    regularMoneyTransferDto.deducteeAccountId(),
                     regularMoneyTransferDto.amount(),
                     regularMoneyTransferDto.paymentType(),
                     regularMoneyTransferDto.explanation()
             );
+
             try {
                 String url = Entity.ACCOUNT.getCollectionUrl() + "/transfer";
                 HttpEntity<MoneyTransferRequest> httpEntity = new HttpEntity<>(moneyTransferRequest, headers);

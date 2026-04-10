@@ -15,7 +15,7 @@ import java.time.LocalDate;
 @Data
 public non-sealed class MoneyTransferOrderDto extends BaseDto {
     private Integer senderAccountId;
-    private Integer chargedAccountId;
+    private Integer deducteeAccountId;
     @NotNull(message = "Transfer date should not be null")
     private LocalDate transferDate;
     @Valid

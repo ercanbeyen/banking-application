@@ -7,6 +7,6 @@ import java.util.concurrent.CompletableFuture;
 public interface NotificationService {
     CompletableFuture<NotificationDto> sendNotification(NotificationDto request);
     NotificationDto getNotification(String id);
-    String deleteNotification(String id);
+    void deleteNotification(String id);
     void deleteNotifications(String nationalId);
 }

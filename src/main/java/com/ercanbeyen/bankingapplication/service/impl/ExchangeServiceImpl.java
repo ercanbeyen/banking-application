@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.ExchangeDto;
-import com.ercanbeyen.bankingapplication.model.Exchange;
+import com.ercanbeyen.bankingapplication.entity.Exchange;
 import com.ercanbeyen.bankingapplication.service.ExchangeService;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
