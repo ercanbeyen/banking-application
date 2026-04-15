@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.integration.controller;
 
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
+import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.factory.MockAgreementFactory;
@@ -9,6 +10,9 @@ import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
 import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
 import com.ercanbeyen.bankingapplication.repository.FileRepository;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
+import com.ercanbeyen.bankingapplication.security.service.JwtService;
+import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.google.gson.Gson;
 import io.restassured.RestAssured;
 import io.restassured.builder.MultiPartSpecBuilder;
@@ -19,8 +23,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.CassandraContainer;
@@ -32,6 +39,10 @@ import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
 import java.nio.file.Files;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
@@ -50,7 +61,6 @@ class CustomerControllerTest {
     @Container
     @ServiceConnection
     private static final GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:latest")).withExposedPorts(6379);
-    private static final String PHOTOS_LOCATION = "C:\\Users\\ercanbeyen\\Photos\\Banking-App\\Source\\Test\\Resources\\";
     @LocalServerPort
     private Integer port;
     @Autowired
@@ -59,9 +69,21 @@ class CustomerControllerTest {
     private AgreementRepository agreementRepository;
     @Autowired
     private FileRepository fileRepository;
+    @Autowired
+    private UserDetailsService userDetailsService;
+    @Autowired
+    private JwtService jwtService;
+    @Autowired
+    private SystemAdminProperties systemAdminProperties;
 
+    private static final String PHOTO_PATH = "C:\\Users\\ercanbeyen\\Photos\\Banking-App\\Source\\Test\\Resources\\";
+    public static final String REGISTER_ENDPOINT = "/api/v1/auth/register";
     private static final String CUSTOMER_COLLECTION_ENDPOINT = "/api/v1/customers";
-    public static final String CUSTOMER_RESOURCE_ENDPOINT = CUSTOMER_COLLECTION_ENDPOINT + "/{id}";
+    private static final String CUSTOMER_RESOURCE_ENDPOINT = CUSTOMER_COLLECTION_ENDPOINT + "/{id}";
+    private static final String PROFILE_PHOTO_UPLOAD_ENDPOINT = CUSTOMER_RESOURCE_ENDPOINT + "/photo/upload";
+    private static final String PROFILE_PHOTO_DOWNLOAD_ENDPOINT = CUSTOMER_RESOURCE_ENDPOINT + "/photo/download";
+    private static final List<String> accessTokens = new ArrayList<>();
+    private static String systemAdminAccessToken;
 
     @DynamicPropertySource
     static void registerMySQLProperties(DynamicPropertyRegistry registry) {
@@ -114,8 +136,11 @@ class CustomerControllerTest {
     @Order(1)
     @DisplayName("Happy path test: Get customers case with no request parameter")
     void whenGetEntities_thenReturnCustomerDtos() {
+        systemAdminAccessToken = generateAccessTokenFromUsername(systemAdminProperties.getUsername());
+
         given()
                 .when()
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(systemAdminAccessToken))
                 .get(CUSTOMER_COLLECTION_ENDPOINT)
                 .then()
                 .assertThat()
@@ -129,17 +154,25 @@ class CustomerControllerTest {
     void givenCustomerDto_whenCreateEntity_thenReturnCustomerDto() {
         generateAgreement();
 
-        CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
-        request.setId(null);
-        generateCustomer(request);
+        CustomerDto customerDto = MockCustomerFactory.generateMockCustomerDtos().getFirst();
+        customerDto.setId(null);
 
-        request = MockCustomerFactory.generateMockCustomerDtos().get(1);
-        request.setId(null);
-        generateCustomer(request);
+        RegistrationRequest request = new RegistrationRequest(customerDto, "password1", Set.of("USER"));
+        registerCustomer(request);
 
-        request = MockCustomerFactory.generateMockCustomerDtos().getLast();
-        request.setId(null);
-        generateCustomer(request);
+        customerDto = MockCustomerFactory.generateMockCustomerDtos().get(1);
+        customerDto.setId(null);
+
+        request = new RegistrationRequest(customerDto, "password2", Set.of("USER"));
+        registerCustomer(request);
+
+        customerDto = MockCustomerFactory.generateMockCustomerDtos().getLast();
+        customerDto.setId(null);
+
+        request = new RegistrationRequest(customerDto, "password3", Set.of("USER"));
+        registerCustomer(request);
+
+        generateAccessTokensOfCustomers();
     }
 
     @Test
@@ -148,6 +181,7 @@ class CustomerControllerTest {
     void givenBirthDate_whenGetEntities_thenReturnCustomerDtos() {
         given()
                 .queryParam("birthDate", String.valueOf(MockCustomerFactory.generateMockCustomers().getFirst().getBirthDate()))
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(systemAdminAccessToken))
                 .when()
                 .get(CUSTOMER_COLLECTION_ENDPOINT)
                 .then()
@@ -162,6 +196,7 @@ class CustomerControllerTest {
     void givenId_whenGetEntity_thenReturnCustomerDto() {
         given()
                 .when()
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
                 .get(CUSTOMER_RESOURCE_ENDPOINT, 1)
                 .then()
                 .assertThat()
@@ -172,13 +207,14 @@ class CustomerControllerTest {
     @Test
     @Order(5)
     @DisplayName("Exception path test: Get customer case")
-    void givenId_whenGetEntity_thenThrowResourceNotFoundException() {
+    void givenId_whenGetEntity_thenThrowAccessDeniedException() {
         given()
                 .when()
-                .get(CUSTOMER_RESOURCE_ENDPOINT, 25)
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
+                .get(CUSTOMER_RESOURCE_ENDPOINT, 2)
                 .then()
                 .assertThat()
-                .statusCode(HttpStatus.NOT_FOUND.value());
+                .statusCode(HttpStatus.FORBIDDEN.value());
     }
 
     @Test
@@ -190,10 +226,11 @@ class CustomerControllerTest {
         String body = gson.toJson(customerDto);
 
         given()
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
                 .contentType(ContentType.JSON)
                 .body(body)
                 .when()
-                .put(CUSTOMER_RESOURCE_ENDPOINT, 1)
+                .put(CUSTOMER_RESOURCE_ENDPOINT, MockCustomerFactory.generateMockCustomers().getFirst().getId())
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.BAD_REQUEST.value())
@@ -209,9 +246,10 @@ class CustomerControllerTest {
         given()
                 .log()
                 .all()
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.get(1)))
                 .multiPart(multiPartSpecification)
                 .when()
-                .post(CUSTOMER_RESOURCE_ENDPOINT, 2)
+                .post(PROFILE_PHOTO_UPLOAD_ENDPOINT, MockCustomerFactory.generateMockCustomers().get(1).getId())
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.OK.value())
@@ -227,22 +265,14 @@ class CustomerControllerTest {
         given()
                 .log()
                 .all()
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
                 .multiPart(multiPartSpecification)
                 .when()
-                .post(CUSTOMER_RESOURCE_ENDPOINT, 2)
+                .post(PROFILE_PHOTO_UPLOAD_ENDPOINT, MockCustomerFactory.generateMockCustomers().getFirst().getId())
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.EXPECTATION_FAILED.value())
                 .body("message", equalTo(ResponseMessage.INVALID_PHOTO_CONTENT_TYPE));
-    }
-
-    private static MultiPartSpecification constructMultiPartSpecification(String profilePhotoName, String mediaType) throws IOException {
-        java.io.File file = new java.io.File(PHOTOS_LOCATION + profilePhotoName);
-        return new MultiPartSpecBuilder(Files.readAllBytes(file.toPath()))
-                .fileName(file.getName())
-                .controlName("file")
-                .mimeType(mediaType)
-                .build();
     }
 
     @Test
@@ -251,23 +281,43 @@ class CustomerControllerTest {
     void givenId_whenDownloadProfilePhoto_thenReturnFile() {
         given()
                 .when()
-                .get(CUSTOMER_RESOURCE_ENDPOINT + "/photo", 2)
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.get(1)))
+                .get(PROFILE_PHOTO_DOWNLOAD_ENDPOINT, MockCustomerFactory.generateMockCustomers().get(1).getId())
                 .then()
                 .statusCode(HttpStatus.OK.value());
     }
 
-    private void generateCustomer(CustomerDto request) {
+    private void registerCustomer(RegistrationRequest request) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
+        Map<String, String> tokens = jwtService.generateTokens(userDetails);
         String body = gson.toJson(request);
 
         given()
+                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)))
                 .contentType(ContentType.JSON)
                 .body(body)
                 .when()
-                .post(CUSTOMER_COLLECTION_ENDPOINT)
+                .post(REGISTER_ENDPOINT)
                 .then()
                 .assertThat()
-                .statusCode(HttpStatus.CREATED.value())
-                .body("nationalId", equalTo(request.getNationalId()));
+                .statusCode(HttpStatus.OK.value());
+    }
+
+    private void generateAccessTokensOfCustomers() {
+        List<String> usernames = MockCustomerFactory.generateMockCustomerDtos()
+                .stream()
+                .map(CustomerDto::getNationalId)
+                .toList();
+
+        usernames.forEach(username -> {
+            String token = generateAccessTokenFromUsername(username);
+            accessTokens.add(token);
+        });
+    }
+
+    private String generateAccessTokenFromUsername(String username) {
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        return jwtService.generateTokens(userDetails).get(JwtUtil.Header.ACCESS_TOKEN_HEADER);
     }
 
     private void generateAgreement() {
@@ -285,5 +335,14 @@ class CustomerControllerTest {
         agreement.setFile(savedFile);
 
         agreementRepository.save(agreement);
+    }
+
+    private static MultiPartSpecification constructMultiPartSpecification(String profilePhotoName, String mediaType) throws IOException {
+        java.io.File file = new java.io.File(PHOTO_PATH + profilePhotoName);
+        return new MultiPartSpecBuilder(Files.readAllBytes(file.toPath()))
+                .fileName(file.getName())
+                .controlName("file")
+                .mimeType(mediaType)
+                .build();
     }
 }
