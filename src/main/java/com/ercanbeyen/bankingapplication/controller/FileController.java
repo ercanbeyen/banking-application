@@ -8,7 +8,9 @@ import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -34,12 +36,18 @@ public class FileController {
     @GetMapping("/{id}")
     public ResponseEntity<byte[]> downloadFile(@PathVariable("id") String id) {
         File file = fileService.getFile(id);
-        String fileName = file.getName();
-        log.info("file.getName(): {}", fileName);
+        byte[] data = file.getData();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(file.getType()));
+        headers.setContentLength(data.length);
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(file.getName())
+                .build());
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .body(file.getData());
+                .headers(headers)
+                .body(data);
     }
 
     @DeleteMapping("/{id}")

@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.util.FileUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -19,18 +20,21 @@ import java.util.List;
 public class AgreementController {
     private final AgreementService agreementService;
 
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PostMapping
     public ResponseEntity<AgreementDto> createAgreement(@RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
         FileUtil.checkFile(request);
         return ResponseEntity.ok(agreementService.createAgreement(title, subject, request));
     }
 
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PutMapping("/{id}")
     public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
         FileUtil.checkFile(request);
         return ResponseEntity.ok(agreementService.updateAgreement(id, title, subject, request));
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
     @GetMapping
     public ResponseEntity<List<AgreementDto>> getAgreements() {
         return ResponseEntity.ok(agreementService.getAgreements());
@@ -41,6 +45,7 @@ public class AgreementController {
         return ResponseEntity.ok(agreementService.getAgreement(id));
     }
 
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> deleteAgreement(@PathVariable("id") String id) {
         agreementService.deleteAgreement(id);

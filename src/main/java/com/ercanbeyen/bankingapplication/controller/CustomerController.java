@@ -124,15 +124,12 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public ResponseEntity<byte[]> downloadProfilePhoto(@PathVariable("id") @P("customerId") Integer id) {
         File file = customerService.downloadProfilePhoto(id);
 
-        String fileName = file.getName();
-        log.info("file.getName() and its length: {} - {}", fileName, fileName.length());
-
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.parseMediaType(file.getType()));
-        headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(fileName)
-                .build());
         headers.setContentLength(file.getData().length);
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(file.getName())
+                .build());
 
         return ResponseEntity.ok()
                 .headers(headers)
@@ -248,10 +245,10 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentLength(outputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
                 .filename("customer_" + customer.getId() + "_financialStatusReport.pdf")
                 .build());
-        headers.setContentLength(outputStream.size());
 
         return ResponseEntity.ok()
                 .headers(headers)

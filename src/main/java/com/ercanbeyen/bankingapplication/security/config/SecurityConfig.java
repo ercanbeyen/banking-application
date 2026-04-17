@@ -45,7 +45,7 @@ public class SecurityConfig {
                 .sessionManagement(sessionManagement ->
                         sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers("/api/v1/auth/**", "/api/v1/agreements/**").permitAll()
+                        .requestMatchers("/api/v1/auth/**").permitAll()
                         .requestMatchers("/api/v1/files/**").hasRole(ERole.ADMIN.toString())
                         .anyRequest().authenticated())
                 .logout(logoutConfigurer -> logoutConfigurer

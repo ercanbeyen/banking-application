@@ -30,6 +30,7 @@
         <jackson-annotations.version>3.0-rc5</jackson-annotations.version>
         <apache-poi.version>5.5.1</apache-poi.version>
 		<jwt.version>0.13.0</jwt.version>
+		<testcontainers-cassandra.version>2.0.4</testcontainers-cassandra.version>
 	</properties>
 
 	<dependencies>
@@ -130,7 +131,8 @@
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>cassandra</artifactId>
+			<artifactId>testcontainers-cassandra</artifactId>
+			<version>${testcontainers-cassandra.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

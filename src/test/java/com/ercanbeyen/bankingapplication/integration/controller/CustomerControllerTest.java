@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.integration.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
@@ -30,7 +31,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.CassandraContainer;
+import org.testcontainers.cassandra.CassandraContainer;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -57,7 +58,7 @@ class CustomerControllerTest {
     private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>(DockerImageName.parse("mysql:latest"));
     @Container
     @ServiceConnection
-    private static final CassandraContainer<?> cassandraContainer = new CassandraContainer<>(DockerImageName.parse("cassandra:latest"));
+    private static final CassandraContainer cassandraContainer = new CassandraContainer(DockerImageName.parse("cassandra:latest"));
     @Container
     @ServiceConnection
     private static final GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:latest")).withExposedPorts(6379);
@@ -77,7 +78,7 @@ class CustomerControllerTest {
     private SystemAdminProperties systemAdminProperties;
 
     private static final String PHOTO_PATH = "C:\\Users\\ercanbeyen\\Photos\\Banking-App\\Source\\Test\\Resources\\";
-    public static final String REGISTER_ENDPOINT = "/api/v1/auth/register";
+    private static final String REGISTER_ENDPOINT = "/api/v1/auth/register";
     private static final String CUSTOMER_COLLECTION_ENDPOINT = "/api/v1/customers";
     private static final String CUSTOMER_RESOURCE_ENDPOINT = CUSTOMER_COLLECTION_ENDPOINT + "/{id}";
     private static final String PROFILE_PHOTO_UPLOAD_ENDPOINT = CUSTOMER_RESOURCE_ENDPOINT + "/photo/upload";
@@ -150,26 +151,28 @@ class CustomerControllerTest {
 
     @Test
     @Order(2)
-    @DisplayName("Happy path test: Create customer case")
+    @DisplayName("Happy path test: Register customer case")
     void givenCustomerDto_whenCreateEntity_thenReturnCustomerDto() {
         generateAgreement();
+
+        Set<String> roles = Set.of(ERole.USER.toString());
 
         CustomerDto customerDto = MockCustomerFactory.generateMockCustomerDtos().getFirst();
         customerDto.setId(null);
 
-        RegistrationRequest request = new RegistrationRequest(customerDto, "password1", Set.of("USER"));
+        RegistrationRequest request = new RegistrationRequest(customerDto, "password1", roles);
         registerCustomer(request);
 
         customerDto = MockCustomerFactory.generateMockCustomerDtos().get(1);
         customerDto.setId(null);
 
-        request = new RegistrationRequest(customerDto, "password2", Set.of("USER"));
+        request = new RegistrationRequest(customerDto, "password2", roles);
         registerCustomer(request);
 
         customerDto = MockCustomerFactory.generateMockCustomerDtos().getLast();
         customerDto.setId(null);
 
-        request = new RegistrationRequest(customerDto, "password3", Set.of("USER"));
+        request = new RegistrationRequest(customerDto, "password3", roles);
         registerCustomer(request);
 
         generateAccessTokensOfCustomers();

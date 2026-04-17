@@ -196,10 +196,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentLength(outputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
                 .filename("account_" + account.getId() + "_statement.pdf")
                 .build());
-        headers.setContentLength(outputStream.size());
 
         return ResponseEntity.ok()
                 .headers(headers)
@@ -222,10 +222,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentLength(outputStream.size());
             headers.setContentDisposition(ContentDisposition.attachment()
                     .filename("account_" + account.getId() + "_statement.xlsx")
                     .build());
-            headers.setContentLength(outputStream.size());
 
             return ResponseEntity.ok()
                     .headers(headers)
