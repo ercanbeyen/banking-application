@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.service.ExchangeService;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import com.ercanbeyen.bankingapplication.dto.option.ExchangeFilteringOption;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import org.springframework.http.ResponseEntity;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/exchanges")
+@SecurityRequirement(name = "Bearer Authentication")
 public class ExchangeController extends BaseController<ExchangeDto, ExchangeFilteringOption> {
     private final ExchangeService exchangeService;
 

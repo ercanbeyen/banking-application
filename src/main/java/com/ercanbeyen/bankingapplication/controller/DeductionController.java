@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.dto.DeductionDto;
 import com.ercanbeyen.bankingapplication.service.DeductionService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -14,6 +15,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/deductions")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 public class DeductionController {
     private final DeductionService deductionService;
 

@@ -22,6 +22,7 @@ import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.itextpdf.text.DocumentException;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.hibernate.validator.constraints.Range;
@@ -39,6 +40,7 @@ import java.util.*;
 @RestController
 @RequestMapping("/api/v1/customers")
 @Slf4j
+@SecurityRequirement(name = "Bearer Authentication")
 public class CustomerController extends BaseController<CustomerDto, CustomerFilteringOption> {
     private final CustomerService customerService;
     private final AccountService accountService;
@@ -111,7 +113,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PreAuthorize("#customerId == authentication.principal.id")
-    @PostMapping("/{id}/photo/upload")
+    @PostMapping(value = "/{id}/photo/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") @P("customerId") Integer id, @RequestParam("file") MultipartFile request) {
         PhotoUtil.checkPhoto(request);
         customerService.uploadProfilePhoto(id, request);
@@ -120,7 +122,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PreAuthorize("#customerId == authentication.principal.id")
-    @GetMapping("/{id}/photo/download")
+    @GetMapping(value = "/{id}/photo/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<byte[]> downloadProfilePhoto(@PathVariable("id") @P("customerId") Integer id) {
         File file = customerService.downloadProfilePhoto(id);
 
@@ -221,7 +223,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PreAuthorize("hasAuthority('READ_DATA') OR #customerNationalId == authentication.principal.username")
-    @PostMapping("/{nationalId}/financial-status/report/pdf")
+    @PostMapping(value = "/{nationalId}/financial-status/report/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") @P("customerNationalId") String nationalId) {
         Customer customer = customerService.findByNationalId(nationalId);
         Double netBalanceOfCustomer = customerService.calculateNetBalance(nationalId, null, Currency.getDeductionCurrency());

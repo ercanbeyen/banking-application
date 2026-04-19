@@ -45,7 +45,14 @@ public class SecurityConfig {
                 .sessionManagement(sessionManagement ->
                         sessionManagement.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(authorizeRequests -> authorizeRequests
-                        .requestMatchers("/api/v1/auth/**").permitAll()
+                        .requestMatchers(
+                                "/api/v1/auth/**",
+                                "/v3/api-docs/**",
+                                "/swagger-ui/**",
+                                "/swagger-ui.html",
+                                "/actuator/**",
+                                "/error"
+                        ).permitAll()
                         .requestMatchers("/api/v1/files/**").hasRole(ERole.ADMIN.toString())
                         .anyRequest().authenticated())
                 .logout(logoutConfigurer -> logoutConfigurer

@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.dto.TermDepositInterestRateDto;
 import com.ercanbeyen.bankingapplication.dto.option.TermDepositInterestRateFilteringOption;
 import com.ercanbeyen.bankingapplication.service.TermDepositInterestRateService;
 import com.ercanbeyen.bankingapplication.util.TermDepositInterestRateUtil;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequestMapping("/api/v1/term-deposit-interest-rates")
+@SecurityRequirement(name = "Bearer Authentication")
 public class TermDepositInterestRateController extends BaseController<TermDepositInterestRateDto, TermDepositInterestRateFilteringOption> {
     private final TermDepositInterestRateService termDepositInterestRateService;
 

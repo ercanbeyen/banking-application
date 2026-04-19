@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService
 import com.ercanbeyen.bankingapplication.security.service.MoneyTransferOrderSecurityService;
 import com.ercanbeyen.bankingapplication.service.MoneyTransferOrderService;
 import com.ercanbeyen.bankingapplication.util.MoneyTransferOrderUtil;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PostAuthorize;
@@ -17,6 +18,7 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/money-transfer-orders")
+@SecurityRequirement(name = "Bearer Authentication")
 public class MoneyTransferOrderController extends BaseController<MoneyTransferOrderDto, MoneyTransferOrderOption> {
     private final MoneyTransferOrderService moneyTransferOrderService;
     private final MoneyTransferOrderSecurityService moneyTransferOrderSecurityService;

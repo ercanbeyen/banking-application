@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.security.service.NotificationSecurityService;
 import com.ercanbeyen.bankingapplication.service.NotificationService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 public class NotificationController {
     private final NotificationService notificationService;
     private final NotificationSecurityService notificationSecurityService;

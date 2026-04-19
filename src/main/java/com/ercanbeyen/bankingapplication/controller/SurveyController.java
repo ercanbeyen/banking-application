@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.dto.response.SurveyStatisticsResponse;
 import com.ercanbeyen.bankingapplication.dto.option.SurveyFilteringOption;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.SurveyUtil;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -21,6 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/surveys")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 public class SurveyController {
     private final SurveyService surveyService;
 

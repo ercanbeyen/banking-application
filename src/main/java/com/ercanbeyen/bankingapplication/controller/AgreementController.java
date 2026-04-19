@@ -6,7 +6,9 @@ import com.ercanbeyen.bankingapplication.dto.AgreementDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.util.FileUtil;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
@@ -17,18 +19,19 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/agreements")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 public class AgreementController {
     private final AgreementService agreementService;
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AgreementDto> createAgreement(@RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
         FileUtil.checkFile(request);
         return ResponseEntity.ok(agreementService.createAgreement(title, subject, request));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @PutMapping("/{id}")
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<AgreementDto> updateAgreement(@PathVariable("id") String id, @RequestParam("title") String title, @RequestParam("subject") String subject, @RequestParam("file") MultipartFile request) {
         FileUtil.checkFile(request);
         return ResponseEntity.ok(agreementService.updateAgreement(id, title, subject, request));

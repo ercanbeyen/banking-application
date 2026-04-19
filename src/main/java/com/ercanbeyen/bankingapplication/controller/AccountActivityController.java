@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -18,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/account-activities")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 public class AccountActivityController {
     private final AccountActivityService accountActivityService;
     private final AccountActivitySecurityService accountActivitySecurityService;
