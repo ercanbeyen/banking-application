@@ -6,9 +6,12 @@ import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.util.FileUtil;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -20,10 +23,11 @@ import java.util.List;
 @RequestMapping("/api/v1/files")
 @RequiredArgsConstructor
 @Slf4j
+@SecurityRequirement(name = "Bearer Authentication")
 public class FileController {
     private final FileService fileService;
 
-    @PostMapping
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse<String>> uploadFile(@RequestParam("file") MultipartFile request) {
         FileUtil.checkFile(request);
         fileService.storeFile(request);
@@ -31,20 +35,27 @@ public class FileController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/{id}")
+    @GetMapping(value = "/{id}", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<byte[]> downloadFile(@PathVariable("id") String id) {
         File file = fileService.getFile(id);
-        String fileName = file.getName();
-        log.info("file.getName(): {}", fileName);
+        byte[] data = file.getData();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType(file.getType()));
+        headers.setContentLength(data.length);
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(file.getName())
+                .build());
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fileName + "\"")
-                .body(file.getData());
+                .headers(headers)
+                .body(data);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<MessageResponse<String>> deleteFile(@PathVariable("id") String id) {
-        MessageResponse<String> response = new MessageResponse<>(fileService.deleteFile(id));
+        fileService.deleteFile(id);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_DELETE_SUCCESS);
         return ResponseEntity.ok(response);
     }
 

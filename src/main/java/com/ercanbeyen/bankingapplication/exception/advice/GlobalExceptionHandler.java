@@ -10,8 +10,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
@@ -38,6 +42,23 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(Exception exception) {
+        String message = exception.getMessage();
+        int beginIndex = message.indexOf("'") + 1;
+        String remainingMessage = message.substring(beginIndex);
+        int endIndex = beginIndex + remainingMessage.indexOf("'");
+        String missingRequestParameter = message.substring(beginIndex, endIndex);
+
+        Exception modifiedException = new Exception(missingRequestParameter + " is missing");
+        return generateErrorResponse(modifiedException, HttpStatus.BAD_REQUEST);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception) {
+        return generateErrorResponse(exception, HttpStatus.BAD_REQUEST);
+    }
+
     @ExceptionHandler(HandlerMethodValidationException.class)
     public ResponseEntity<Map<String, String>> handleMethodValidationException(HandlerMethodValidationException exception) {
         Map<String, String> errors = new HashMap<>();
@@ -59,6 +80,16 @@ public class GlobalExceptionHandler {
         return generateErrorResponse(exception, HttpStatus.BAD_REQUEST);
     }
 
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthenticationException(Exception exception) {
+        return generateErrorResponse(exception, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(Exception exception) {
+        return generateErrorResponse(exception, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(Exception exception) {
         return generateErrorResponse(exception, HttpStatus.NOT_FOUND);
@@ -70,7 +101,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler({MaxUploadSizeExceededException.class, ResourceExpectationFailedException.class})
-    public ResponseEntity<ErrorResponse> handleResourceExpectationFailedException(Exception exception) {
+    public ResponseEntity<ErrorResponse> handleResourceFailedExceptions(Exception exception) {
         return generateErrorResponse(exception, HttpStatus.EXPECTATION_FAILED);
     }
 

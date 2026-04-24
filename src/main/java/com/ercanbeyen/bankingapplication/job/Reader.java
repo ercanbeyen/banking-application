@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.batch.item.ItemReader;
 import org.springframework.batch.item.data.RepositoryItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.data.domain.Sort;
@@ -20,13 +21,16 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class Reader {
+    @Value("${dataset.news.path}")
+    private String newsPath;
+    private static final String FIND_BY_TYPE_METHOD = "findByType";
     private final NewsReportRepository newsReportRepository;
 
     @Bean(name = "readerNewsReportCSVFile")
     public ItemReader<NewsReport> readerNewsReportCSVFile() {
         return new FlatFileItemReaderBuilder<NewsReport>()
                 .name("readerNewsReportCSVFile")
-                .resource(new ClassPathResource("/dataset/News.csv"))
+                .resource(new ClassPathResource(newsPath))
                 .linesToSkip(1)
                 .delimited()
                 .names("title", "url", "type")
@@ -47,13 +51,16 @@ public class Reader {
     private RepositoryItemReader<NewsReport> getNewsReportRepositoryItemReader(NewsType newsType) {
         RepositoryItemReader<NewsReport> reader = new RepositoryItemReader<>();
         reader.setRepository(newsReportRepository);
-        reader.setMethodName("findByType");
+        reader.setMethodName(FIND_BY_TYPE_METHOD);
+
         List<Object> queryMethodArguments = new ArrayList<>();
         queryMethodArguments.add(newsType);
         reader.setArguments(queryMethodArguments);
+
         Map<String, Sort.Direction> sorts = new LinkedHashMap<>();
         sorts.put("id", Sort.Direction.ASC);
         reader.setSort(sorts);
+
         return reader;
     }
 

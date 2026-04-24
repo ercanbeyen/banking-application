@@ -16,6 +16,7 @@ public final class LogMessage {
             Response is returned successfully after rest template call.
             Response: {}
             """;
+    public static final String PROCESS_NEWS = "Processing {} news...{}";
     public static final String RESOURCE_CREATE_SUCCESS = "{} {} is successfully created";
     public static final String RESOURCE_DELETE_SUCCESS = "{} {} is successfully deleted";
     public static final String CLASS_OF_RESPONSE = "Class of response: {}";

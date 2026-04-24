@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.dto.ExchangeDto;
-import com.ercanbeyen.bankingapplication.option.ExchangeFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.ExchangeFilteringOption;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 
 import java.util.List;

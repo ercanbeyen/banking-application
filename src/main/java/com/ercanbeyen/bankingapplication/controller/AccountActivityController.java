@@ -1,15 +1,16 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
+import com.ercanbeyen.bankingapplication.security.service.AccountActivitySecurityService;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
@@ -18,20 +19,25 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1/account-activities")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 public class AccountActivityController {
     private final AccountActivityService accountActivityService;
+    private final AccountActivitySecurityService accountActivitySecurityService;
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
     @GetMapping
     public ResponseEntity<List<AccountActivityDto>> getAccountActivities(AccountActivityFilteringOption filteringOption) {
         AccountActivityUtil.checkFilteringOption(filteringOption);
         return ResponseEntity.ok(accountActivityService.getAccountActivities(filteringOption));
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
     @GetMapping("/{id}")
     public ResponseEntity<AccountActivityDto> getAccountActivity(@PathVariable("id") String id) {
         return ResponseEntity.ok(accountActivityService.getAccountActivity(id));
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
     @GetMapping("/views")
     public ResponseEntity<List<AccountActivityView>> getAccountActivityViews(
             @RequestParam(name = "senderAccountId") Integer senderAccountId,
@@ -39,15 +45,20 @@ public class AccountActivityController {
         return ResponseEntity.ok(accountActivityService.getAccountActivityViews(senderAccountId, recipientAccountId));
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA') OR @accountActivitySecurityService.isOwner(#accountActivityId, authentication)")
     @PostMapping("/{id}/receipt")
-    public ResponseEntity<byte[]> generateReceipt(@PathVariable("id") String id) {
+    public ResponseEntity<byte[]> generateReceipt(@PathVariable("id") @P("accountActivityId") String id) {
         ByteArrayOutputStream receiptStream = accountActivityService.generateReceiptStream(id);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.set(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=receipt.pdf");
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename("receipt.pdf")
+                .build());
         headers.setContentLength(receiptStream.size());
 
-        return new ResponseEntity<>(receiptStream.toByteArray(), headers, HttpStatus.OK);
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(receiptStream.toByteArray());
     }
 }

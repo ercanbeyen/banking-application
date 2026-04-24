@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 

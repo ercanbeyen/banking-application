@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
@@ -8,20 +9,25 @@ import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
+import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
-import com.ercanbeyen.bankingapplication.exporter.ExcelExporter;
-import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
+import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
+import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.springframework.http.*;
+import org.springframework.security.access.prepost.PostAuthorize;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
@@ -31,24 +37,43 @@ import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
 
-@Slf4j
 @RestController
 @RequestMapping("/api/v1/accounts")
+@Slf4j
+@SecurityRequirement(name = "Bearer Authentication")
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;
+    private final AccountSecurityService accountSecurityService;
 
-    public AccountController(AccountService accountService) {
+    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService) {
         super(accountService);
         this.accountService = accountService;
+        this.accountSecurityService = accountSecurityService;
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @GetMapping
+    @Override
+    public ResponseEntity<List<AccountDto>> getEntities(AccountFilteringOption filteringOption) {
+        return ResponseEntity.ok(accountService.getEntities(filteringOption));
+    }
+
+    @PostAuthorize("returnObject.body.customerNationalId == authentication.principal.username OR hasAuthority('READ_DATA')")
+    @GetMapping("/{id}")
+    @Override
+    public ResponseEntity<AccountDto> getEntity(@PathVariable("id") @P("accountId") Integer id) {
+        return ResponseEntity.ok(accountService.getEntity(id));
+    }
+
+    @PreAuthorize("#account.customerNationalId == authentication.principal.username")
     @PostMapping
     @Override
-    public ResponseEntity<AccountDto> createEntity(@RequestBody @Valid AccountDto request) {
+    public ResponseEntity<AccountDto> createEntity(@RequestBody @Valid @P("account") AccountDto request) {
         AccountUtil.checkRequest(request);
         return new ResponseEntity<>(accountService.createEntity(request), HttpStatus.CREATED);
     }
 
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PutMapping("/{id}")
     @Override
     public ResponseEntity<AccountDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid AccountDto request) {
@@ -56,63 +81,86 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(accountService.updateEntity(id, request), HttpStatus.OK);
     }
 
-    @PutMapping("/deposit/{id}")
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @DeleteMapping("/{id}")
+    @Override
+    public ResponseEntity<Void> deleteEntity(@PathVariable("id") Integer id) {
+        accountService.deleteEntity(id);
+        return ResponseEntity.ok().build();
+    }
+
+    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
+    @PutMapping("{id}/deposit")
     public ResponseEntity<MessageResponse<String>> depositMoney(
-            @PathVariable("id") Integer id,
+            @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.depositMoney(id, amount));
+        accountService.depositMoney(id, amount);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_DEPOSIT.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PutMapping("/withdrawal/{id}")
+    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
+    @PutMapping("{id}/withdrawal")
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
-            @PathVariable("id") Integer id,
+            @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.withdrawMoney(id, amount));
+        accountService.withdrawMoney(id, amount);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.WITHDRAWAL.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PutMapping("/pay/interest/{id}")
-    public ResponseEntity<MessageResponse<String>> payInterest(@PathVariable("id") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.payInterest(id));
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @PutMapping("/{id}/pay/interest-income")
+    public ResponseEntity<MessageResponse<String>> payInterestIncome(@PathVariable("id") Integer id) {
+        MessageResponse<String> response = new MessageResponse<>(accountService.payInterestIncome(id));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication) OR hasRole('ADMIN')")
     @PutMapping("/transfer")
-    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid MoneyTransferRequest request) {
+    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request) {
         AccountUtil.checkMoneyTransferRequest(request);
-        MessageResponse<String> response = new MessageResponse<>(accountService.transferMoney(request));
+        accountService.transferMoney(request);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PreAuthorize("@accountSecurityService.isOwner(#moneyExchange.sellerAccountId, authentication)")
     @PutMapping("/exchange")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid MoneyExchangeRequest request) {
+    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request) {
         AccountUtil.checkMoneyExchangeRequest(request);
-        MessageResponse<String> response = new MessageResponse<>(accountService.exchangeMoney(request));
+        accountService.exchangeMoney(request);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PatchMapping("/block/{id}")
-    public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("block") Boolean status) {
+    @PreAuthorize("hasRole('ADMIN')")
+    @PatchMapping("/{id}/block")
+    public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("status") Boolean status) {
         MessageResponse<String> response = new MessageResponse<>(accountService.updateBlockStatus(id, status));
         return ResponseEntity.ok(response);
     }
 
-    @PatchMapping("/close/{id}")
-    public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") Integer id) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.closeAccount(id));
+    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
+    @PatchMapping("/{id}/close")
+    public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") @P("accountId") Integer id) {
+        accountService.closeAccount(id);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.ACCOUNT_CLOSING.getValue()));
         return ResponseEntity.ok(response);
     }
 
+    @PreAuthorize("hasRole('TELLER')")
     @GetMapping("/total")
     public ResponseEntity<MessageResponse<String>> getTotalAccounts(
             @RequestParam("type") AccountType type,
             @RequestParam("currency") Currency currency,
             @RequestParam(name = "city", required = false) City city) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.getTotalActiveAccounts(type, currency, city));
+        Integer count = accountService.getTotalActiveAccounts(type, currency, city);
+        MessageResponse<String> response = new MessageResponse<>(String.format("Total %s %s accounts is %d", type.getValue(), currency, count));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasRole('TELLER')")
     @GetMapping("/statistics/maximum-balances")
     public ResponseEntity<MessageResponse<List<CustomerStatisticsResponse>>> getCustomerInformationWithMaximumBalance(
             @RequestParam("type") AccountType type,
@@ -121,14 +169,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
+    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
     @GetMapping("/{id}/account-activities")
-    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
         return ResponseEntity.ok(accountService.getAccountActivities(id, request));
     }
 
-    @PostMapping("/{id}/statement/pdf")
-    public ResponseEntity<byte[]> generateAccountStatementPdf(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
+    @PostMapping(value = "/{id}/statement/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> generateAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
@@ -148,18 +198,19 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
+        headers.setContentLength(outputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
                 .filename("account_" + account.getId() + "_statement.pdf")
                 .build());
-        headers.setContentLength(outputStream.size());
 
         return ResponseEntity.ok()
                 .headers(headers)
                 .body(outputStream.toByteArray());
     }
 
-    @PostMapping("/{id}/statement/excel")
-    public ResponseEntity<byte[]> generateAccountStatementExcel(@PathVariable("id") Integer id, AccountActivityFilteringRequest request) {
+    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
+    @PostMapping(value = "/{id}/statement/excel", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<byte[]> generateAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
@@ -173,10 +224,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+            headers.setContentLength(outputStream.size());
             headers.setContentDisposition(ContentDisposition.attachment()
                     .filename("account_" + account.getId() + "_statement.xlsx")
                     .build());
-            headers.setContentLength(outputStream.size());
 
             return ResponseEntity.ok()
                     .headers(headers)

@@ -16,7 +16,7 @@ public non-sealed class MoneyTransferOrder extends BaseEntity {
     @ManyToOne
     private Account senderAccount;
     @ManyToOne
-    private Account chargedAccount;
+    private Account deducteeAccount;
     private LocalDate transferDate;
     @Embedded
     private RegularMoneyTransfer regularMoneyTransfer;

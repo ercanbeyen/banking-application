@@ -42,7 +42,7 @@ public non-sealed class Account extends BaseEntity {
     @OneToMany(mappedBy = "senderAccount", cascade = CascadeType.ALL)
     private List<MoneyTransferOrder> moneyTransferOrders = new ArrayList<>();
     /* Deposit Account fields */
-    private Double interestRatio;
-    private Integer depositPeriod;
-    private Double balanceAfterNextFee;
+    private Double interestRate;
+    private Integer depositMaturity;
+    private Double balanceAfterNextInterestIncome;
 }

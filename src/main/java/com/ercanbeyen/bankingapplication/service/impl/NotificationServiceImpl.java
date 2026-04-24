@@ -30,12 +30,12 @@ public class NotificationServiceImpl implements NotificationService {
 
     @Async
     @Override
-    public CompletableFuture<NotificationDto> createNotification(NotificationDto notificationDto) {
+    public CompletableFuture<NotificationDto> sendNotification(NotificationDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         return CompletableFuture.supplyAsync(() -> {
-            Notification notification = notificationMapper.dtoToEntity(notificationDto);
-            Customer customer = customerService.findByNationalId(notificationDto.customerNationalId());
+            Notification notification = notificationMapper.dtoToEntity(request);
+            Customer customer = customerService.findByNationalId(request.customerNationalId());
             notification.setCustomer(customer);
 
             Notification savedNotification = notificationRepository.save(notification);
@@ -46,7 +46,12 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
-    public String deleteNotification(String id) {
+    public NotificationDto getNotification(String id) {
+        return notificationMapper.entityToDto(findById(id));
+    }
+
+    @Override
+    public void deleteNotification(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.NOTIFICATION.getValue();
@@ -61,8 +66,6 @@ public class NotificationServiceImpl implements NotificationService {
                 });
 
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
-
-        return entity + " " + id + " is successfully deleted";
     }
 
     @Transactional
@@ -74,5 +77,10 @@ public class NotificationServiceImpl implements NotificationService {
         log.info(LogMessage.RESOURCE_FOUND, Entity.CUSTOMER.getValue());
 
         notificationRepository.deleteAllByCustomer(customer);
+    }
+
+    private Notification findById(String id) {
+        return notificationRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.NOTIFICATION.getValue())));
     }
 }

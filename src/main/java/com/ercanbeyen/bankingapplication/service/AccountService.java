@@ -11,22 +11,22 @@ import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.entity.Account;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 
 import java.util.List;
 
 public interface AccountService extends BaseService<AccountDto, AccountFilteringOption> {
-    String depositMoney(Integer id, Double amount);
-    String withdrawMoney(Integer id, Double amount);
-    String payInterest(Integer id);
-    String transferMoney(MoneyTransferRequest request);
-    String exchangeMoney(MoneyExchangeRequest request);
+    void depositMoney(Integer id, Double amount);
+    void withdrawMoney(Integer id, Double amount);
+    String payInterestIncome(Integer id);
+    void transferMoney(MoneyTransferRequest request);
+    void exchangeMoney(MoneyExchangeRequest request);
     String updateBlockStatus(Integer id, boolean status);
-    String closeAccount(Integer id);
-    String getTotalActiveAccounts(AccountType type, Currency currency, City city);
+    void closeAccount(Integer id);
+    Integer getTotalActiveAccounts(AccountType type, Currency currency, City city);
     List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency);
-    Account getChargedAccount(AccountActivityType accountActivityType, Integer extraChargedAccountId, List<Account> relatedAccounts);
-    Account findChargedAccountById(Integer id);
+    Account getDeducteeAccount(AccountActivityType accountActivityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts);
+    Account findDeducteeAccountById(Integer id);
     Account findActiveAccountById(Integer id);
     void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account recipientAccount);
     List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringRequest request);

@@ -14,5 +14,5 @@ public interface AgreementService {
     AgreementDto getAgreement(String id);
     void approveAgreement(String title, Customer customer);
     void approveAgreements(AgreementSubject subject, Customer customer);
-    String deleteAgreement(String id);
+    void deleteAgreement(String id);
 }

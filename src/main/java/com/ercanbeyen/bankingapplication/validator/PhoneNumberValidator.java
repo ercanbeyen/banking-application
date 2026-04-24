@@ -8,7 +8,6 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PhoneNumberValidator implements ConstraintValidator<PhoneNumberRequest, String> {
-
     @Override
     public void initialize(PhoneNumberRequest constraintAnnotation) {
         ConstraintValidator.super.initialize(constraintAnnotation);

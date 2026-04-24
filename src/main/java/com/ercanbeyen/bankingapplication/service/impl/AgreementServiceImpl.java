@@ -128,7 +128,7 @@ public class AgreementServiceImpl implements AgreementService {
             String title = agreement.getTitle();
 
             if (customerAgreementRepository.existsByAgreementTitleAndCustomerNationalId(title, customer.getNationalId())) {
-                log.warn("Customer {} has already been added to {} agreement before", customer.getNationalId(), title);
+                log.warn("{} {} has already been added to {} agreement before", Entity.CUSTOMER.getValue(), customer.getNationalId(), title);
                 continue;
             }
 
@@ -138,24 +138,20 @@ public class AgreementServiceImpl implements AgreementService {
 
             customerAgreementRepository.save(customerAgreement);
 
-            log.info("Customer {} is successfully added to all agreements of subject {}", customer.getNationalId(), agreement.getTitle());
+            log.info("{} {} is successfully added to all agreements of subject {}", Entity.CUSTOMER.getValue(), customer.getNationalId(), agreement.getTitle());
         }
     }
 
     @Transactional
     @Override
-    public String deleteAgreement(String id) {
+    public void deleteAgreement(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        String entity = Entity.AGREEMENT.getValue();
 
         Agreement agreement = findById(id);
         customerAgreementRepository.deleteAllByAgreementTitle(agreement.getTitle());
         agreementRepository.delete(agreement);
 
-        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, id);
-
-        return entity + " " + id + " is successfully deleted";
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.AGREEMENT.getValue(), id);
     }
 
     private Agreement findById(String id) {

@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.dto.BaseDto;
-import com.ercanbeyen.bankingapplication.option.BaseFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.BaseFilteringOption;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

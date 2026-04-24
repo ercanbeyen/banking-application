@@ -5,7 +5,8 @@ import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import java.util.concurrent.CompletableFuture;
 
 public interface NotificationService {
-    CompletableFuture<NotificationDto> createNotification(NotificationDto notificationDto);
-    String deleteNotification(String id);
+    CompletableFuture<NotificationDto> sendNotification(NotificationDto request);
+    NotificationDto getNotification(String id);
+    void deleteNotification(String id);
     void deleteNotifications(String nationalId);
 }

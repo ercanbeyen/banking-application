@@ -18,9 +18,10 @@ import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.service.TransactionService;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.service.*;
@@ -43,7 +44,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class AccountServiceImpl implements AccountService {
-    private static final Currency CHARGE_CURRENCY = Currency.getChargeCurrency();
+    private static final Currency DEDUCTION_CURRENCY = Currency.getDeductionCurrency();
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final CustomerServiceImpl customerService;
@@ -92,12 +93,12 @@ public class AccountServiceImpl implements AccountService {
         String entity = Entity.ACCOUNT.getValue();
 
         if (AccountUtil.checkAccountTypeMatch.test(accountType, AccountType.DEPOSIT)) {
-            log.info("Account type is {}. So, agreements and interest ratio will be assigned", accountType.getValue());
+            log.info("Account type is {}. So, agreements and interest rate will be assigned", accountType.getValue());
             agreementService.approveAgreements(AgreementSubject.DEPOSIT_ACCOUNT, customer);
 
-            log.info("{} is {}, so update interest ratio and balance after next {}", entity, accountType.getValue(), Entity.FEE.getValue());
-            account.setInterestRatio(0D);
-            account.setBalanceAfterNextFee(0D);
+            log.info("{} is {}, so update interest rate and balance after next {}", entity, accountType.getValue(), Entity.TERM_DEPOSIT_INTEREST_RATE.getValue());
+            account.setInterestRate(0D);
+            account.setBalanceAfterNextInterestIncome(0D);
         }
 
         account.setCustomer(customer);
@@ -120,9 +121,9 @@ public class AccountServiceImpl implements AccountService {
         Branch branch = branchService.findByName(request.getBranchName());
         account.setBranch(branch);
 
-        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(account.getDepositPeriod(), request.getDepositPeriod())) {
+        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(account.getDepositMaturity(), request.getDepositMaturity())) {
             log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
-            transactionService.updateDepositAccountFields(account, account.getBalance(), request.getDepositPeriod());
+            transactionService.updateDepositAccountFields(account, account.getBalance(), request.getDepositMaturity());
         }
 
         return accountMapper.entityToDto(accountRepository.save(account));
@@ -135,7 +136,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public String depositMoney(Integer id, Double amount) {
+    public void depositMoney(Integer id, Double amount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -151,13 +152,11 @@ public class AccountServiceImpl implements AccountService {
         String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
 
-        notificationService.createNotification(notificationDto);
-
-        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
+        notificationService.sendNotification(notificationDto);
     }
 
     @Override
-    public String withdrawMoney(Integer id, Double amount) {
+    public void withdrawMoney(Integer id, Double amount) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -172,31 +171,28 @@ public class AccountServiceImpl implements AccountService {
 
         String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
-        notificationService.createNotification(notificationDto);
-
-        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
+        notificationService.sendNotification(notificationDto);
     }
 
     @Override
-    public String payInterest(Integer id) {
+    public String payInterestIncome(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
 
-        if (!AccountUtil.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositPeriod())) {
-            log.warn("Deposit period is not completed");
-            return "Today is not the completion of deposit period";
+        if (!AccountUtil.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositMaturity())) {
+            return "Maturity date has not arrived yet";
         }
 
-        Double amount = AccountUtil.calculateInterest(account.getBalance(), account.getDepositPeriod(), account.getInterestRatio());
-        AccountActivityType activityType = AccountActivityType.FEE;
+        Double amount = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
+        AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
         transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
-        notificationService.createNotification(notificationDto);
+        notificationService.sendNotification(notificationDto);
 
         String response = activityType.getValue() + " transfer";
 
@@ -204,7 +200,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public String transferMoney(MoneyTransferRequest request) {
+    public void transferMoney(MoneyTransferRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account senderAccount = findActiveAccountById(request.senderAccountId());
@@ -216,11 +212,11 @@ public class AccountServiceImpl implements AccountService {
 
         checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
-        Account chargedAccount = getChargedAccount(AccountActivityType.MONEY_TRANSFER, request.chargedAccountId(), List.of(senderAccount, recipientAccount));
+        Account deducteeAccount = getDeducteeAccount(AccountActivityType.MONEY_TRANSFER, request.deducteeAccountId(), List.of(senderAccount, recipientAccount));
 
         checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
-        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, chargedAccount);
+        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount);
 
         if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -228,15 +224,13 @@ public class AccountServiceImpl implements AccountService {
             NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made from your %s.", amount, currency, entity));
             NotificationDto recipientNotificationDto = new NotificationDto(recipientAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made to your %s.", amount, currency, entity));
 
-            notificationService.createNotification(senderNotificationDto);
-            notificationService.createNotification(recipientNotificationDto);
+            notificationService.sendNotification(senderNotificationDto);
+            notificationService.sendNotification(recipientNotificationDto);
         }
-
-        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
     }
 
     @Override
-    public String exchangeMoney(MoneyExchangeRequest request) {
+    public void exchangeMoney(MoneyExchangeRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account sellerAccount = findActiveAccountById(request.sellerAccountId());
@@ -247,10 +241,8 @@ public class AccountServiceImpl implements AccountService {
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
         checkDailyAccountActivityLimit(sellerAccount, request.amount(), activityType);
 
-        Account chargedAccount = getChargedAccount(AccountActivityType.MONEY_EXCHANGE, request.chargedAccountId(), List.of(sellerAccount, buyerAccount));
-        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, chargedAccount);
-
-        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
+        Account deducteeAccount = getDeducteeAccount(AccountActivityType.MONEY_EXCHANGE, request.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
+        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount);
     }
 
     @Transactional
@@ -261,26 +253,23 @@ public class AccountServiceImpl implements AccountService {
         Account account = findById(id);
         checkAccountClosed(account);
 
-        account.setBlocked(status);
-        accountRepository.save(account);
-
         String entity = Entity.ACCOUNT.getValue();
 
-        String logMessage = status ? "{} {} is blocked" : "Blockage of {} {} is removed";
-        logMessage += " at {}";
-        log.info(logMessage, entity, id, TimeUtil.getTurkeyDateTime());
+        if (account.isBlocked() == status) {
+            log.warn("Same blocking status was applied to the {} {}", entity, id);
+        } else {
+            account.setBlocked(status);
+            accountRepository.save(account);
 
-        AccountActivityType activityType = AccountActivityType.ACCOUNT_BLOCKING;
-        createAccountActivityForAccountStatusUpdate(account, activityType);
+            createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_BLOCKING);
+        }
 
-        String message = status ? activityType.getValue() : entity + " blockage removal";
-
-        return String.format(ResponseMessage.SUCCESS, message);
+        return status ? entity + " is successfully blocked" : entity + " blockage is successfully removed";
     }
 
     @Transactional
     @Override
-    public String closeAccount(Integer id) {
+    public void closeAccount(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -294,20 +283,13 @@ public class AccountServiceImpl implements AccountService {
         account.setClosedAt(TimeUtil.getTurkeyDateTime());
         accountRepository.save(account);
 
-        AccountActivityType activityType = AccountActivityType.ACCOUNT_CLOSING;
-        createAccountActivityForAccountStatusUpdate(account, activityType);
-
-        return String.format(ResponseMessage.SUCCESS, activityType.getValue());
+        createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_CLOSING);
     }
 
     @Override
-    public String getTotalActiveAccounts(AccountType type, Currency currency, City city) {
+    public Integer getTotalActiveAccounts(AccountType type, Currency currency, City city) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        int count = accountRepository.getTotalAccountsByCityAndTypeAndCurrency(city.name(), type.name(), currency.name());
-        log.info("Total count: {}", count);
-
-        return String.format("Total %s %s accounts is %d", type.getValue(), currency, count);
+        return accountRepository.getTotalAccountsByCityAndTypeAndCurrency(city.name(), type.name(), currency.name());
     }
 
     @Override
@@ -317,7 +299,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account getChargedAccount(AccountActivityType accountActivityType, Integer extraChargedAccountId, List<Account> relatedAccounts) {
+    public Account getDeducteeAccount(AccountActivityType accountActivityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         return switch (accountActivityType) {
@@ -329,34 +311,34 @@ public class AccountServiceImpl implements AccountService {
                     yield senderAccount;
                 }
 
-                yield getChargedAccountInMoneyTransfer(extraChargedAccountId, senderAccount);
+                yield getDeducteeAccountInMoneyTransfer(extraDeducteeAccountId, senderAccount);
             }
             case AccountActivityType.MONEY_EXCHANGE ->
-                    getChargedAccountInMoneyExchange(extraChargedAccountId, relatedAccounts);
+                    getDeducteeAccountInMoneyExchange(extraDeducteeAccountId, relatedAccounts);
             default ->
-                    throw new InternalServerErrorException("Unknown account activity type for getting charged account");
+                    throw new InternalServerErrorException("Unknown account activity type for getting deductee account");
         };
     }
 
     @Override
-    public Account findChargedAccountById(Integer id) {
+    public Account findDeducteeAccountById(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
-        if (account.getCurrency() != CHARGE_CURRENCY) {
-            throw new ResourceConflictException(String.format(ResponseMessage.INVALID_CHARGED_ACCOUNT_CURRENCY, entity, CHARGE_CURRENCY));
+        if (account.getCurrency() != DEDUCTION_CURRENCY) {
+            throw new ResourceConflictException(String.format(ResponseMessage.INVALID_DEDUCTEE_ACCOUNT_CURRENCY, entity, DEDUCTION_CURRENCY));
         }
 
         AccountType accountType = AccountType.CURRENT;
 
         if (account.getType() != accountType) {
-            throw new ResourceConflictException(String.format("Charged %s type should be %s", entity, accountType));
+            throw new ResourceConflictException(String.format("Deductee %s type should be %s", entity, accountType));
         }
 
 
-        log.info(LogMessage.RESOURCE_FOUND, "Charged " + entity);
+        log.info(LogMessage.RESOURCE_FOUND, "Deductee " + entity);
 
         return account;
     }
@@ -474,51 +456,51 @@ public class AccountServiceImpl implements AccountService {
         AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType(), AccountActivityType.MONEY_EXCHANGE);
     }
 
-    private Account getChargedAccountInMoneyExchange(Integer id, List<Account> accounts) {
-        boolean accountWithChargeCurrencyExists = accounts.stream()
+    private Account getDeducteeAccountInMoneyExchange(Integer id, List<Account> accounts) {
+        boolean accountWithDeductionCurrencyExists = accounts.stream()
                 .map(Account::getCurrency)
-                .anyMatch(currency -> currency == CHARGE_CURRENCY);
+                .anyMatch(currency -> currency == DEDUCTION_CURRENCY);
 
-        Account chargedAccount;
+        Account deducteeAccount;
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
-        if (Optional.ofNullable(id).isPresent()) { // need an extra charged account
-            if (accountWithChargeCurrencyExists) {
-                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_CHARGED_ACCOUNT, entity, CHARGE_CURRENCY));
+        if (Optional.ofNullable(id).isPresent()) { // need an extra deductee account
+            if (accountWithDeductionCurrencyExists) {
+                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_DEDUCTEE_ACCOUNT, entity, DEDUCTION_CURRENCY));
             }
 
-            chargedAccount = findChargedAccountById(id);
-        } else { // no need an extra charged account
-            if (!accountWithChargeCurrencyExists) {
-                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_CHARGED_ACCOUNT_CURRENCY, entity, CHARGE_CURRENCY));
+            deducteeAccount = findDeducteeAccountById(id);
+        } else { // no need an extra deductee account
+            if (!accountWithDeductionCurrencyExists) {
+                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_DEDUCTEE_ACCOUNT_CURRENCY, entity, DEDUCTION_CURRENCY));
             }
 
-            chargedAccount = accounts.getFirst().getCurrency() == CHARGE_CURRENCY ? accounts.getFirst() : accounts.getLast();
+            deducteeAccount = accounts.getFirst().getCurrency() == DEDUCTION_CURRENCY ? accounts.getFirst() : accounts.getLast();
         }
 
-        return chargedAccount;
+        return deducteeAccount;
     }
 
-    private Account getChargedAccountInMoneyTransfer(Integer id, Account account) {
-        Account chargedAccount;
+    private Account getDeducteeAccountInMoneyTransfer(Integer id, Account account) {
+        Account deducteeAccount;
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
-        if (Optional.ofNullable(id).isPresent()) { // need an extra charged account
-            if (account.getCurrency() == CHARGE_CURRENCY) {
-                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_CHARGED_ACCOUNT, entity, CHARGE_CURRENCY));
+        if (Optional.ofNullable(id).isPresent()) { // need an extra deductee account
+            if (account.getCurrency() == DEDUCTION_CURRENCY) {
+                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_DEDUCTEE_ACCOUNT, entity, DEDUCTION_CURRENCY));
             }
 
-            chargedAccount = findChargedAccountById(id);
-        } else { // no need an extra charged account
-            if (account.getCurrency() != CHARGE_CURRENCY) {
-                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_CHARGED_ACCOUNT_CURRENCY, entity, CHARGE_CURRENCY));
+            deducteeAccount = findDeducteeAccountById(id);
+        } else { // no need an extra deductee account
+            if (account.getCurrency() != DEDUCTION_CURRENCY) {
+                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_DEDUCTEE_ACCOUNT_CURRENCY, entity, DEDUCTION_CURRENCY));
             }
 
-            log.info("Charged {} is the related {} {}. So, no need the indicate a different {}", entity, entity, account.getId(), entity);
-            chargedAccount = account;
+            log.info("Deductee {} is the related {} {}. So, no need the indicate a different {}", entity, entity, account.getId(), entity);
+            deducteeAccount = account;
         }
 
-        return chargedAccount;
+        return deducteeAccount;
     }
 
     private void checkDailyAccountActivityLimit(Account account, Double amount, AccountActivityType activityType) {

@@ -11,11 +11,11 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.exporter.PdfExporter;
+import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AccountActivityMapper;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.AccountActivityRepository;
 import com.ercanbeyen.bankingapplication.view.repository.AccountActivityViewRepository;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
@@ -141,9 +141,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .getNationalId()
                 .equals(customerNationalId);
 
-        if (accountActivity.getType() == AccountActivityType.MONEY_DEPOSIT || accountActivity.getType() == AccountActivityType.FEE) {
+        if (accountActivity.getType() == AccountActivityType.MONEY_DEPOSIT || accountActivity.getType() == AccountActivityType.INTEREST_INCOME) {
             accountActivityExists = accountPredicate.test(accountActivity.getRecipientAccount());
-        } else if (accountActivity.getType() == AccountActivityType.WITHDRAWAL || accountActivity.getType() == AccountActivityType.CHARGE) {
+        } else if (accountActivity.getType() == AccountActivityType.WITHDRAWAL || accountActivity.getType() == AccountActivityType.DEDUCTION) {
             accountActivityExists = accountPredicate.test(accountActivity.getSenderAccount());
         } else if (accountActivity.getType() == AccountActivityType.MONEY_TRANSFER || accountActivity.getType() == AccountActivityType.MONEY_EXCHANGE) {
             boolean recipientAccountIsCustomer = accountPredicate.test(accountActivity.getRecipientAccount());

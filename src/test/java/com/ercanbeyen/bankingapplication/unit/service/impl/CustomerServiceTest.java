@@ -12,7 +12,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.factory.*;
 import com.ercanbeyen.bankingapplication.mapper.CustomerAgreementMapper;
 import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
@@ -102,10 +102,8 @@ class CustomerServiceTest {
         List<CustomerDto> actual = customerService.getEntities(filteringOption);
 
         // then
-        verify(customerRepository, times(1))
-                .findAll();
-        verify(customerMapper, times(1))
-                .entityToDto(any());
+        verify(customerRepository, times(1)).findAll();
+        verify(customerMapper, times(1)).entityToDto(any());
 
         assertEquals(expected.size(), actual.size());
     }
@@ -128,10 +126,8 @@ class CustomerServiceTest {
         CustomerDto actual = customerService.getEntity(customer.getId());
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verify(customerMapper, times(1))
-                .entityToDto(any());
+        verify(customerRepository, times(1)).findById(anyInt());
+        verify(customerMapper, times(1)).entityToDto(any());
 
         assertEquals(expected.get().getId(), actual.getId());
     }
@@ -151,8 +147,7 @@ class CustomerServiceTest {
         String actual = exception.getMessage();
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
+        verify(customerRepository, times(1)).findById(anyInt());
         verifyNoMoreInteractions(customerRepository, customerMapper);
 
         assertEquals(expected, actual);
@@ -187,18 +182,12 @@ class CustomerServiceTest {
         CustomerDto actual = customerService.createEntity(request);
 
         // then
-        verify(customerRepository, times(1))
-                .findAll();
-        verify(customerMapper, times(1))
-                .dtoToEntity(any());
-        verify(cashFlowCalendarService, times(1))
-                .createCashFlowCalendar();
-        verify(customerRepository, times(1))
-                .save(any());
-        verify(agreementService, times(1))
-                .approveAgreements(any(), any());
-        verify(customerMapper, times(1))
-                .entityToDto(any());
+        verify(customerRepository, times(1)).findAll();
+        verify(customerMapper, times(1)).dtoToEntity(any());
+        verify(cashFlowCalendarService, times(1)).createCashFlowCalendar();
+        verify(customerRepository, times(1)).save(any());
+        verify(agreementService, times(1)).approveAgreements(any(), any());
+        verify(customerMapper, times(1)).entityToDto(any());
 
         assertEquals(expected, actual);
     }
@@ -217,22 +206,21 @@ class CustomerServiceTest {
         String actual = exception.getMessage();
 
         // then
-        verify(customerRepository, times(1))
-                .findAll();
+        verify(customerRepository, times(1)).findAll();
         verifyNoMoreInteractions(customerRepository, customerMapper);
 
         assertEquals(expected, actual);
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"test@email.com", "test_updated@email.com"})
+    @ValueSource(strings = {"+905328465704", "+905328465705"})
     @DisplayName("Happy path: Update customer case")
-    void givenIdAndCustomerDto_whenUpdateEntity_thenReturnCustomerDto(String email) {
+    void givenIdAndCustomerDto_whenUpdateEntity_thenReturnCustomerDto(String phoneNumber) {
         // given
-        CustomerDto request = getUpdateMockCustomerDtoRequest(email);
+        CustomerDto request = getUpdateMockCustomerDtoRequest(phoneNumber);
 
         Customer customer = customers.getFirst();
-        customer.setEmail(email);
+        customer.setPhoneNumber(phoneNumber);
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
@@ -248,22 +236,19 @@ class CustomerServiceTest {
         CustomerDto actual = customerService.updateEntity(customer.getId(), request);
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verify(customerRepository, times(1))
-                .save(any());
-        verify(customerMapper, times(1))
-                .entityToDto(any());
+        verify(customerRepository, times(1)).findById(anyInt());
+        verify(customerRepository, times(1)).save(any());
+        verify(customerMapper, times(1)).entityToDto(any());
 
-        assertEquals(email, actual.getEmail());
+        assertEquals(phoneNumber, actual.getPhoneNumber());
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"test2@email.com", "test3@email.com"})
+    @ValueSource(strings = {"+905328465702", "+905328465703"})
     @DisplayName("Exception path test: Update customer case")
-    void givenIdAndCustomerDto_whenUpdateEntity_thenThrowResourceConflictException(String email) {
+    void givenIdAndCustomerDto_whenUpdateEntity_thenThrowResourceConflictException(String phoneNumber) {
         // given
-        CustomerDto request = getUpdateMockCustomerDtoRequest(email);
+        CustomerDto request = getUpdateMockCustomerDtoRequest(phoneNumber);
         String expected = String.format(ResponseMessage.ALREADY_EXISTS, Entity.CUSTOMER.getValue());
 
         doReturn(Optional.of(customers.getFirst()))
@@ -278,10 +263,8 @@ class CustomerServiceTest {
         String actual = exception.getMessage();
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verify(customerRepository, times(1))
-                .findAll();
+        verify(customerRepository, times(1)).findById(anyInt());
+        verify(customerRepository, times(1)).findAll();
         verifyNoMoreInteractions(customerRepository, customerMapper);
 
         assertEquals(expected, actual);
@@ -292,7 +275,6 @@ class CustomerServiceTest {
     @DisplayName("Happy path test: Upload photo case")
     void givenMultipartFile_whenUploadPhoto_thenReturnMessage() throws IOException {
         // given
-        String expected = ResponseMessage.FILE_UPLOAD_SUCCESS;
         MultipartFile multipartFile = MockFileFactory.generateMockMultipartFile();
         File file = MockFileFactory.generateMockFile();
         CompletableFuture<File> fileCompletableFuture = CompletableFuture.supplyAsync(() -> file);
@@ -308,15 +290,12 @@ class CustomerServiceTest {
                 .save(any());
 
         // when
-        String actual = customerService.uploadProfilePhoto(customers.getFirst().getId(), multipartFile);
+        customerService.uploadProfilePhoto(customers.getFirst().getId(), multipartFile);
 
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(fileService, times(1))
-                .storeFile(any(), any());
-
-        assertEquals(expected, actual);
+        verify(fileService, times(1)).storeFile(any(), any());
     }
 
     @Test
@@ -338,10 +317,8 @@ class CustomerServiceTest {
         String actual = exception.getMessage();
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verify(fileService, times(1))
-                .storeFile(any(), any());
+        verify(customerRepository, times(1)).findById(anyInt());
+        verify(fileService, times(1)).storeFile(any(), any());
         verifyNoMoreInteractions(customerRepository);
 
         assertEquals(expected, actual);
@@ -363,8 +340,7 @@ class CustomerServiceTest {
         File actual = customerService.downloadProfilePhoto(id);
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
+        verify(customerRepository, times(1)).findById(anyInt());
 
         assertEquals(expected.getName(), actual.getName());
     }
@@ -384,8 +360,7 @@ class CustomerServiceTest {
         String actual = exception.getMessage();
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
+        verify(customerRepository, times(1)).findById(anyInt());
         verifyNoMoreInteractions(fileService);
 
         assertEquals(expected, actual);
@@ -395,7 +370,6 @@ class CustomerServiceTest {
     @DisplayName("Happy path test: Delete profile photo case")
     void givenId_whenDeletePhoto_thenReturnMessage() {
         // given
-        String expected = ResponseMessage.FILE_DELETE_SUCCESS;
         int id = customers.getFirst().getId();
 
         doReturn(Optional.of(customers.getFirst()))
@@ -403,12 +377,10 @@ class CustomerServiceTest {
                 .findById(anyInt());
 
         // when
-        String actual = customerService.deleteProfilePhoto(id);
+        customerService.deleteProfilePhoto(id);
 
         // then
         verify(customerRepository, times(1)).findById(id);
-
-        assertEquals(expected, actual);
     }
 
     @Test
@@ -430,17 +402,15 @@ class CustomerServiceTest {
         List<CustomerAgreementDto> actual = customerService.getAgreements(id);
 
         // then
-        verify(customerRepository, times(1))
-                .findById(anyInt());
-        verify(customerAgreementMapper, times(1))
-                .entityToDto(any());
+        verify(customerRepository, times(1)).findById(anyInt());
+        verify(customerAgreementMapper, times(1)).entityToDto(any());
 
         assertEquals(expected.size(), actual.size());
     }
 
     private CustomerDto getUpdateMockCustomerDtoRequest(String email) {
         CustomerDto request = customerDtos.getFirst();
-        request.setEmail(email);
+        request.setPhoneNumber(email);
         return request;
     }
 }

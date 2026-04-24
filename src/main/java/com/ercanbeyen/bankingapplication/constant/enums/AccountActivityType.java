@@ -11,8 +11,8 @@ public enum AccountActivityType {
     WITHDRAWAL("Withdrawal"),
     MONEY_TRANSFER("Money Transfer"),
     MONEY_EXCHANGE("Money Exchange"),
-    FEE("Fee"),
-    CHARGE("Charge"),
+    INTEREST_INCOME("Interest Income"),
+    DEDUCTION("Deduction"),
     ACCOUNT_OPENING("Account Opening"),
     ACCOUNT_BLOCKING("Account Blocking"),
     ACCOUNT_CLOSING("Account Closing");

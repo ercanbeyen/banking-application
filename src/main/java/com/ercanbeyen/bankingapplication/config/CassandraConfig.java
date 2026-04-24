@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.config;
 
+import io.micrometer.common.lang.NonNullApi;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.PropertySource;
@@ -9,12 +10,12 @@ import org.springframework.data.cassandra.core.cql.keyspace.CreateKeyspaceSpecif
 import org.springframework.data.cassandra.core.cql.keyspace.KeyspaceOption;
 import org.springframework.data.cassandra.repository.config.EnableCassandraRepositories;
 
-import java.util.Arrays;
 import java.util.List;
 
 @Configuration
 @PropertySource("classpath:cassandra.properties")
 @EnableCassandraRepositories
+@NonNullApi
 public class CassandraConfig extends AbstractCassandraConfiguration {
     private final String localDataCenter;
     private final String contactPoints;
@@ -43,7 +44,7 @@ public class CassandraConfig extends AbstractCassandraConfiguration {
                 .with(KeyspaceOption.DURABLE_WRITES, true)
                 .ifNotExists();
 
-        return Arrays.asList(specification);
+        return List.of(specification);
     }
 
     @Override

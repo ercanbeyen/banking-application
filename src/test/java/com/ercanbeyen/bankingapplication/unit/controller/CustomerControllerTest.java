@@ -4,7 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.controller.CustomerController;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerServiceImpl;
 import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;

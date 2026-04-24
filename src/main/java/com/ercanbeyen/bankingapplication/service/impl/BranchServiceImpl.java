@@ -11,7 +11,7 @@ import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchMapper;
-import com.ercanbeyen.bankingapplication.option.BranchFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.BranchFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.BranchRepository;
 import com.ercanbeyen.bankingapplication.service.BranchService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
@@ -132,7 +132,7 @@ public class BranchServiceImpl implements BranchService {
             findByName(request.getName());
             log.error(LogMessage.RESOURCE_NOT_UNIQUE, entity);
             isUnique = false;
-        } catch (Exception exception) {
+        } catch (Exception _) {
             log.info(LogMessage.RESOURCE_UNIQUE, entity);
             isUnique = true;
         }

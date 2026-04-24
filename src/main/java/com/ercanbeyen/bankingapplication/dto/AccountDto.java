@@ -28,8 +28,8 @@ public non-sealed class AccountDto extends BaseDto {
     @NotBlank(message = "Branch name should not be blank")
     private String branchName;
     /* Deposit Account fields */
-    @Range(min = 0, max = 100, message = "Interest ratio is not between {min} and {max}")
-    private Double interestRatio;
-    private Integer depositPeriod;
-    private Double balanceAfterNextFee;
+    @Range(min = 0, max = 100, message = "Interest rate is not between {min} and {max}")
+    private Double interestRate;
+    private Integer depositMaturity;
+    private Double balanceAfterNextInterestIncome;
 }

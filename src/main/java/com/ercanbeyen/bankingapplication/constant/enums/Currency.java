@@ -6,7 +6,7 @@ public enum Currency {
     EUR,
     GBP;
 
-    public static Currency getChargeCurrency() {
+    public static Currency getDeductionCurrency() {
         return TRY;
     }
 }

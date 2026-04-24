@@ -9,8 +9,8 @@ import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
 import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
-import com.ercanbeyen.bankingapplication.option.AccountFilteringOption;
-import com.ercanbeyen.bankingapplication.option.CustomerFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
@@ -18,12 +18,13 @@ import java.util.List;
 import java.util.Map;
 
 public interface CustomerService extends BaseService<CustomerDto, CustomerFilteringOption> {
-    String approveAgreement(Integer id, String title);
+    CustomerDto getCustomerByNationalId(String nationalId);
+    void approveAgreement(Integer id, String title);
     String addRegisteredRecipient(Integer id, RegisteredRecipient request);
     String removeRegisteredRecipient(Integer id, Integer recipientAccountId);
-    String uploadProfilePhoto(Integer id, MultipartFile request);
+    void uploadProfilePhoto(Integer id, MultipartFile request);
     File downloadProfilePhoto(Integer id);
-    String deleteProfilePhoto(Integer id);
+    void deleteProfilePhoto(Integer id);
     CustomerFinancialSummaryResponse calculateFinancialSummary(String nationalId, Currency currency);
     List<AccountDto> getAccounts(Integer id, AccountFilteringOption filteringOption);
     List<NotificationDto> getNotifications(Integer id);

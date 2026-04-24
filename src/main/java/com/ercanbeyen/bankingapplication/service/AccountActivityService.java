@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
-import com.ercanbeyen.bankingapplication.option.AccountActivityFilteringOption;
+import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 
 import java.io.ByteArrayOutputStream;
 import java.util.List;

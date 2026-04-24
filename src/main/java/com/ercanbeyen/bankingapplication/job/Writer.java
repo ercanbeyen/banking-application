@@ -14,10 +14,10 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class Writer {
+    private static final String SAVE_METHOD = "save";
     private final NewsReportRepository newsReportRepository;
     private final BankNewsRepository bankNewsRepository;
     private final OfferNewsRepository offerNewsRepository;
-    private static final String SAVE_METHOD = "save";
 
     @Bean(name = "writerNewsReportTable")
     public RepositoryItemWriter<NewsReport> writerNewsReportTable() {
