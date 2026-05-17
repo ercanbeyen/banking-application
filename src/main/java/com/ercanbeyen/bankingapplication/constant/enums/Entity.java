@@ -23,7 +23,8 @@ public enum Entity {
     CASH_FLOW_CALENDAR("Cash Flow Calendar"),
     USER_CREDENTIALS("User Credentials"),
     ROLE("Role"),
-    REFRESH_TOKEN("Refresh Token");
+    REFRESH_TOKEN("Refresh Token"),
+    INCORRECT_LOGIN_ATTEMPT("Incorrect Login Attempt");
 
     private final String value;
 
@@ -38,7 +39,7 @@ public enum Entity {
             case ACCOUNT_ACTIVITY -> "account-activitie";
             case BRANCH -> "branche";
             case TERM_DEPOSIT_INTEREST_RATE -> "term-deposit-interest-rate";
-            case USER_CREDENTIALS, ROLE, REFRESH_TOKEN -> throw new ResourceNotFoundException("Resource is not found");
+            case USER_CREDENTIALS, ROLE, REFRESH_TOKEN, INCORRECT_LOGIN_ATTEMPT -> throw new ResourceNotFoundException("Resource is not found");
             default -> value.toLowerCase();
         };
     }
