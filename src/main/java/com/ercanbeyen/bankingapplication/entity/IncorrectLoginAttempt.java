@@ -12,7 +12,7 @@ public class IncorrectLoginAttempt {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
-    private LocalDateTime dateTime;
+    private LocalDateTime attemptedAt;
     @ManyToOne
     @JoinColumn(name = "user_credentials_id", referencedColumnName = "username")
     private UserCredentials userCredentials;

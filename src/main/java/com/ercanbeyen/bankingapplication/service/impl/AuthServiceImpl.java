@@ -27,6 +27,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -59,7 +60,7 @@ public class AuthServiceImpl implements AuthService {
             SecurityContextHolder.getContext().setAuthentication(authentication);
             userDetails = (UserDetails) authentication.getPrincipal();
         } catch (AuthenticationException exception) {
-            log.error("Incorrect Login Attempt!");
+            log.error("{}!", Entity.INCORRECT_LOGIN_ATTEMPT.getValue());
 
             IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(request.username(), TimeUtil.getTurkeyDateTime());
             incorrectLoginAttemptService.createIncorrectLoginAttempt(incorrectLoginAttemptRequest);
@@ -122,7 +123,6 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void updateRoles(String username, Set<String> roles) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
         userCredentialsService.updateRoles(username, roles);
         refreshTokenService.revokeAllRefreshTokens(username);
     }
@@ -130,8 +130,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void updatePassword(String username, String password) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
         userCredentialsService.updatePassword(username, password);
         refreshTokenService.revokeAllRefreshTokens(username);
+    }
+
+    @Override
+    public List<IncorrectLoginAttemptDto> getIncorrectLoginAttempts(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return incorrectLoginAttemptService.getIncorrectLoginAttempts(username);
     }
 }
