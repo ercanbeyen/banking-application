@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -24,6 +25,9 @@ public class UserCredentials {
     @Column(unique = true)
     private Integer customerId;
     private String password;
+    private boolean accountNonLocked = true;
+    private int failedAttempt = 0;
+    private LocalDateTime lockAt;
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(name = "user_credentials_roles",
             joinColumns = @JoinColumn(name = "user_credentials_id"),

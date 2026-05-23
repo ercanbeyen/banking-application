@@ -17,12 +17,14 @@ public class UserDetailsImpl implements UserDetails {
     private final Integer id;
     private final String username;
     private final String password;
+    private final boolean accountNonLocked;
     private final Collection<? extends GrantedAuthority> authorities;
 
-    public UserDetailsImpl(Integer id, String username, String password, Collection<? extends GrantedAuthority> authorities) {
+    public UserDetailsImpl(Integer id, String username, String password, boolean accountNonLocked, Collection<? extends GrantedAuthority> authorities) {
         this.id = id;
         this.username = username;
         this.password = password;
+        this.accountNonLocked = accountNonLocked;
         this.authorities = authorities;
     }
 
@@ -37,7 +39,7 @@ public class UserDetailsImpl implements UserDetails {
             }
         }
 
-        return new UserDetailsImpl(userCredentials.getCustomerId(), userCredentials.getUsername(), userCredentials.getPassword(), authorities);
+        return new UserDetailsImpl(userCredentials.getCustomerId(), userCredentials.getUsername(), userCredentials.getPassword(), userCredentials.isAccountNonLocked(), authorities);
     }
 
     @Override
@@ -62,7 +64,7 @@ public class UserDetailsImpl implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
+        return accountNonLocked;
     }
 
     @Override

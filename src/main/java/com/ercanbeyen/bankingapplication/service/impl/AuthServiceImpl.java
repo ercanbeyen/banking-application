@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
+import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -19,9 +20,9 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -47,7 +48,8 @@ public class AuthServiceImpl implements AuthService {
     public Map<String, String> loginUser(LoginRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        UserDetails userDetails;
+        UserCredentials userCredentials = userCredentialsService.findByUsername(request.username());
+        userCredentialsService.checkLockStatus(userCredentials);
 
         try {
             Authentication authentication = authenticationManager.authenticate(
@@ -58,22 +60,26 @@ public class AuthServiceImpl implements AuthService {
             );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            userDetails = (UserDetails) authentication.getPrincipal();
-        } catch (AuthenticationException exception) {
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+
+            userCredentialsService.loginSucceeded(userCredentials.getUsername());
+
+            Map<String, String> tokens = jwtService.generateTokens(userDetails);
+
+            refreshTokenService.revokeAllRefreshTokens(request.username());
+            refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
+
+            return tokens;
+        } catch (BadCredentialsException exception) {
             log.error("{}!", Entity.INCORRECT_LOGIN_ATTEMPT.getValue());
+
+            userCredentialsService.loginFailed(request.username());
 
             IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(request.username(), TimeUtil.getTurkeyDateTime());
             incorrectLoginAttemptService.createIncorrectLoginAttempt(incorrectLoginAttemptRequest);
 
             throw exception;
         }
-
-        Map<String, String> tokens = jwtService.generateTokens(userDetails);
-
-        refreshTokenService.revokeAllRefreshTokens(request.username());
-        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
-
-        return tokens;
     }
 
     @Transactional
@@ -86,7 +92,12 @@ public class AuthServiceImpl implements AuthService {
         }
 
         CustomerDto registeredCustomer = customerService.createEntity(request.customerDto());
-        UserCredentialsDto userCredentialRequest = new UserCredentialsDto(registeredCustomer.getNationalId(), registeredCustomer.getId(), request.password(), request.roles());
+        UserCredentialsDto userCredentialRequest = new UserCredentialsDto(
+                registeredCustomer.getNationalId(),
+                registeredCustomer.getId(),
+                request.password(),
+                request.roles()
+        );
 
         userCredentialsService.createUserCredentials(userCredentialRequest);
     }

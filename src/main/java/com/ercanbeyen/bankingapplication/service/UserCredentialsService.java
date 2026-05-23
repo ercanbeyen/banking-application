@@ -8,6 +8,9 @@ import java.util.Set;
 
 public interface UserCredentialsService {
     void createUserCredentials(UserCredentialsDto request);
+    void loginSucceeded(String username);
+    void loginFailed(String username);
+    void checkLockStatus(UserCredentials userCredentials);
     UserCredentials findByUsername(String username);
     Set<ERole> getRoles(String username);
     void updateRoles(String username, Set<String> roles);
