@@ -1,11 +1,7 @@
 package com.ercanbeyen.bankingapplication.security.service;
 
-import com.ercanbeyen.bankingapplication.entity.Permission;
-import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
-import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import io.jsonwebtoken.security.MacAlgorithm;
@@ -14,12 +10,14 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @Service
@@ -35,7 +33,6 @@ public class JwtService {
     @Value("${jwt.refreshExpiration}")
     private int refreshTokenDuration;
     private SecretKey key;
-    private final UserCredentialsService userCredentialsService;
 
     @PostConstruct
     public void init() {
@@ -44,18 +41,22 @@ public class JwtService {
 
     public Map<String, String> generateTokens(UserDetails userDetails) {
         String username = userDetails.getUsername();
-        UserCredentials userCredentials = userCredentialsService.findByUsername(username);
-        Set<Role> userCredentialRoles = userCredentials.getRoles();
+        Set<GrantedAuthority> grantedAuthorities = (Set<GrantedAuthority>) userDetails.getAuthorities();
         Map<String, Object> claims = new HashMap<>();
 
-        Set<String> roles = userCredentialRoles.stream()
-                .map(role -> role.getName().toString())
+        final String rolePrefix = "ROLE_";
+        Predicate<String> authorityStartsWith = authority -> authority.startsWith(rolePrefix);
+
+        Set<String> roles = grantedAuthorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authorityStartsWith)
+                .map(authority -> authority.substring(rolePrefix.length()))
                 .collect(Collectors.toSet());
         claims.put("roles", roles);
 
-        Set<String> permissions = userCredentialRoles.stream()
-                .flatMap(role -> role.getPermissions().stream())
-                .map(Permission::getName)
+        Set<String> permissions = grantedAuthorities.stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authorityStartsWith.negate())
                 .collect(Collectors.toSet());
         claims.put("permissions", permissions);
 
@@ -85,6 +86,19 @@ public class JwtService {
                 .compact();
 
         return Map.of(JwtUtil.Header.ACCESS_TOKEN_HEADER, accessToken, JwtUtil.Header.REFRESH_TOKEN_HEADER, refreshToken);
+    }
+
+    public long getRemainingExpiration(String token) {
+        try {
+            Date expiration = extractExpiration(token);
+            Date now = new Date();
+
+            long remainingMillis = expiration.getTime() - now.getTime();
+
+            return Math.max(remainingMillis, 0);
+        } catch (Exception _) { // Token is invalid, corrupted, or has already expired
+            return 0;
+        }
     }
 
     public String extractSubject(String token) {

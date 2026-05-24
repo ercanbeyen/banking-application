@@ -16,6 +16,7 @@ import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -45,17 +46,17 @@ public class AuthServiceImpl implements AuthService {
     private final JwtService jwtService;
 
     @Override
-    public Map<String, String> loginUser(LoginRequest request) {
+    public Map<String, String> loginUser(LoginRequest loginRequest, HttpServletRequest httpServletRequest) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        UserCredentials userCredentials = userCredentialsService.findByUsername(request.username());
+        UserCredentials userCredentials = userCredentialsService.findByUsername(loginRequest.username());
         userCredentialsService.checkLockStatus(userCredentials);
 
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            request.username(),
-                            request.password()
+                            loginRequest.username(),
+                            loginRequest.password()
                     )
             );
 
@@ -66,16 +67,20 @@ public class AuthServiceImpl implements AuthService {
 
             Map<String, String> tokens = jwtService.generateTokens(userDetails);
 
-            refreshTokenService.revokeAllRefreshTokens(request.username());
+            refreshTokenService.revokeAllRefreshTokens(loginRequest.username());
             refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
 
             return tokens;
         } catch (BadCredentialsException exception) {
             log.error("{}!", Entity.INCORRECT_LOGIN_ATTEMPT.getValue());
 
-            userCredentialsService.loginFailed(request.username());
+            userCredentialsService.loginFailed(loginRequest.username(), httpServletRequest);
 
-            IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(request.username(), TimeUtil.getTurkeyDateTime());
+            if (userCredentials.getFailedAttempt() >= UserCredentialsServiceImpl.MAX_FAILED_ATTEMPTS) {
+                refreshTokenService.revokeAllRefreshTokens(userCredentials.getUsername());
+            }
+
+            IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(loginRequest.username(), TimeUtil.getTurkeyDateTime());
             incorrectLoginAttemptService.createIncorrectLoginAttempt(incorrectLoginAttemptRequest);
 
             throw exception;

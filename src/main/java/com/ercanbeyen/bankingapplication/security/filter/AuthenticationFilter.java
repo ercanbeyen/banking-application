@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.security.filter;
 
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
+import com.ercanbeyen.bankingapplication.service.TokenBlackListService;
 import io.micrometer.common.lang.NonNullApi;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -28,6 +29,7 @@ import java.util.Optional;
 public class AuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
+    private final TokenBlackListService tokenBlackListService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -36,6 +38,12 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                     .orElse(null);
 
             if (Optional.ofNullable(token).isPresent() && jwtService.validateToken(token)) {
+                if (tokenBlackListService.isTokenBlacklisted(token)) {
+                    response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                    response.getWriter().write("This token has been invalidated due to an account lock.");
+                    return;
+                }
+
                 String username = jwtService.extractSubject(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
