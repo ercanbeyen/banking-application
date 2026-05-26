@@ -36,8 +36,8 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<Void> loginUser(@RequestBody @Valid LoginRequest loginRequest, HttpServletRequest httpServletRequest, HttpServletResponse httpServletResponse) {
-        Map<String, String> tokens = authService.loginUser(loginRequest, httpServletRequest);
+    public ResponseEntity<Void> loginUser(@RequestBody @Valid LoginRequest loginRequest, HttpServletResponse httpServletResponse) {
+        Map<String, String> tokens = authService.loginUser(loginRequest);
         httpServletResponse.addHeader(JwtUtil.Header.ACCESS_TOKEN_HEADER, tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER));
         httpServletResponse.addHeader(JwtUtil.Header.REFRESH_TOKEN_HEADER, tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
 

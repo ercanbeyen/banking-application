@@ -1,8 +1,9 @@
 package com.ercanbeyen.bankingapplication.security.filter;
 
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
-import com.ercanbeyen.bankingapplication.service.TokenBlackListService;
+import com.ercanbeyen.bankingapplication.service.UserRevocationService;
 import io.micrometer.common.lang.NonNullApi;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -29,7 +30,7 @@ import java.util.Optional;
 public class AuthenticationFilter extends OncePerRequestFilter {
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;
-    private final TokenBlackListService tokenBlackListService;
+    private final UserRevocationService userRevocationService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -38,13 +39,15 @@ public class AuthenticationFilter extends OncePerRequestFilter {
                     .orElse(null);
 
             if (Optional.ofNullable(token).isPresent() && jwtService.validateToken(token)) {
-                if (tokenBlackListService.isTokenBlacklisted(token)) {
+                String username = jwtService.extractSubject(token);
+                long issuedAt = jwtService.extractIssuedAt(token).getTime();
+
+                if (userRevocationService.isTokenRevoked(username, issuedAt)) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                    response.getWriter().write("This token has been invalidated due to an account lock.");
+                    response.getWriter().write(String.format(ResponseMessage.ACCESS_DENIED, "For security reasons, all sessions for this account have been closed!"));
                     return;
                 }
 
-                String username = jwtService.extractSubject(token);
                 UserDetails userDetails = userDetailsService.loadUserByUsername(username);
                 UsernamePasswordAuthenticationToken authentication = new UsernamePasswordAuthenticationToken(
                         userDetails,

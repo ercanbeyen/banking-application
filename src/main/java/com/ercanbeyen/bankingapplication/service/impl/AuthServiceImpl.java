@@ -16,7 +16,6 @@ import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,9 +43,10 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenService refreshTokenService;
     private final IncorrectLoginAttemptService incorrectLoginAttemptService;
     private final JwtService jwtService;
+    private final UserRevocationService userRevocationService;
 
     @Override
-    public Map<String, String> loginUser(LoginRequest loginRequest, HttpServletRequest httpServletRequest) {
+    public Map<String, String> loginUser(LoginRequest loginRequest) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         UserCredentials userCredentials = userCredentialsService.findByUsername(loginRequest.username());
@@ -74,9 +74,10 @@ public class AuthServiceImpl implements AuthService {
         } catch (BadCredentialsException exception) {
             log.error("{}!", Entity.INCORRECT_LOGIN_ATTEMPT.getValue());
 
-            userCredentialsService.loginFailed(loginRequest.username(), httpServletRequest);
+            userCredentialsService.loginFailed(loginRequest.username());
 
-            if (userCredentials.getFailedAttempt() >= UserCredentialsServiceImpl.MAX_FAILED_ATTEMPTS) {
+            if (!userCredentials.isAccountNonLocked()) {
+                userRevocationService.revokeAllTokensForUser(userCredentials.getUsername());
                 refreshTokenService.revokeAllRefreshTokens(userCredentials.getUsername());
             }
 

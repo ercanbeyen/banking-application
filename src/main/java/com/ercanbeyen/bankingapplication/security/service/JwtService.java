@@ -88,25 +88,16 @@ public class JwtService {
         return Map.of(JwtUtil.Header.ACCESS_TOKEN_HEADER, accessToken, JwtUtil.Header.REFRESH_TOKEN_HEADER, refreshToken);
     }
 
-    public long getRemainingExpiration(String token) {
-        try {
-            Date expiration = extractExpiration(token);
-            Date now = new Date();
-
-            long remainingMillis = expiration.getTime() - now.getTime();
-
-            return Math.max(remainingMillis, 0);
-        } catch (Exception _) { // Token is invalid, corrupted, or has already expired
-            return 0;
-        }
-    }
-
     public String extractSubject(String token) {
         return extractClaims(token).getSubject();
     }
 
     public Date extractExpiration(String token) {
         return extractClaims(token).getExpiration();
+    }
+
+    public Date extractIssuedAt(String token) {
+        return extractClaims(token).getIssuedAt();
     }
 
     public String extractToken(HttpServletRequest request) {
