@@ -9,6 +9,7 @@ It is a banking application includes basic banking services. Abstract CRUD appro
 
 ### Information
 - Customers must register and then log in before they can use banking services.
+- Customers can attempt to log in a maximum of 5 times consecutively. If they fail to log in 5 times consecutively, their account will be locked for 30 minutes.
 - Customers can transfer money to their deposit accounts using their current accounts.
 - Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
 - Customers can trade within daily transaction limits and may incur transaction fees for some transactions.

@@ -10,13 +10,16 @@ import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.UserCredentialsRepository;
 import com.ercanbeyen.bankingapplication.service.RoleService;
+import com.ercanbeyen.bankingapplication.service.UserRevocationService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.LockedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -24,6 +27,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class UserCredentialsServiceImpl implements UserCredentialsService {
+    public static final int MAX_FAILED_ATTEMPTS = 5;
+
     private final UserCredentialsRepository userCredentialsRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
@@ -41,6 +46,64 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
         userCredentials.setRoles(roles);
 
         userCredentialsRepository.save(userCredentials);
+    }
+
+    @Override
+    public void loginSucceeded(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        userCredentialsRepository.findByUsername(username)
+                .ifPresent(userCredentials -> {
+                    userCredentials.setFailedAttempt(0);
+                    userCredentials.setAccountNonLocked(true);
+                    userCredentials.setLockAt(null);
+
+                    userCredentialsRepository.save(userCredentials);
+                });
+    }
+
+    @Override
+    public void loginFailed(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        userCredentialsRepository.findByUsername(username)
+                .ifPresent(userCredentials -> {
+                    int newAttempts = userCredentials.getFailedAttempt() + 1;
+                    userCredentials.setFailedAttempt(newAttempts);
+
+                    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+                        userCredentials.setAccountNonLocked(false);
+                        userCredentials.setLockAt(LocalDateTime.now());
+                    }
+
+                    userCredentialsRepository.save(userCredentials);
+                });
+    }
+
+    @Override
+    public void checkLockStatus(UserCredentials userCredentials) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        if (userCredentials.isAccountNonLocked()) {
+            log.warn("Account has not been locked!");
+            return;
+        }
+
+        if (userCredentials.getLockAt() != null) { // Account has been locked before
+            LocalDateTime lockExpiryTime = userCredentials.getLockAt().plusMinutes(UserRevocationService.LOCK_TIME_DURATION_MINUTES);
+
+            if (LocalDateTime.now().isAfter(lockExpiryTime)) { // The lock period has expired, open the account
+                userCredentials.setAccountNonLocked(true);
+                userCredentials.setFailedAttempt(0);
+                userCredentials.setLockAt(null);
+
+                userCredentialsRepository.save(userCredentials);
+
+                return;
+            }
+        }
+
+        throw new LockedException("Your account has been locked due to too many failed attempts. Duration: " + UserRevocationService.LOCK_TIME_DURATION_MINUTES + " minutes.");
     }
 
     @Override

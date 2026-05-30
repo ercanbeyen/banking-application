@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.annotation.RolesRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -23,6 +24,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -34,10 +36,10 @@ public class AuthController {
     private final AuthService authService;
 
     @PostMapping("/login")
-    public ResponseEntity<Void> loginUser(@RequestBody @Valid LoginRequest request, HttpServletResponse response) {
-        Map<String, String> tokens = authService.loginUser(request);
-        response.addHeader(JwtUtil.Header.ACCESS_TOKEN_HEADER, tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER));
-        response.addHeader(JwtUtil.Header.REFRESH_TOKEN_HEADER, tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
+    public ResponseEntity<Void> loginUser(@RequestBody @Valid LoginRequest loginRequest, HttpServletResponse httpServletResponse) {
+        Map<String, String> tokens = authService.loginUser(loginRequest);
+        httpServletResponse.addHeader(JwtUtil.Header.ACCESS_TOKEN_HEADER, tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER));
+        httpServletResponse.addHeader(JwtUtil.Header.REFRESH_TOKEN_HEADER, tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
 
         return ResponseEntity.ok().build();
     }
@@ -77,11 +79,17 @@ public class AuthController {
         return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('ADMIN') OR #username == authentication.principal.username")
+    @PreAuthorize("hasRole('ADMIN') OR #username == authentication.principal.username")
     @PatchMapping(value = "/users/{username}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
     public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @NotBlank(message = "Password should not be blank") String password) {
         authService.updatePassword(username, password);
         MessageResponse<String> response = new MessageResponse<>("Password is successfully updated!");
         return ResponseEntity.ok(response);
+    }
+
+    @PreAuthorize("hasAuthority('READ_DATA') OR #username == authentication.principal.username")
+    @GetMapping("/users/{username}/incorrect-login-attempts")
+    public ResponseEntity<List<IncorrectLoginAttemptDto>> getIncorrectLoginAttempts(@PathVariable("username") @P("username") String username) {
+        return ResponseEntity.ok(authService.getIncorrectLoginAttempts(username));
     }
 }
