@@ -1,9 +1,10 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.annotation.RolesRequest;
-import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
+import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -15,10 +16,8 @@ import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
@@ -67,7 +66,7 @@ public class AuthController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users/{username}/roles")
-    public ResponseEntity<Set<ERole>> getRoles(@PathVariable("username") String username) {
+    public ResponseEntity<Set<String>> getRoles(@PathVariable("username") String username) {
         return ResponseEntity.ok(authService.getRoles(username));
     }
 
@@ -80,10 +79,15 @@ public class AuthController {
     }
 
     @PreAuthorize("hasRole('ADMIN') OR #username == authentication.principal.username")
-    @PatchMapping(value = "/users/{username}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
-    public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @NotBlank(message = "Password should not be blank") String password) {
-        authService.updatePassword(username, password);
+    @PatchMapping(value = "/users/{username}/password")
+    public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @Valid UpdatePasswordRequest request) {
+        if (!request.newPassword().equals(request.verificationPassword())) {
+            throw new BadRequestException("Passwords must match!");
+        }
+
+        authService.updatePassword(username, request.newPassword());
         MessageResponse<String> response = new MessageResponse<>("Password is successfully updated!");
+
         return ResponseEntity.ok(response);
     }
 

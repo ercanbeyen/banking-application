@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class UserCredentialsServiceImpl implements UserCredentialsService {
-    public static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final int MAX_FAILED_ATTEMPTS = 5;
 
     private final UserCredentialsRepository userCredentialsRepository;
     private final PasswordEncoder passwordEncoder;
@@ -107,23 +107,6 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
     }
 
     @Override
-    public UserCredentials findByUsername(String username) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return userCredentialsRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.USER_CREDENTIALS.getValue())));
-    }
-
-    @Override
-    public Set<ERole> getRoles(String username) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return findByUsername(username)
-                .getRoles()
-                .stream()
-                .map(Role::getName)
-                .collect(Collectors.toSet());
-    }
-
-    @Override
     public void updateRoles(String username, Set<String> request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -138,10 +121,18 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
     public void updatePassword(String username, String password) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        UserCredentials userCredentials = findByUsername(username);
-        userCredentials.setPassword(passwordEncoder.encode(password));
+        userCredentialsRepository.findByUsername(username)
+                .ifPresent(userCredentials -> {
+                    userCredentials.setPassword(passwordEncoder.encode(password));
+                    userCredentialsRepository.save(userCredentials);
+                });
+    }
 
-        userCredentialsRepository.save(userCredentials);
+    @Override
+    public UserCredentials findByUsername(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return userCredentialsRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.USER_CREDENTIALS.getValue())));
     }
 
     @Override
@@ -150,9 +141,9 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
         return userCredentialsRepository.existsByUsername(username);
     }
 
-    private Set<Role> getRequestedRoles(Set<String> requestedRoles) {
-        return requestedRoles.stream()
-                .map(requestedRole -> roleService.findByName(ERole.valueOf(requestedRole)))
+    private Set<Role> getRequestedRoles(Set<String> roles) {
+        return roles.stream()
+                .map(role -> roleService.findByName(ERole.valueOf(role)))
                 .collect(Collectors.toSet());
     }
 }

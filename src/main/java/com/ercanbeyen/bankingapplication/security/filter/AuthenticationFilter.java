@@ -35,8 +35,7 @@ public class AuthenticationFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         try {
-            String token = JwtUtil.extractToken(request)
-                    .orElse(null);
+            String token = JwtUtil.extractToken(request).orElse(null);
 
             if (Optional.ofNullable(token).isPresent() && jwtService.validateToken(token)) {
                 String username = jwtService.extractSubject(token);

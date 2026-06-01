@@ -1,6 +1,5 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
@@ -13,6 +12,7 @@ import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
+import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
@@ -26,6 +26,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -44,6 +45,7 @@ public class AuthServiceImpl implements AuthService {
     private final IncorrectLoginAttemptService incorrectLoginAttemptService;
     private final JwtService jwtService;
     private final UserRevocationService userRevocationService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     public Map<String, String> loginUser(LoginRequest loginRequest) {
@@ -131,9 +133,9 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public Set<ERole> getRoles(String username) {
+    public Set<String> getRoles(String username) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return userCredentialsService.getRoles(username);
+        return UserDetailsUtil.getRoles(userDetailsService.loadUserByUsername(username));
     }
 
     @Transactional
@@ -147,6 +149,13 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void updatePassword(String username, String password) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        if (passwordEncoder.matches(password, userDetails.getPassword())) {
+            throw new BadRequestException("The new password and the current password must be different!");
+        }
+
         userCredentialsService.updatePassword(username, password);
         refreshTokenService.revokeAllRefreshTokens(username);
     }
