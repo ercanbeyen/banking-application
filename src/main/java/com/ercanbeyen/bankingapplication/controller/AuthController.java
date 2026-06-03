@@ -4,7 +4,6 @@ import com.ercanbeyen.bankingapplication.annotation.RolesRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
-import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -12,6 +11,7 @@ import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.service.AuthService;
+import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -47,8 +47,8 @@ public class AuthController {
     public ResponseEntity<MessageResponse<String>> registerUser(@RequestBody @Valid RegistrationRequest request) {
         CustomerUtil.checkRequest(request.customerDto());
         authService.registerUser(request);
-        MessageResponse<String> response = new MessageResponse<>("User registered successfully!");
 
+        MessageResponse<String> response = new MessageResponse<>("User registered successfully!");
         return ResponseEntity.ok(response);
     }
 
@@ -74,6 +74,7 @@ public class AuthController {
     @PatchMapping("/users/{username}/roles")
     public ResponseEntity<MessageResponse<String>> updateRoles(@PathVariable("username") String username, @RequestBody @RolesRequest Set<String> roles) {
         authService.updateRoles(username, roles);
+
         MessageResponse<String> response = new MessageResponse<>("Roles are successfully updated!");
         return ResponseEntity.ok(response);
     }
@@ -81,13 +82,10 @@ public class AuthController {
     @PreAuthorize("hasRole('ADMIN') OR #username == authentication.principal.username")
     @PatchMapping(value = "/users/{username}/password")
     public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @Valid UpdatePasswordRequest request) {
-        if (!request.newPassword().equals(request.verificationPassword())) {
-            throw new BadRequestException("Passwords must match!");
-        }
-
+        AuthUtil.checkUpdatePasswordRequest(request);
         authService.updatePassword(username, request.newPassword());
-        MessageResponse<String> response = new MessageResponse<>("Password is successfully updated!");
 
+        MessageResponse<String> response = new MessageResponse<>("Password is successfully updated!");
         return ResponseEntity.ok(response);
     }
 
