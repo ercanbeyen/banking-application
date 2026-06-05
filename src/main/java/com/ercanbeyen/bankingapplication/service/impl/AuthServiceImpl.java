@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
@@ -96,6 +97,7 @@ public class AuthServiceImpl implements AuthService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         if (userCredentialsService.existsByUsername(request.customerDto().getNationalId())) {
+            log.error(LogMessage.RESOURCE_NOT_UNIQUE, Entity.USER_CREDENTIALS.getValue());
             throw new ResourceConflictException("User is already registered!");
         }
 
@@ -153,7 +155,7 @@ public class AuthServiceImpl implements AuthService {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
         if (passwordEncoder.matches(password, userDetails.getPassword())) {
-            throw new BadRequestException("The new password and the current password must be different!");
+            throw new BadRequestException(ResponseMessage.PASSWORD_SHOULD_BE_DIFFERENT);
         }
 
         userCredentialsService.updatePassword(username, password);

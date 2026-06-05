@@ -13,6 +13,7 @@ import com.ercanbeyen.bankingapplication.repository.UserCredentialsRepository;
 import com.ercanbeyen.bankingapplication.service.RoleService;
 import com.ercanbeyen.bankingapplication.service.UserRevocationService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
+import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
-import java.util.List;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -30,9 +31,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class UserCredentialsServiceImpl implements UserCredentialsService {
-    private static final int MAX_FAILED_ATTEMPTS = 5;
-    private static final int PASSWORD_HISTORY_MAX_SIZE = 3;
-
     private final UserCredentialsRepository userCredentialsRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
@@ -47,14 +45,15 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
 
         String password = passwordEncoder.encode(request.password());
         userCredentials.setPassword(password);
-        userCredentials.getPasswordHistory().add(password);
-
         userCredentials.setUpdatePasswordAt(TimeUtil.getTurkeyDateTime());
 
-        Set<Role> roles = getRequestedRoles(request.roles());
+        addPasswordToHistory(userCredentials, password);
+
+        Set<Role> roles = getRoles(request.roles());
         userCredentials.setRoles(roles);
 
-        userCredentialsRepository.save(userCredentials);
+        UserCredentials savedUserCredentials = userCredentialsRepository.save(userCredentials);
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.USER_CREDENTIALS.getValue(), savedUserCredentials.getId());
     }
 
     @Override
@@ -80,7 +79,7 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
                     int newAttempts = userCredentials.getFailedAttempt() + 1;
                     userCredentials.setFailedAttempt(newAttempts);
 
-                    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+                    if (newAttempts >= AuthUtil.getMaxFailedAttempts()) {
                         userCredentials.setAccountNonLocked(false);
                         userCredentials.setLockAt(LocalDateTime.now());
                     }
@@ -119,7 +118,7 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
     public void updateRoles(String username, Set<String> request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Set<Role> roles = getRequestedRoles(request);
+        Set<Role> roles = getRoles(request);
         UserCredentials userCredentials = findByUsername(username);
         userCredentials.setRoles(roles);
 
@@ -133,11 +132,11 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
         UserCredentials userCredentials = findByUsername(username);
         checkPasswordHistory(password, userCredentials.getPasswordHistory());
 
-        String encodedPassword = passwordEncoder.encode(password);
-        userCredentials.setPassword(encodedPassword);
-        userCredentials.getPasswordHistory().add(encodedPassword);
-
+        String updatedPassword = passwordEncoder.encode(password);
+        userCredentials.setPassword(updatedPassword);
         userCredentials.setUpdatePasswordAt(TimeUtil.getTurkeyDateTime());
+
+        addPasswordToHistory(userCredentials, updatedPassword);
 
         userCredentialsRepository.save(userCredentials);
     }
@@ -155,19 +154,26 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
         return userCredentialsRepository.existsByUsername(username);
     }
 
-    private void checkPasswordHistory(String password, List<String> passwordHistory) {
-        List<String> last3Passwords = passwordHistory.stream()
-                .skip(Math.max(0, passwordHistory.size() - PASSWORD_HISTORY_MAX_SIZE))
-                .toList();
+    private void addPasswordToHistory(UserCredentials userCredentials, String password) {
+        Queue<String> passwordHistoryQueue = userCredentials.getPasswordHistory();
 
-        for (String passwordInHistory : last3Passwords) {
+        if (passwordHistoryQueue.size() >= AuthUtil.getPasswordHistoryMaxSize()) {
+            passwordHistoryQueue.poll();
+        }
+
+        passwordHistoryQueue.offer(password);
+        userCredentials.setPasswordHistory(passwordHistoryQueue);
+    }
+
+    private void checkPasswordHistory(String password, Queue<String> passwordHistory) {
+        for (String passwordInHistory : passwordHistory) {
             if (passwordEncoder.matches(password, passwordInHistory)) {
-                throw new ResourceConflictException("New password should be different from your last " + PASSWORD_HISTORY_MAX_SIZE + " passwords!");
+                throw new ResourceConflictException(ResponseMessage.PASSWORD_SHOULD_BE_DIFFERENT);
             }
         }
     }
 
-    private Set<Role> getRequestedRoles(Set<String> roles) {
+    private Set<Role> getRoles(Set<String> roles) {
         return roles.stream()
                 .map(role -> roleService.findByName(ERole.valueOf(role)))
                 .collect(Collectors.toSet());
