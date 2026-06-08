@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.security.util;
 
+import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import lombok.experimental.UtilityClass;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
@@ -12,11 +13,15 @@ import java.util.stream.Collectors;
 
 @UtilityClass
 public class UserDetailsUtil {
-    public final String rolePrefix = "ROLE_";
+    private final String ROLE_PREFIX = "ROLE_";
 
     public String getUsername(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         return userDetails.getUsername();
+    }
+
+    public String getRole(ERole eRole) {
+        return ROLE_PREFIX + eRole.toString();
     }
 
     public Set<String> getRoles(UserDetails userDetails) {
@@ -36,6 +41,6 @@ public class UserDetailsUtil {
                 .collect(Collectors.toSet());
     }
 
-    private final UnaryOperator<String> extractRoleFromAuthority = authority -> authority.substring(rolePrefix.length());
-    private final Predicate<String> authorityStartsWith = authority -> authority.startsWith(rolePrefix);
+    private final UnaryOperator<String> extractRoleFromAuthority = authority -> authority.substring(ROLE_PREFIX.length());
+    private final Predicate<String> authorityStartsWith = authority -> authority.startsWith(ROLE_PREFIX);
 }

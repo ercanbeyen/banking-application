@@ -33,7 +33,7 @@ public class UserDetailsImpl implements UserDetails {
         Set<GrantedAuthority> authorities = new HashSet<>();
 
         for (Role role : userCredentials.getRoles()) {
-            authorities.add(new SimpleGrantedAuthority(UserDetailsUtil.rolePrefix + role.getName()));
+            authorities.add(new SimpleGrantedAuthority(UserDetailsUtil.getRole(role.getName())));
 
             for (Permission permission : role.getPermissions()) {
                 authorities.add(new SimpleGrantedAuthority(permission.getName()));

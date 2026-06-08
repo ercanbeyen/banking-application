@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
+import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
 import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
@@ -15,6 +16,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.*;
+import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import jakarta.transaction.Transactional;
@@ -106,6 +108,7 @@ public class AuthServiceImpl implements AuthService {
                 registeredCustomer.getNationalId(),
                 registeredCustomer.getId(),
                 request.password(),
+                AuthUtil.getDefaultPasswordRenewalPeriod(),
                 request.roles()
         );
 
@@ -149,16 +152,16 @@ public class AuthServiceImpl implements AuthService {
     }
 
     @Override
-    public void updatePassword(String username, String password) {
+    public void updatePassword(String username, UpdatePasswordRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
 
-        if (passwordEncoder.matches(password, userDetails.getPassword())) {
+        if (passwordEncoder.matches(request.newPassword(), userDetails.getPassword())) {
             throw new BadRequestException(ResponseMessage.PASSWORD_SHOULD_BE_DIFFERENT);
         }
 
-        userCredentialsService.updatePassword(username, password);
+        userCredentialsService.updatePassword(username, request);
         refreshTokenService.revokeAllRefreshTokens(username);
     }
 

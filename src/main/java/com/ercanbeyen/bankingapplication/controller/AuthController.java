@@ -48,7 +48,7 @@ public class AuthController {
         CustomerUtil.checkRequest(request.customerDto());
         authService.registerUser(request);
 
-        MessageResponse<String> response = new MessageResponse<>("User registered successfully!");
+        MessageResponse<String> response = new MessageResponse<>("User successfully registered!");
         return ResponseEntity.ok(response);
     }
 
@@ -83,7 +83,7 @@ public class AuthController {
     @PatchMapping(value = "/users/{username}/password")
     public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @Valid UpdatePasswordRequest request) {
         AuthUtil.checkUpdatePasswordRequest(request);
-        authService.updatePassword(username, request.newPassword());
+        authService.updatePassword(username, request);
 
         MessageResponse<String> response = new MessageResponse<>("Password is successfully updated!");
         return ResponseEntity.ok(response);

@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
+import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
 import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
@@ -45,7 +46,8 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
 
         String password = passwordEncoder.encode(request.password());
         userCredentials.setPassword(password);
-        userCredentials.setUpdatePasswordAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordUpdatedAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordRenewalPeriod(request.passwordRenewalPeriod());
 
         addPasswordToHistory(userCredentials, password);
 
@@ -126,15 +128,16 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
     }
 
     @Override
-    public void updatePassword(String username, String password) {
+    public void updatePassword(String username, UpdatePasswordRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         UserCredentials userCredentials = findByUsername(username);
-        checkPasswordHistory(password, userCredentials.getPasswordHistory());
+        checkPasswordHistory(request.newPassword(), userCredentials.getPasswordHistory());
 
-        String updatedPassword = passwordEncoder.encode(password);
+        String updatedPassword = passwordEncoder.encode(request.newPassword());
         userCredentials.setPassword(updatedPassword);
-        userCredentials.setUpdatePasswordAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordUpdatedAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordRenewalPeriod(request.passwordRenewalPeriod());
 
         addPasswordToHistory(userCredentials, updatedPassword);
 

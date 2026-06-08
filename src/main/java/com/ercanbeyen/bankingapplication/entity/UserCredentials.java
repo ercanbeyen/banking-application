@@ -34,7 +34,7 @@ public class UserCredentials {
     private boolean accountNonLocked = true;
     @Getter
     @Setter
-    private int failedAttempt = 0;
+    private Integer failedAttempt = 0;
     @Getter
     @Setter
     private LocalDateTime lockAt;
@@ -49,7 +49,10 @@ public class UserCredentials {
     private Set<Role> roles = new HashSet<>();
     @Getter
     @Setter
-    private LocalDateTime updatePasswordAt;
+    private Integer passwordRenewalPeriod;
+    @Getter
+    @Setter
+    private LocalDateTime passwordUpdatedAt;
     @ElementCollection
     @CollectionTable(
             name = "user_passwords",
