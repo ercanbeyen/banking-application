@@ -42,7 +42,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import static io.restassured.RestAssured.given;
@@ -160,19 +159,19 @@ class CustomerControllerTest {
         CustomerDto customerDto = MockCustomerFactory.generateMockCustomerDtos().getFirst();
         customerDto.setId(null);
 
-        RegistrationRequest request = new RegistrationRequest(customerDto, "password1", roles);
+        RegistrationRequest request = new RegistrationRequest(customerDto, "124578", roles);
         registerCustomer(request);
 
         customerDto = MockCustomerFactory.generateMockCustomerDtos().get(1);
         customerDto.setId(null);
 
-        request = new RegistrationRequest(customerDto, "password2", roles);
+        request = new RegistrationRequest(customerDto, "235878", roles);
         registerCustomer(request);
 
         customerDto = MockCustomerFactory.generateMockCustomerDtos().getLast();
         customerDto.setId(null);
 
-        request = new RegistrationRequest(customerDto, "password3", roles);
+        request = new RegistrationRequest(customerDto, "256893", roles);
         registerCustomer(request);
 
         generateAccessTokensOfCustomers();
@@ -291,12 +290,9 @@ class CustomerControllerTest {
     }
 
     private void registerCustomer(RegistrationRequest request) {
-        UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
-        Map<String, String> tokens = jwtService.generateTokens(userDetails);
         String body = gson.toJson(request);
 
         given()
-                .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)))
                 .contentType(ContentType.JSON)
                 .body(body)
                 .when()

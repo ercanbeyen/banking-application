@@ -5,7 +5,9 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
+import com.ercanbeyen.bankingapplication.dto.request.PasswordValidationRequest;
 import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
+import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
@@ -32,9 +34,11 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.function.IntFunction;
 
 @Service
 @Slf4j
@@ -98,16 +102,23 @@ public class AuthServiceImpl implements AuthService {
     public void registerUser(RegistrationRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        if (userCredentialsService.existsByUsername(request.customerDto().getNationalId())) {
+        CustomerDto requestedCustomer = request.customerDto();
+        String username = requestedCustomer.getNationalId();
+        String password = request.password();
+
+        if (userCredentialsService.existsByUsername(username)) {
             log.error(LogMessage.RESOURCE_NOT_UNIQUE, Entity.USER_CREDENTIALS.getValue());
             throw new ResourceConflictException("User is already registered!");
         }
 
-        CustomerDto registeredCustomer = customerService.createEntity(request.customerDto());
+        PasswordValidationRequest passwordValidationRequest = new PasswordValidationRequest(password, username, requestedCustomer.getPhoneNumber(), requestedCustomer.getBirthDate());
+        validatePassword(passwordValidationRequest);
+
+        CustomerDto registeredCustomer = customerService.createEntity(requestedCustomer);
         UserCredentialsDto userCredentialRequest = new UserCredentialsDto(
                 registeredCustomer.getNationalId(),
                 registeredCustomer.getId(),
-                request.password(),
+                password,
                 AuthUtil.getDefaultPasswordRenewalPeriod(),
                 request.roles()
         );
@@ -156,10 +167,16 @@ public class AuthServiceImpl implements AuthService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+        String newPassword = request.newPassword();
 
-        if (passwordEncoder.matches(request.newPassword(), userDetails.getPassword())) {
+        if (passwordEncoder.matches(newPassword, userDetails.getPassword())) {
             throw new BadRequestException(ResponseMessage.PASSWORD_SHOULD_BE_DIFFERENT);
         }
+
+        Customer customer = customerService.findByNationalId(username);
+
+        PasswordValidationRequest passwordValidationRequest = new PasswordValidationRequest(newPassword, username, customer.getPhoneNumber(), customer.getBirthDate());
+        validatePassword(passwordValidationRequest);
 
         userCredentialsService.updatePassword(username, request);
         refreshTokenService.revokeAllRefreshTokens(username);
@@ -169,5 +186,49 @@ public class AuthServiceImpl implements AuthService {
     public List<IncorrectLoginAttemptDto> getIncorrectLoginAttempts(String username) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return incorrectLoginAttemptService.getIncorrectLoginAttempts(username);
+    }
+
+    private void validatePassword(PasswordValidationRequest request) {
+        String password = request.password();
+
+        if (request.phoneNumber().contains(password)) {
+            throw new BadRequestException("Password should not contain phone number!");
+        }
+
+        if (request.nationalId().contains(password)) {
+            throw new BadRequestException("Password should not contain national id!");
+        }
+
+        checkBirthDate(password, request.birthDate());
+    }
+
+    private static void checkBirthDate(String password, LocalDate birthDate) {
+        IntFunction<String> formatLocalDateValue = localDateValue -> {
+            if (localDateValue < 10) {
+                return "0" + localDateValue;
+            } else {
+                return String.valueOf(localDateValue);
+            }
+        };
+
+        String year = formatLocalDateValue.apply(birthDate.getYear());
+        String month = formatLocalDateValue.apply(birthDate.getMonthValue());
+        String day = formatLocalDateValue.apply(birthDate.getDayOfMonth());
+
+        List<String> birthDateCombinations = List.of(
+                /* year & month combinations */
+                year + month,
+                month + year,
+                /* month & day combinations */
+                month + day,
+                day + month,
+                /* year & day combinations */
+                year + day,
+                day + year
+        );
+
+        if (birthDateCombinations.contains(password)) {
+            throw new BadRequestException("Password should not contain birth date!");
+        }
     }
 }
