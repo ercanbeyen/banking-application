@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.service.PermissionService;
 import com.ercanbeyen.bankingapplication.service.RoleService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
+import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -41,8 +42,10 @@ public class DataInitializer {
                 systemAdminProperties.getUsername(),
                 systemAdminProperties.getCustomerId(),
                 systemAdminProperties.getPassword(),
+                AuthUtil.getDefaultPasswordRenewalPeriod(),
                 Set.of(ERole.ADMIN.toString())
         );
+
         userCredentialsService.createUserCredentials(request);
         log.warn("System Admin is created!");
     }

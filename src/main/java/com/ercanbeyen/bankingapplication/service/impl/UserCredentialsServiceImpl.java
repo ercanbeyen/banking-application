@@ -5,14 +5,18 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
+import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
 import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.entity.UserCredentials;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.UserCredentialsRepository;
 import com.ercanbeyen.bankingapplication.service.RoleService;
 import com.ercanbeyen.bankingapplication.service.UserRevocationService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
+import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.LockedException;
@@ -20,6 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -27,8 +32,6 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 @Slf4j
 public class UserCredentialsServiceImpl implements UserCredentialsService {
-    public static final int MAX_FAILED_ATTEMPTS = 5;
-
     private final UserCredentialsRepository userCredentialsRepository;
     private final PasswordEncoder passwordEncoder;
     private final RoleService roleService;
@@ -40,12 +43,19 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
         UserCredentials userCredentials = new UserCredentials();
         userCredentials.setCustomerId(request.customerId());
         userCredentials.setUsername(request.username());
-        userCredentials.setPassword(passwordEncoder.encode(request.password()));
 
-        Set<Role> roles = getRequestedRoles(request.roles());
+        String password = passwordEncoder.encode(request.password());
+        userCredentials.setPassword(password);
+        userCredentials.setPasswordUpdatedAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordRenewalPeriod(request.passwordRenewalPeriod());
+
+        addPasswordToHistory(userCredentials, password);
+
+        Set<Role> roles = getRoles(request.roles());
         userCredentials.setRoles(roles);
 
-        userCredentialsRepository.save(userCredentials);
+        UserCredentials savedUserCredentials = userCredentialsRepository.save(userCredentials);
+        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.USER_CREDENTIALS.getValue(), savedUserCredentials.getId());
     }
 
     @Override
@@ -71,7 +81,7 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
                     int newAttempts = userCredentials.getFailedAttempt() + 1;
                     userCredentials.setFailedAttempt(newAttempts);
 
-                    if (newAttempts >= MAX_FAILED_ATTEMPTS) {
+                    if (newAttempts >= AuthUtil.getMaxFailedAttempts()) {
                         userCredentials.setAccountNonLocked(false);
                         userCredentials.setLockAt(LocalDateTime.now());
                     }
@@ -107,27 +117,10 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
     }
 
     @Override
-    public UserCredentials findByUsername(String username) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return userCredentialsRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.USER_CREDENTIALS.getValue())));
-    }
-
-    @Override
-    public Set<ERole> getRoles(String username) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return findByUsername(username)
-                .getRoles()
-                .stream()
-                .map(Role::getName)
-                .collect(Collectors.toSet());
-    }
-
-    @Override
     public void updateRoles(String username, Set<String> request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Set<Role> roles = getRequestedRoles(request);
+        Set<Role> roles = getRoles(request);
         UserCredentials userCredentials = findByUsername(username);
         userCredentials.setRoles(roles);
 
@@ -135,13 +128,27 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
     }
 
     @Override
-    public void updatePassword(String username, String password) {
+    public void updatePassword(String username, UpdatePasswordRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         UserCredentials userCredentials = findByUsername(username);
-        userCredentials.setPassword(passwordEncoder.encode(password));
+        checkPasswordHistory(request.newPassword(), userCredentials.getPasswordHistory());
+
+        String updatedPassword = passwordEncoder.encode(request.newPassword());
+        userCredentials.setPassword(updatedPassword);
+        userCredentials.setPasswordUpdatedAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordRenewalPeriod(request.passwordRenewalPeriod());
+
+        addPasswordToHistory(userCredentials, updatedPassword);
 
         userCredentialsRepository.save(userCredentials);
+    }
+
+    @Override
+    public UserCredentials findByUsername(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return userCredentialsRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.USER_CREDENTIALS.getValue())));
     }
 
     @Override
@@ -150,9 +157,28 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
         return userCredentialsRepository.existsByUsername(username);
     }
 
-    private Set<Role> getRequestedRoles(Set<String> requestedRoles) {
-        return requestedRoles.stream()
-                .map(requestedRole -> roleService.findByName(ERole.valueOf(requestedRole)))
+    private void addPasswordToHistory(UserCredentials userCredentials, String password) {
+        Queue<String> passwordHistoryQueue = userCredentials.getPasswordHistory();
+
+        if (passwordHistoryQueue.size() >= AuthUtil.getPasswordHistoryMaxSize()) {
+            passwordHistoryQueue.poll();
+        }
+
+        passwordHistoryQueue.offer(password);
+        userCredentials.setPasswordHistory(passwordHistoryQueue);
+    }
+
+    private void checkPasswordHistory(String password, Queue<String> passwordHistory) {
+        for (String passwordInHistory : passwordHistory) {
+            if (passwordEncoder.matches(password, passwordInHistory)) {
+                throw new ResourceConflictException(ResponseMessage.PASSWORD_SHOULD_BE_DIFFERENT);
+            }
+        }
+    }
+
+    private Set<Role> getRoles(Set<String> roles) {
+        return roles.stream()
+                .map(role -> roleService.findByName(ERole.valueOf(role)))
                 .collect(Collectors.toSet());
     }
 }

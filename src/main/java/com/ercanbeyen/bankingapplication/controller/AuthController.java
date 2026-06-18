@@ -1,9 +1,9 @@
 package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.annotation.RolesRequest;
-import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
+import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -11,14 +11,13 @@ import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.service.AuthService;
+import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
@@ -48,8 +47,8 @@ public class AuthController {
     public ResponseEntity<MessageResponse<String>> registerUser(@RequestBody @Valid RegistrationRequest request) {
         CustomerUtil.checkRequest(request.customerDto());
         authService.registerUser(request);
-        MessageResponse<String> response = new MessageResponse<>("User registered successfully!");
 
+        MessageResponse<String> response = new MessageResponse<>("User successfully registered!");
         return ResponseEntity.ok(response);
     }
 
@@ -67,7 +66,7 @@ public class AuthController {
 
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/users/{username}/roles")
-    public ResponseEntity<Set<ERole>> getRoles(@PathVariable("username") String username) {
+    public ResponseEntity<Set<String>> getRoles(@PathVariable("username") String username) {
         return ResponseEntity.ok(authService.getRoles(username));
     }
 
@@ -75,14 +74,17 @@ public class AuthController {
     @PatchMapping("/users/{username}/roles")
     public ResponseEntity<MessageResponse<String>> updateRoles(@PathVariable("username") String username, @RequestBody @RolesRequest Set<String> roles) {
         authService.updateRoles(username, roles);
+
         MessageResponse<String> response = new MessageResponse<>("Roles are successfully updated!");
         return ResponseEntity.ok(response);
     }
 
     @PreAuthorize("hasRole('ADMIN') OR #username == authentication.principal.username")
-    @PatchMapping(value = "/users/{username}/password", consumes = MediaType.TEXT_PLAIN_VALUE)
-    public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @NotBlank(message = "Password should not be blank") String password) {
-        authService.updatePassword(username, password);
+    @PatchMapping(value = "/users/{username}/password")
+    public ResponseEntity<MessageResponse<String>> updatePassword(@PathVariable("username") @P("username") String username, @RequestBody @Valid UpdatePasswordRequest request) {
+        AuthUtil.checkUpdatePasswordRequest(request);
+        authService.updatePassword(username, request);
+
         MessageResponse<String> response = new MessageResponse<>("Password is successfully updated!");
         return ResponseEntity.ok(response);
     }

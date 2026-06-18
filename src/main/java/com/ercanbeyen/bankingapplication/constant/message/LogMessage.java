@@ -7,7 +7,6 @@ public final class LogMessage {
     public static final String RESOURCE_UNIQUE = "{} is unique";
     public static final String RESOURCE_NOT_UNIQUE = "{} is not unique";
     public static final String EXCEPTION = "Exception message: {}";
-    public static final String TRANSACTION_MESSAGE = "Transaction message: {}";
     public static final String SCHEDULED_TASK_STARTED = "Scheduled task is started for {}";
     public static final String SCHEDULED_TASK_ENDED = "Scheduled task is ended for {}";
     public static final String BEFORE_REQUEST = "Before sending the request";

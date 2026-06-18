@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.security.service.impl;
 import com.ercanbeyen.bankingapplication.entity.Permission;
 import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.entity.UserCredentials;
+import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import lombok.Getter;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -32,14 +33,20 @@ public class UserDetailsImpl implements UserDetails {
         Set<GrantedAuthority> authorities = new HashSet<>();
 
         for (Role role : userCredentials.getRoles()) {
-            authorities.add(new SimpleGrantedAuthority("ROLE_" + role.getName()));
+            authorities.add(new SimpleGrantedAuthority(UserDetailsUtil.getRole(role.getName())));
 
             for (Permission permission : role.getPermissions()) {
                 authorities.add(new SimpleGrantedAuthority(permission.getName()));
             }
         }
 
-        return new UserDetailsImpl(userCredentials.getCustomerId(), userCredentials.getUsername(), userCredentials.getPassword(), userCredentials.isAccountNonLocked(), authorities);
+        return new UserDetailsImpl(
+                userCredentials.getCustomerId(),
+                userCredentials.getUsername(),
+                userCredentials.getPassword(),
+                userCredentials.isAccountNonLocked(),
+                authorities
+        );
     }
 
     @Override
