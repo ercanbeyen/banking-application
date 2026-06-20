@@ -41,10 +41,19 @@ services:
     ports:
       - "9042:9042"
   redisdb:
-    container_name: "bank_cache"
+    container_name: "bank-cache"
     image: "redis"
     ports:
       - "6379:6379"
+    networks:
+      - banking-network
+  mailpit:
+    image: axllent/mailpit
+    container_name: "mail-server"
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+    restart: unless-stopped
     networks:
       - banking-network
 networks:

@@ -20,6 +20,17 @@ spring:
       enabled: true
     jdbc:
       initialize-schema: always
+  mail:
+    host: mailpit
+    port: 1025
+    properties:
+      mail:
+        username: username
+        password: password
+        smtp:
+          auth: false
+          starttls:
+            enable: false
 management:
   endpoints:
     web:
