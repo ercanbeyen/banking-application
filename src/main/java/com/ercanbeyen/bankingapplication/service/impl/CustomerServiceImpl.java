@@ -51,6 +51,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final ExchangeService exchangeService;
     private final CashFlowCalendarService cashFlowCalendarService;
     private final AgreementService agreementService;
+    private final EmailService emailService;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOption filteringOption) {
@@ -107,13 +108,30 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = findById(id);
         checkUniqueness(customer, request);
 
-        customer.setName(request.getName());
-        customer.setSurname(request.getSurname());
         customer.setPhoneNumber(request.getPhoneNumber());
-        customer.setEmail(request.getEmail());
         customer.setGender(request.getGender());
         customer.setBirthDate(request.getBirthDate());
         customer.setAddresses(request.getAddresses());
+
+        String currentFullName = customer.getFullName();
+        String nextFullName = request.getName() + " " + request.getSurname();
+
+        if (!currentFullName.equals(nextFullName)) {
+            customer.setName(request.getName());
+            customer.setSurname(request.getSurname());
+        }
+
+        String currentEmail = customer.getEmail();
+        String nextEmail = request.getEmail();
+
+        if (!currentEmail.equals(nextEmail)) {
+            customer.setEmail(nextEmail);
+            emailService.sendEmail(
+                    nextEmail,
+                    "Email Update",
+                    "Dear " + customer.getFullName() + ",\n\nYour email is successfully updated!"
+            );
+        }
 
         return customerMapper.entityToDto(customerRepository.save(customer));
     }

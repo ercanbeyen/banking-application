@@ -16,6 +16,7 @@ import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
+import com.ercanbeyen.bankingapplication.service.EmailService;
 import com.ercanbeyen.bankingapplication.service.FileService;
 import com.ercanbeyen.bankingapplication.service.impl.CustomerServiceImpl;
 import lombok.extern.slf4j.Slf4j;
@@ -38,6 +39,7 @@ import static org.mockito.Mockito.*;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Customer Service Test")
 class CustomerServiceTest {
     public static final String TESTED_CLASS = "Customer Service";
     @InjectMocks
@@ -54,6 +56,9 @@ class CustomerServiceTest {
     private CashFlowCalendarService cashFlowCalendarService;
     @Mock
     private AgreementService agreementService;
+    @Mock
+    private EmailService emailService;
+
     private List<Customer> customers;
     private List<CustomerAgreementDto> customerAgreementDtos;
     private List<CustomerDto> customerDtos;
@@ -84,8 +89,8 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Get customers case")
-    void givenFilteringOption_whenGetEntity_thenReturnCustomerDtos() {
+    @DisplayName("Happy path test: Given filtering option when getEntities then return CustomerDtos")
+    void givenFilteringOption_whenGetEntities_thenReturnCustomerDtos() {
         // given
         List<CustomerDto> expected = List.of(customerDtos.getFirst());
         CustomerFilteringOption filteringOption = new CustomerFilteringOption();
@@ -109,7 +114,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Get customer case")
+    @DisplayName("Happy path test: Given existing id when getEntity then return CustomerDto")
     void givenExistingId_whenGetEntity_thenReturnCustomerDto() {
         // given
         Optional<CustomerDto> expected = Optional.of(customerDtos.getFirst());
@@ -133,8 +138,8 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Exception path test: Get customer case")
-    void givenNotExistingId_whenGetEntity_thenThrowsResourceNotFoundException() {
+    @DisplayName("Exception path test: Given not existing id when getEntity then throw ResourceNotFoundException")
+    void givenNotExistingId_whenGetEntity_thenThrowResourceNotFoundException() {
         // given
         String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
 
@@ -154,7 +159,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Create customer case")
+    @DisplayName("Happy path test: Given CustomerDto when createEntity then return CustomerDto")
     void givenCustomerDto_whenCreateEntity_thenReturnCustomerDto() {
         // given
         Customer customer = customers.getFirst();
@@ -193,7 +198,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Exception path test: Create customer case")
+    @DisplayName("Exception path test: Given CustomerDto when createEntity then throw ResourceConflictException")
     void givenCustomerDto_whenCreateEntity_thenThrowResourceConflictException() {
         // given
         CustomerDto request = MockCustomerFactory.generateMockCustomerDtos().getFirst();
@@ -214,13 +219,13 @@ class CustomerServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"+905328465704", "+905328465705"})
-    @DisplayName("Happy path: Update customer case")
-    void givenIdAndCustomerDto_whenUpdateEntity_thenReturnCustomerDto(String phoneNumber) {
+    @DisplayName("Happy path test: Given phone number when updateEntity then return CustomerDto")
+    void givenPhoneNumber_whenUpdateEntity_thenReturnCustomerDto(String phoneNumber) {
         // given
-        CustomerDto request = getUpdateMockCustomerDtoRequest(phoneNumber);
+        CustomerDto request = customerDtos.getFirst();
+        request.setPhoneNumber(phoneNumber);
 
         Customer customer = customers.getFirst();
-        customer.setPhoneNumber(phoneNumber);
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
@@ -239,16 +244,18 @@ class CustomerServiceTest {
         verify(customerRepository, times(1)).findById(anyInt());
         verify(customerRepository, times(1)).save(any());
         verify(customerMapper, times(1)).entityToDto(any());
+        verifyNoInteractions(emailService);
 
         assertEquals(phoneNumber, actual.getPhoneNumber());
     }
 
     @ParameterizedTest
     @ValueSource(strings = {"+905328465702", "+905328465703"})
-    @DisplayName("Exception path test: Update customer case")
-    void givenIdAndCustomerDto_whenUpdateEntity_thenThrowResourceConflictException(String phoneNumber) {
+    @DisplayName("Exception path test: Given phone number when updateEntity then throw ResourceConflictException")
+    void givenPhoneNumber_whenUpdateEntity_thenThrowResourceConflictException(String phoneNumber) {
         // given
-        CustomerDto request = getUpdateMockCustomerDtoRequest(phoneNumber);
+        CustomerDto request = customerDtos.getFirst();
+        request.setPhoneNumber(phoneNumber);
         String expected = String.format(ResponseMessage.ALREADY_EXISTS, Entity.CUSTOMER.getValue());
 
         doReturn(Optional.of(customers.getFirst()))
@@ -265,14 +272,50 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1)).findById(anyInt());
         verify(customerRepository, times(1)).findAll();
+        verifyNoInteractions(emailService);
         verifyNoMoreInteractions(customerRepository, customerMapper);
 
         assertEquals(expected, actual);
     }
 
     @Test
+    @DisplayName("Happy path test: Given email when updateEntity then return CustomerDto")
+    void givenEmail_whenUpdateEntity_thenReturnCustomerDto() {
+        // given
+        String email = "updatedTest@email.com";
+        CustomerDto request = customerDtos.getFirst();
+        request.setEmail(email);
+
+        Customer customer = customers.getFirst();
+
+        doReturn(Optional.of(customers.getFirst()))
+                .when(customerRepository)
+                .findById(anyInt());
+        doReturn(customer)
+                .when(customerRepository)
+                .save(any());
+        doNothing()
+                .when(emailService)
+                .sendEmail(any(), any(), any());
+        doReturn(request)
+                .when(customerMapper)
+                .entityToDto(any());
+
+        // when
+        CustomerDto actual = customerService.updateEntity(customer.getId(), request);
+
+        // then
+        verify(customerRepository, times(1)).findById(anyInt());
+        verify(customerRepository, times(1)).save(any());
+        verify(emailService, times(1)).sendEmail(any(), any(), any());
+        verify(customerMapper, times(1)).entityToDto(any());
+
+        assertEquals(email, actual.getEmail());
+    }
+
+    @Test
     @Timeout(value = 5) // The default time unit is seconds
-    @DisplayName("Happy path test: Upload photo case")
+    @DisplayName("Happy path test: Given file when uploadPhoto then return message")
     void givenMultipartFile_whenUploadPhoto_thenReturnMessage() throws IOException {
         // given
         MultipartFile multipartFile = MockFileFactory.generateMockMultipartFile();
@@ -299,7 +342,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Exception path test: Upload photo case")
+    @DisplayName("Exception path test: given multipartFile when uploadFile then throw ResourceExpectationFailedException")
     void givenMultipartFile_whenUploadFile_thenThrowResourceExpectationFailedException() {
         // given
         String expected = ResponseMessage.FILE_UPLOAD_ERROR;
@@ -325,7 +368,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Download profile photo case")
+    @DisplayName("Happy path test: Given id when downloadProfilePhoto then return file")
     void givenId_whenDownloadProfilePhoto_thenReturnFile() throws IOException {
         // given
         File expected = MockFileFactory.generateMockFile();
@@ -346,7 +389,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Exception path test: Download profile photo")
+    @DisplayName("Exception path test: Given id when downloadProfilePhoto then throw ResourceNotFoundException")
     void givenId_whenDownloadProfilePhoto_thenThrowResourceNotFoundException() {
         // given
         String expected = String.format(ResponseMessage.NOT_FOUND, Entity.CUSTOMER.getValue());
@@ -367,7 +410,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Delete profile photo case")
+    @DisplayName("Happy path test: Given id when deletePhoto then return message")
     void givenId_whenDeletePhoto_thenReturnMessage() {
         // given
         int id = customers.getFirst().getId();
@@ -384,7 +427,7 @@ class CustomerServiceTest {
     }
 
     @Test
-    @DisplayName("Happy path test: Get agreements")
+    @DisplayName("Happy path test: Given id when getAgreements then return CustomerAgreements")
     void givenId_whenGetAgreements_thenReturnCustomerAgreements() {
         // given
         int id = customers.getFirst().getId();
@@ -406,11 +449,5 @@ class CustomerServiceTest {
         verify(customerAgreementMapper, times(1)).entityToDto(any());
 
         assertEquals(expected.size(), actual.size());
-    }
-
-    private CustomerDto getUpdateMockCustomerDtoRequest(String email) {
-        CustomerDto request = customerDtos.getFirst();
-        request.setPhoneNumber(email);
-        return request;
     }
 }
