@@ -11,6 +11,7 @@ public final class ResponseMessage {
     public static final String FILE_UPLOAD_SUCCESS = "File is successfully uploaded";
     public static final String FILE_DELETE_SUCCESS = "File is successfully deleted";
     public static final String FILE_UPLOAD_ERROR = "Error occurred while uploading the file";
+    public static final String EMAIL_SENT_SUCCESS = "Email is successfully sent!";
     public static final String INVALID_CONTENT_TYPE = "Invalid content type";
     public static final String INVALID_PHOTO_CONTENT_TYPE = INVALID_CONTENT_TYPE + ". Valid content types for photo are " + PhotoUtil.getPlainContentTypes();
     public static final String EVALUATION_MESSAGE = "Please evaluate your %s activity at %s in the %s before %s";

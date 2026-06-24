@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.MediaType;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -19,6 +20,20 @@ public class AccountActivityUtil {
 
     public void checkFilteringRequest(AccountActivityFilteringRequest request) {
         checkDates(request.fromDate(), request.toDate());
+    }
+
+    public String getAccountStatementFileName(Integer id, String requestedFileType) {
+        String fileType = switch (requestedFileType) {
+            case MediaType.APPLICATION_PDF_VALUE -> "pdf";
+            case MediaType.APPLICATION_OCTET_STREAM_VALUE -> "xlsx";
+            default -> throw new BadRequestException("Unknown file type");
+        };
+
+        return String.format("account_%d_statement.%s", id, fileType);
+    }
+
+    public String getAccountStatementEmailSubject() {
+        return "Account Statement";
     }
 
     private void checkDates(LocalDate fromDate, LocalDate toDate) {
