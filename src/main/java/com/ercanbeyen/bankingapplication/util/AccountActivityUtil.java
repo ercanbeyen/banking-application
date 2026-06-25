@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AttachmentFile;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
@@ -22,18 +23,17 @@ public class AccountActivityUtil {
         checkDates(request.fromDate(), request.toDate());
     }
 
-    public String getAccountStatementFileName(Integer id, String requestedFileType) {
+    public String getAttachmentFileName(String id, String requestedFileType, AttachmentFile attachmentFile) {
         String fileType = switch (requestedFileType) {
             case MediaType.APPLICATION_PDF_VALUE -> "pdf";
             case MediaType.APPLICATION_OCTET_STREAM_VALUE -> "xlsx";
             default -> throw new BadRequestException("Unknown file type");
         };
 
-        return String.format("account_%d_statement.%s", id, fileType);
-    }
-
-    public String getAccountStatementEmailSubject() {
-        return "Account Statement";
+        return switch (attachmentFile) {
+            case ACCOUNT_STATEMENT -> String.format("account_%s_statement.%s", id, fileType);
+            case RECEIPT -> String.format("receipt_%s.%s", id, fileType);
+        };
     }
 
     private void checkDates(LocalDate fromDate, LocalDate toDate) {

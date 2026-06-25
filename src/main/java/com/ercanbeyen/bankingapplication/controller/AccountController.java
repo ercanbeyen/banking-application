@@ -189,7 +189,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentLength(byteArrayOutputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(AccountActivityUtil.getAccountStatementFileName(id, MediaType.APPLICATION_PDF_VALUE))
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
                 .build());
 
         return ResponseEntity.ok()
@@ -206,7 +206,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
         headers.setContentLength(byteArrayOutputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(AccountActivityUtil.getAccountStatementFileName(id, MediaType.APPLICATION_OCTET_STREAM_VALUE))
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
                 .build());
 
         return ResponseEntity.ok()
@@ -219,15 +219,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @GetMapping
     public ResponseEntity<MessageResponse<String>> sendAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) throws MessagingException, IOException {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementPdf(id, request);
+        AttachmentFile attachmentFile = AttachmentFile.ACCOUNT_STATEMENT;
+
         emailService.sendEmail(
                 email,
-                AccountActivityUtil.getAccountStatementEmailSubject(),
-                AccountActivityUtil.getAccountStatementFileName(id, MediaType.APPLICATION_PDF_VALUE),
+                attachmentFile.getValue(),
+                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, attachmentFile),
                 byteArrayOutputStream.toByteArray()
         );
 
         MessageResponse<String> messageResponse = new MessageResponse<>(ResponseMessage.EMAIL_SENT_SUCCESS);
-
         return ResponseEntity.ok(messageResponse);
     }
 
@@ -235,15 +236,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PostMapping("/{id}/statement/excel/email")
     public ResponseEntity<MessageResponse<String>> sendAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) throws MessagingException, IOException {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementExcel(id, request);
+        AttachmentFile attachmentFile = AttachmentFile.ACCOUNT_STATEMENT;
+
         emailService.sendEmail(
                 email,
-                AccountActivityUtil.getAccountStatementEmailSubject(),
-                AccountActivityUtil.getAccountStatementFileName(id, MediaType.APPLICATION_OCTET_STREAM_VALUE),
+                attachmentFile.getValue(),
+                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, attachmentFile),
                 byteArrayOutputStream.toByteArray()
         );
 
         MessageResponse<String> messageResponse = new MessageResponse<>(ResponseMessage.EMAIL_SENT_SUCCESS);
-
         return ResponseEntity.ok(messageResponse);
     }
 
