@@ -18,7 +18,7 @@ It is a banking application includes basic banking services. Abstract CRUD appro
 - Customers are obliged to comply with the agreements they have approved.
 - Customers will receive notifications once the transactions are successfully completed.
 - Customers can participate in surveys related to their transactions.
-- Customers can generate receipts, account statements and financial status report at any time.
+- Customers can receive their receipts, account statements, and financial status reports via email at any time.
 
 ### Details
 - Scheduled tasks run while application is running.
@@ -53,6 +53,7 @@ In order to pull images from Dockerhub, you should run the below commands
 $ docker pull mysql
 $ docker pull cassandra
 $ docker pull redis
+$ docker pull axllent/mailpit
 ```
 
 Then, you should run the below commands in order to run the application (Default port is 8080)
@@ -79,14 +80,21 @@ In order to debug the application, you should follow the below steps
 
 ### Monitor
 ---
-In order to monitor the application, you should use below actuator URL to get metrics you may monitor.<br/>
+In order to monitor the application, you should use the following URL to get metrics you may monitor.<br/>
 `http://localhost:${PORT}/actuator`
  
-If you want to monitor specific metric, you should append the metric to the actuator URL. For example, in order to check health, you should use the below URL to check health.<br/>
+If you want to monitor specific metric, you should append the metric to the actuator URL. For example, in order to check health, you should use the following URL to check health.<br/>
 `http://localhost:${PORT}/actuator/health`
+
+### MailPit Page
+---
+
+You may use MailPit page to access the incoming emails.<br/>
+You can access MailPit page using the following URL.<br/>
+`http://localhost:8025`
 
 ### API Documentation
 ---
 You may use Swagger-UI with the port of the application you configured to access the project's API documentation.<br/>
-You should use the below URL to access the Swagger-UI.<br/>
+You should use the following URL to access the Swagger-UI.<br/>
 `http://localhost:${PORT}/swagger-ui.html`

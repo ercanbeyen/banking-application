@@ -3,13 +3,11 @@ package com.ercanbeyen.bankingapplication.validator;
 import com.ercanbeyen.bankingapplication.annotation.PasswordRequest;
 import jakarta.validation.ConstraintValidator;
 import jakarta.validation.ConstraintValidatorContext;
-import lombok.extern.slf4j.Slf4j;
 
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-@Slf4j
 public class PasswordValidator implements ConstraintValidator<PasswordRequest, String> {
     private static final int PASSWORD_LENGTH = 6;
     private static final int ALLOWED_MAX_REPEATING_DIGITS = 1;
@@ -69,8 +67,6 @@ public class PasswordValidator implements ConstraintValidator<PasswordRequest, S
             } else {
                 descendingCount = 1;
             }
-
-            log.info("Counts:: Ascending: {} & Descending: {}", ascendingCount, descendingCount);
 
             if (ascendingCount > ALLOWED_MAX_CONSECUTIVE_DIGITS || descendingCount > ALLOWED_MAX_CONSECUTIVE_DIGITS) {
                 hasConsecutiveDigits = true;

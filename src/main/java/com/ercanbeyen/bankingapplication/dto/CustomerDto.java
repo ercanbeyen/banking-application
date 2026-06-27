@@ -35,4 +35,8 @@ public non-sealed class CustomerDto extends BaseDto {
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate birthDate;
     private List<@Valid Address> addresses;
+
+    public String getFullName() {
+        return name + " " + surname;
+    }
 }

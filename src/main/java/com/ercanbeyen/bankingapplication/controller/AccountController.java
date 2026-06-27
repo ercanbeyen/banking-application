@@ -14,12 +14,14 @@ import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
+import com.ercanbeyen.bankingapplication.service.EmailService;
 import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
@@ -44,11 +46,13 @@ import java.util.function.UnaryOperator;
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;
     private final AccountSecurityService accountSecurityService;
+    private final EmailService emailService;
 
-    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService) {
+    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, EmailService emailService) {
         super(accountService);
         this.accountService = accountService;
         this.accountSecurityService = accountSecurityService;
+        this.emailService = emailService;
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
@@ -176,41 +180,76 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return ResponseEntity.ok(accountService.getAccountActivities(id, request));
     }
 
-    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
-    @PostMapping(value = "/{id}/statement/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> generateAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
-        AccountActivityUtil.checkFilteringRequest(request);
-
-        Account account = accountService.findActiveAccountById(id);
-        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
-
-        LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
-        LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
-
-        ByteArrayOutputStream outputStream;
-
-        try {
-            outputStream = PdfExporter.generateAccountStatementPdf(account, fromDate, toDate, accountActivityDtos);
-            log.info("Account Statement Pdf is successfully generated");
-        } catch (DocumentException | IOException exception) {
-            throw new InternalServerErrorException(exception.getMessage());
-        }
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @PostMapping(value = "/{id}/statement/pdf/download", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> downloadAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
+        ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementPdf(id, request);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentLength(outputStream.size());
+        headers.setContentLength(byteArrayOutputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename("account_" + account.getId() + "_statement.pdf")
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
                 .build());
 
         return ResponseEntity.ok()
                 .headers(headers)
-                .body(outputStream.toByteArray());
+                .body(byteArrayOutputStream.toByteArray());
     }
 
-    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
-    @PostMapping(value = "/{id}/statement/excel", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
-    public ResponseEntity<byte[]> generateAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @PostMapping(value = "/{id}/statement/excel/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<byte[]> downloadAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
+        ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementExcel(id, request);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        headers.setContentLength(byteArrayOutputStream.size());
+        headers.setContentDisposition(ContentDisposition.attachment()
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
+                .build());
+
+        return ResponseEntity.ok()
+                .headers(headers)
+                .body(byteArrayOutputStream.toByteArray());
+    }
+
+    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
+    @PostMapping("/{id}/statement/pdf/email")
+    @GetMapping
+    public ResponseEntity<MessageResponse<String>> sendAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) throws MessagingException, IOException {
+        ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementPdf(id, request);
+        AttachmentFile attachmentFile = AttachmentFile.ACCOUNT_STATEMENT;
+
+        emailService.sendEmail(
+                email,
+                attachmentFile.getValue(),
+                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, attachmentFile),
+                byteArrayOutputStream.toByteArray()
+        );
+
+        MessageResponse<String> messageResponse = new MessageResponse<>(ResponseMessage.EMAIL_SENT_SUCCESS);
+        return ResponseEntity.ok(messageResponse);
+    }
+
+    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
+    @PostMapping("/{id}/statement/excel/email")
+    public ResponseEntity<MessageResponse<String>> sendAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) throws MessagingException, IOException {
+        ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementExcel(id, request);
+        AttachmentFile attachmentFile = AttachmentFile.ACCOUNT_STATEMENT;
+
+        emailService.sendEmail(
+                email,
+                attachmentFile.getValue(),
+                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, attachmentFile),
+                byteArrayOutputStream.toByteArray()
+        );
+
+        MessageResponse<String> messageResponse = new MessageResponse<>(ResponseMessage.EMAIL_SENT_SUCCESS);
+        return ResponseEntity.ok(messageResponse);
+    }
+
+    private ByteArrayOutputStream generateAccountStatementPdf(Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
         Account account = accountService.findActiveAccountById(id);
@@ -219,19 +258,25 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
         LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
 
-        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos, fromDate, toDate); ByteArrayOutputStream outputStream = new ByteArrayOutputStream()) {
-            workbook.write(outputStream);
+        try {
+            return PdfExporter.generateAccountStatementPdf(account, fromDate, toDate, accountActivityDtos);
+        } catch (DocumentException | IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
+    }
 
-            HttpHeaders headers = new HttpHeaders();
-            headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-            headers.setContentLength(outputStream.size());
-            headers.setContentDisposition(ContentDisposition.attachment()
-                    .filename("account_" + account.getId() + "_statement.xlsx")
-                    .build());
+    private ByteArrayOutputStream generateAccountStatementExcel(Integer id, AccountActivityFilteringRequest request) {
+        AccountActivityUtil.checkFilteringRequest(request);
 
-            return ResponseEntity.ok()
-                    .headers(headers)
-                    .body(outputStream.toByteArray());
+        Account account = accountService.findActiveAccountById(id);
+        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
+
+        LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
+        LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
+
+        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos, fromDate, toDate); ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+            workbook.write(byteArrayOutputStream);
+            return byteArrayOutputStream;
         } catch (IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }

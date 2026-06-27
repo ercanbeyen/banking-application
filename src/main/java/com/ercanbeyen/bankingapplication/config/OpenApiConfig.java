@@ -11,12 +11,12 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 @OpenAPIDefinition(
         info = @Info(
-                title = "Banking Application",
+                title = "Bank APIs",
                 version = "1.0",
-                description = "Bank API",
+                description = "Bank's REST APIs",
                 contact = @Contact(
-                        name = "Bank API Support",
-                        email = "support@email.com"
+                        name = "Support Contact",
+                        email = "support@bank.com"
                 ),
                 license = @License(
                         name = "Apache 2.0",
