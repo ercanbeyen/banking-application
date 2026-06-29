@@ -10,7 +10,8 @@ import java.util.Map;
 import java.util.Set;
 
 public interface AuthService {
-    Map<String, String> loginUser(LoginRequest loginRequest);
+    void loginUser(LoginRequest loginRequest);
+    Map<String, String> generateTokens(String username);
     void registerUser(RegistrationRequest request);
     Map<String, String> refreshToken(String token);
     Set<String> getRoles(String username);

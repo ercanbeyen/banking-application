@@ -11,6 +11,7 @@ import java.util.List;
 public class AuthUtil {
     private final int PASSWORD_HISTORY_MAX_SIZE = 3;
     private final int MAX_FAILED_ATTEMPTS = 5;
+    private final int OTP_VALID_MINUTES = 5;
     private final List<Integer> passwordRenewalPeriods = List.of(1, 3, 6);
 
     public void checkUpdatePasswordRequest(UpdatePasswordRequest request) {
@@ -33,5 +34,9 @@ public class AuthUtil {
 
     public int getDefaultPasswordRenewalPeriod() {
         return Collections.max(passwordRenewalPeriods);
+    }
+
+    public static int getOtpValidMinutes() {
+        return OTP_VALID_MINUTES;
     }
 }

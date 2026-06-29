@@ -18,6 +18,7 @@ import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
@@ -52,6 +53,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CashFlowCalendarService cashFlowCalendarService;
     private final AgreementService agreementService;
     private final EmailService emailService;
+    private final SystemAdminProperties systemAdminProperties;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOption filteringOption) {
@@ -95,7 +97,9 @@ public class CustomerServiceImpl implements CustomerService {
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
-        agreementService.approveAgreements(AgreementSubject.CUSTOMER, customer);
+        if (!request.getNationalId().equals(systemAdminProperties.getUsername())) {
+            agreementService.approveAgreements(AgreementSubject.CUSTOMER, customer);
+        }
 
         return customerMapper.entityToDto(savedCustomer);
     }
@@ -484,6 +488,19 @@ public class CustomerServiceImpl implements CustomerService {
         return customer;
     }
 
+    @Override
+    public Customer findByEmail(String email) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        String entity = Entity.CUSTOMER.getValue();
+        Customer customer = customerRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
+
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        return customer;
+    }
+
     /**
      * @param nationalId is national identity which is unique for each customer
      * @return status for customer existence corresponds to nationalId
@@ -628,19 +645,24 @@ public class CustomerServiceImpl implements CustomerService {
     private void checkUniqueness(Customer customerInDb, CustomerDto request) {
         String nationalId = request.getNationalId();
         String phoneNumber = request.getPhoneNumber();
+        String email = request.getEmail();
 
         Predicate<Customer> nationalIdPredicate = customer -> customer.getNationalId().equals(nationalId);
         Predicate<Customer> phoneNumberPredicate = customer -> customer.getPhoneNumber().equals(phoneNumber);
+        Predicate<Customer> emailPredicate = customer -> customer.getEmail().equals(email);
 
-        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateDeduction case
+        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateEntity case
             Predicate<Customer> customerInDbPredicate = _ -> !customerInDb.getNationalId().equals(nationalId);
             nationalIdPredicate = customerInDbPredicate.and(nationalIdPredicate);
 
             customerInDbPredicate = _ -> !customerInDb.getPhoneNumber().equals(phoneNumber);
             phoneNumberPredicate = customerInDbPredicate.and(phoneNumberPredicate);
+
+            customerInDbPredicate = _ -> !customerInDb.getEmail().equals(email);
+            emailPredicate = customerInDbPredicate.and(emailPredicate);
         }
 
-        Predicate<Customer> customerPredicate = nationalIdPredicate.or(phoneNumberPredicate);
+        Predicate<Customer> customerPredicate = nationalIdPredicate.or(phoneNumberPredicate).or(emailPredicate);
 
         boolean customerExists = customerRepository.findAll()
                 .stream()

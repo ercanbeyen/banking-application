@@ -1,19 +1,21 @@
 package com.ercanbeyen.bankingapplication.helper.initializer;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
-import com.ercanbeyen.bankingapplication.dto.UserCredentialsDto;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
+import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.request.CreateRoleRequest;
+import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.entity.Permission;
 import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
-import com.ercanbeyen.bankingapplication.service.PermissionService;
-import com.ercanbeyen.bankingapplication.service.RoleService;
-import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
-import com.ercanbeyen.bankingapplication.util.AuthUtil;
+import com.ercanbeyen.bankingapplication.service.*;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.Month;
+import java.util.ArrayList;
 import java.util.Set;
 
 @Component
@@ -23,7 +25,7 @@ public class DataInitializer {
     private final SystemAdminProperties systemAdminProperties;
     private final RoleService roleService;
     private final PermissionService permissionService;
-    private final UserCredentialsService userCredentialsService;
+    private final AuthService authService;
 
     @PostConstruct
     public void initialize() {
@@ -38,16 +40,24 @@ public class DataInitializer {
     }
 
     private void createSystemAdmin() {
-        UserCredentialsDto request = new UserCredentialsDto(
-                systemAdminProperties.getUsername(),
-                systemAdminProperties.getCustomerId(),
+        CustomerDto customerDto = new CustomerDto();
+        customerDto.setName("Admin");
+        customerDto.setSurname("User");
+        customerDto.setNationalId(systemAdminProperties.getUsername());
+        customerDto.setEmail("admin@bank.com");
+        customerDto.setPhoneNumber("+905809452510");
+        customerDto.setGender(Gender.MALE);
+        customerDto.setBirthDate(LocalDate.of(1980, Month.NOVEMBER, 10));
+        customerDto.setAddresses(new ArrayList<>());
+
+        RegistrationRequest request = new RegistrationRequest(
+                customerDto,
                 systemAdminProperties.getPassword(),
-                AuthUtil.getDefaultPasswordRenewalPeriod(),
                 Set.of(ERole.ADMIN.toString())
         );
 
-        userCredentialsService.createUserCredentials(request);
-        log.warn("System Admin is created!");
+        authService.registerUser(request);
+        log.warn(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), customerDto.getName());
     }
 
     public void createRolesAndPermissions() {

@@ -2,8 +2,13 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.annotation.RolesRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
+import com.ercanbeyen.bankingapplication.dto.request.VerifyOtpRequest;
+import com.ercanbeyen.bankingapplication.dto.response.LoginResponse;
+import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.request.LoginRequest;
@@ -11,6 +16,9 @@ import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.service.AuthService;
+import com.ercanbeyen.bankingapplication.service.CustomerService;
+import com.ercanbeyen.bankingapplication.service.EmailService;
+import com.ercanbeyen.bankingapplication.service.OtpService;
 import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.CustomerUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -33,14 +41,56 @@ import java.util.Set;
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;
+    private final CustomerService customerService;
+    private final OtpService otpService;
+    private final EmailService emailService;
 
     @PostMapping("/login")
-    public ResponseEntity<Void> loginUser(@RequestBody @Valid LoginRequest loginRequest, HttpServletResponse httpServletResponse) {
-        Map<String, String> tokens = authService.loginUser(loginRequest);
-        httpServletResponse.addHeader(JwtUtil.Header.ACCESS_TOKEN_HEADER, tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER));
-        httpServletResponse.addHeader(JwtUtil.Header.REFRESH_TOKEN_HEADER, tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
+    public ResponseEntity<LoginResponse> loginUser(@RequestBody @Valid LoginRequest loginRequest) {
+        authService.loginUser(loginRequest);
+        CustomerDto customerDto = customerService.getCustomerByNationalId(loginRequest.username());
 
-        return ResponseEntity.ok().build();
+        String email = customerDto.getEmail();
+        String otp = otpService.generateOtp(email);
+
+        emailService.sendEmail(
+                email,
+                "Verification Code (OTP)",
+                "Hello,\n\nYour verification code for logging into the application: " + otp +
+                        "\nThis code is valid for " + AuthUtil.getOtpValidMinutes()+ " minutes."
+                );
+
+        LoginResponse response = new LoginResponse(
+                true,
+                email,
+                null,
+                null,
+                "The password is correct. Please enter the OTP code sent to your email address."
+        );
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-login-otp")
+    public ResponseEntity<LoginResponse> verifyLoginOtp(@RequestBody VerifyOtpRequest request) {
+        String email = request.email();
+
+        if (!otpService.validateOtp(email, request.otp())) {
+            throw new BadRequestException("Invalid or expired OTP code!");
+        }
+
+        Customer customerDto = customerService.findByEmail(email);
+        Map<String, String> tokens = authService.generateTokens(customerDto.getNationalId());
+
+        LoginResponse response = new LoginResponse(
+                false,
+                email,
+                tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER),
+                tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER),
+                "Login success! Tokens are generated."
+        );
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/register")

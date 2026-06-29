@@ -37,5 +37,6 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency);
     Customer findById(Integer id);
     Customer findByNationalId(String nationalId);
+    Customer findByEmail(String email);
     boolean existsByNationalId(String nationalId);
 }

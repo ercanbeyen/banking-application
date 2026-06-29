@@ -145,7 +145,7 @@ class CustomerControllerTest {
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.OK.value())
-                .body("size()", is(0));
+                .body("size()", is(1));
     }
 
     @Test
@@ -199,7 +199,7 @@ class CustomerControllerTest {
         given()
                 .when()
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
-                .get(CUSTOMER_RESOURCE_ENDPOINT, 1)
+                .get(CUSTOMER_RESOURCE_ENDPOINT, 2)
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.OK.value())
@@ -213,7 +213,7 @@ class CustomerControllerTest {
         given()
                 .when()
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
-                .get(CUSTOMER_RESOURCE_ENDPOINT, 2)
+                .get(CUSTOMER_RESOURCE_ENDPOINT, 3)
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.FORBIDDEN.value());

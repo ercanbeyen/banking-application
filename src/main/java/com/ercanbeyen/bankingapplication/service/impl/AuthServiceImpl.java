@@ -56,46 +56,53 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public Map<String, String> loginUser(LoginRequest loginRequest) {
+    public void loginUser(LoginRequest loginRequest) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        UserCredentials userCredentials = userCredentialsService.findByUsername(loginRequest.username());
+        String username = loginRequest.username();
+        UserCredentials userCredentials = userCredentialsService.findByUsername(username);
         userCredentialsService.checkLockStatus(userCredentials);
 
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
-                            loginRequest.username(),
+                            username,
                             loginRequest.password()
                     )
             );
 
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-
-            userCredentialsService.loginSucceeded(userCredentials.getUsername());
-
-            Map<String, String> tokens = jwtService.generateTokens(userDetails);
-
-            refreshTokenService.revokeAllRefreshTokens(loginRequest.username());
-            refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
-
-            return tokens;
+            userCredentialsService.loginSucceeded(username);
         } catch (BadCredentialsException exception) {
             log.error("{}!", Entity.INCORRECT_LOGIN_ATTEMPT.getValue());
 
-            userCredentialsService.loginFailed(loginRequest.username());
+            userCredentialsService.loginFailed(username);
 
             if (!userCredentials.isAccountNonLocked()) {
                 userRevocationService.revokeAllTokensForUser(userCredentials.getUsername());
                 refreshTokenService.revokeAllRefreshTokens(userCredentials.getUsername());
             }
 
-            IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(loginRequest.username(), TimeUtil.getTurkeyDateTime());
+            IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(username, TimeUtil.getTurkeyDateTime());
             incorrectLoginAttemptService.createIncorrectLoginAttempt(incorrectLoginAttemptRequest);
 
             throw exception;
         }
+    }
+
+    @Override
+    public Map<String, String> generateTokens(String username) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        userCredentialsService.loginSucceeded(username);
+        UserDetails userDetails = userDetailsService.loadUserByUsername(username);
+
+        Map<String, String> tokens = jwtService.generateTokens(userDetails);
+
+        refreshTokenService.revokeAllRefreshTokens(username);
+        refreshTokenService.createRefreshToken(tokens.get(JwtUtil.Header.REFRESH_TOKEN_HEADER));
+
+        return tokens;
     }
 
     @Transactional

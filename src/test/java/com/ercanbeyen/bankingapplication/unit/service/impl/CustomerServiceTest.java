@@ -14,6 +14,7 @@ import com.ercanbeyen.bankingapplication.mapper.CustomerAgreementMapper;
 import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
 import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
@@ -31,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -58,6 +60,8 @@ class CustomerServiceTest {
     private AgreementService agreementService;
     @Mock
     private EmailService emailService;
+    @Mock
+    private SystemAdminProperties systemAdminProperties;
 
     private List<Customer> customers;
     private List<CustomerAgreementDto> customerAgreementDtos;
@@ -94,7 +98,7 @@ class CustomerServiceTest {
         // given
         List<CustomerDto> expected = List.of(customerDtos.getFirst());
         CustomerFilteringOption filteringOption = new CustomerFilteringOption();
-        filteringOption.setBirthDate(LocalDate.of(1980, 8, 15));
+        filteringOption.setBirthDate(LocalDate.of(1980, Month.AUGUST, 15));
 
         doReturn(customers)
                 .when(customerRepository)
@@ -191,6 +195,7 @@ class CustomerServiceTest {
         verify(customerMapper, times(1)).dtoToEntity(any());
         verify(cashFlowCalendarService, times(1)).createCashFlowCalendar();
         verify(customerRepository, times(1)).save(any());
+        verify(systemAdminProperties, times(1)).getUsername();
         verify(agreementService, times(1)).approveAgreements(any(), any());
         verify(customerMapper, times(1)).entityToDto(any());
 
@@ -212,6 +217,7 @@ class CustomerServiceTest {
 
         // then
         verify(customerRepository, times(1)).findAll();
+        verifyNoInteractions(systemAdminProperties);
         verifyNoMoreInteractions(customerRepository, customerMapper);
 
         assertEquals(expected, actual);
