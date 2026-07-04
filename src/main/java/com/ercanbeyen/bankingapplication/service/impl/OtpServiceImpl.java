@@ -57,13 +57,8 @@ public class OtpServiceImpl implements OtpService {
             return true;
         }
 
-        log.info("Before:: Redis has key: {}", redisTemplate.hasKey(attemptsKey));
-
         /* Wrong OTP */
         Long attempts = redisTemplate.opsForValue().increment(attemptsKey);
-        log.info("Attempts: {}", attempts);
-
-        log.info("After:: Redis has key: {}", redisTemplate.hasKey(attemptsKey));
 
         if (attempts == null) { // Unknown OTP
             log.warn(LogMessage.RESOURCE_NOT_FOUND, "OTP");

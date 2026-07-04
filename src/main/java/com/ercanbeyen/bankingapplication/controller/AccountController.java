@@ -15,13 +15,13 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.mail.MessagingException;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
@@ -216,8 +216,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
     @PostMapping("/{id}/statement/pdf/email")
-    @GetMapping
-    public ResponseEntity<MessageResponse<String>> sendAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) throws MessagingException, IOException {
+    public ResponseEntity<MessageResponse<String>> sendAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementPdf(id, request);
         AttachmentFile attachmentFile = AttachmentFile.ACCOUNT_STATEMENT;
 
@@ -234,7 +233,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
     @PostMapping("/{id}/statement/excel/email")
-    public ResponseEntity<MessageResponse<String>> sendAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) throws MessagingException, IOException {
+    public ResponseEntity<MessageResponse<String>> sendAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, @RequestParam("to") String email, AccountActivityFilteringRequest request) {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementExcel(id, request);
         AttachmentFile attachmentFile = AttachmentFile.ACCOUNT_STATEMENT;
 
@@ -282,5 +281,5 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         }
     }
 
-    private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : LocalDate.now();
+    private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : TimeUtil.getTurkeyDate();
 }

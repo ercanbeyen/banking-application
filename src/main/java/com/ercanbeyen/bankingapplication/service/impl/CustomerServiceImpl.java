@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.message.EmailMessage;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
@@ -23,6 +24,7 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.javatuples.Pair;
@@ -64,7 +66,7 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDate customerBirthday = customer.getBirthDate();
 
             Boolean birthDayFilter = (birthDateOption == null
-                    || birthDateOption.getMonth() == customerBirthday.getMonth() && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
+                    || birthDateOption.getMonth().equals(customerBirthday.getMonth()) && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
             Boolean createdAtFilter = (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().isEqual(filteringOption.getCreatedAt()));
 
             return (birthDayFilter && createdAtFilter);
@@ -104,7 +106,6 @@ public class CustomerServiceImpl implements CustomerService {
         return customerMapper.entityToDto(savedCustomer);
     }
 
-    @Transactional
     @Override
     public CustomerDto updateEntity(Integer id, CustomerDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
@@ -112,28 +113,26 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = findById(id);
         checkUniqueness(customer, request);
 
+        customer.setName(request.getName());
+        customer.setSurname(request.getSurname());
         customer.setPhoneNumber(request.getPhoneNumber());
         customer.setGender(request.getGender());
         customer.setBirthDate(request.getBirthDate());
         customer.setAddresses(request.getAddresses());
-
-        String currentFullName = customer.getFullName();
-        String nextFullName = request.getName() + " " + request.getSurname();
-
-        if (!currentFullName.equals(nextFullName)) {
-            customer.setName(request.getName());
-            customer.setSurname(request.getSurname());
-        }
 
         String currentEmail = customer.getEmail();
         String nextEmail = request.getEmail();
 
         if (!currentEmail.equals(nextEmail)) {
             customer.setEmail(nextEmail);
+            String content = "<p>Dear " + customer.getFullName() + ","
+                    + "<br><br>Your email is successfully updated! &#x1F44D;</p>"
+                    + EmailMessage.FOOTER;
+
             emailService.sendEmail(
                     nextEmail,
                     "Email Update",
-                    "Dear " + customer.getFullName() + ",\n\nYour email is successfully updated!"
+                    content
             );
         }
 
@@ -323,7 +322,7 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = findById(id);
         CashFlowCalendar cashFlowCalendar = customer.getCashFlowCalendar();
         List<CashFlow> cashFlows = new ArrayList<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = TimeUtil.getTurkeyDate();
 
         if (CashFlowCalendarUtil.isDateFuture(today, year, month)) {
             log.info("Past cash flows are requested");
@@ -351,7 +350,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         Customer customer = findById(id);
         List<ExpectedTransaction> expectedTransactions = new ArrayList<>();
-        LocalDate finalDate = LocalDate.now().plusMonths(month);
+        LocalDate finalDate = TimeUtil.getTurkeyDate().plusMonths(month);
 
         for (Account account : customer.getAccounts()) {
             AccountType accountType = account.getType();
@@ -541,7 +540,7 @@ public class CustomerServiceImpl implements CustomerService {
     private static void addFutureCashFlowsForMoneyTransferOrders(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
         for (MoneyTransferOrder moneyTransferOrder : account.getMoneyTransferOrders()) {
             LocalDate paymentDate = moneyTransferOrder.getTransferDate();
-            LocalDate counterDate = LocalDate.now();
+            LocalDate counterDate = TimeUtil.getTurkeyDate();
             PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
             AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
             Double amount = moneyTransferOrder.getRegularMoneyTransfer().getAmount();
@@ -580,7 +579,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private static void addFutureCashFlowsForInterestIncomePayments(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
         LocalDate paymentDate = account.getUpdatedAt().toLocalDate();
-        LocalDate counterDate = LocalDate.now();
+        LocalDate counterDate = TimeUtil.getTurkeyDate();
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
             AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;

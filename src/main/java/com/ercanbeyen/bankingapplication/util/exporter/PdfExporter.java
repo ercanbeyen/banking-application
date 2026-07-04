@@ -22,7 +22,6 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.experimental.UtilityClass;
-import lombok.extern.slf4j.Slf4j;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,7 +33,6 @@ import java.util.List;
 import java.util.function.BiConsumer;
 import java.util.function.Function;
 
-@Slf4j
 @UtilityClass
 public class PdfExporter {
     private final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
@@ -300,7 +298,6 @@ public class PdfExporter {
         Function<String, StringBuilder> maskWordInFullName = word -> {
             int length = word.length();
             int endIndex = length < 5 ? 1 : 2;
-            log.info("Length and end index: {} & {}", length, endIndex);
 
             return new StringBuilder()
                     .append(word, 0, endIndex)

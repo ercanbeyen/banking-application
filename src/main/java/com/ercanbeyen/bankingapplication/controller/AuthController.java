@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.annotation.RolesRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.EmailMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
@@ -53,12 +54,16 @@ public class AuthController {
         String email = customerDto.getEmail();
         String otp = otpService.generateOtp(email);
 
+        String content =  "<p>Hello,"
+                + "<br><br>Your verification code for logging into the application: <b>" + otp + "</b>"
+                + "<br>This code is valid for " + AuthUtil.getOtpValidMinutes() + " minutes.</p>"
+                + EmailMessage.FOOTER;
+
         emailService.sendEmail(
                 email,
                 "Verification Code (OTP)",
-                "Hello,\n\nYour verification code for logging into the application: " + otp +
-                        "\nThis code is valid for " + AuthUtil.getOtpValidMinutes()+ " minutes."
-                );
+                content
+        );
 
         LoginResponse response = new LoginResponse(
                 true,
@@ -95,8 +100,20 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<MessageResponse<String>> registerUser(@RequestBody @Valid RegistrationRequest request) {
-        CustomerUtil.checkRequest(request.customerDto());
+        CustomerDto requestedCustomer = request.customerDto();
+        CustomerUtil.checkRequest(requestedCustomer);
+
         authService.registerUser(request);
+
+        String content = "<p>Hello " + requestedCustomer.getFullName() + ","
+                + "<br><br>Welcome to the bank! &#x1F44B</p>"
+                + EmailMessage.FOOTER;
+
+        emailService.sendEmail(
+                requestedCustomer.getEmail(),
+                "Customer Registration",
+                content
+        );
 
         MessageResponse<String> response = new MessageResponse<>("User successfully registered!");
         return ResponseEntity.ok(response);

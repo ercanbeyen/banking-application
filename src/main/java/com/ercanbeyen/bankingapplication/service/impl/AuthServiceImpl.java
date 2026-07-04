@@ -52,7 +52,6 @@ public class AuthServiceImpl implements AuthService {
     private final IncorrectLoginAttemptService incorrectLoginAttemptService;
     private final JwtService jwtService;
     private final UserRevocationService userRevocationService;
-    private final EmailService emailService;
     private final PasswordEncoder passwordEncoder;
 
     @Override
@@ -132,11 +131,6 @@ public class AuthServiceImpl implements AuthService {
         );
 
         userCredentialsService.createUserCredentials(userCredentialRequest);
-        emailService.sendEmail(
-                registeredCustomer.getEmail(),
-                "Customer Registration",
-                "Dear " + registeredCustomer.getFullName() + ",\n\nWelcome to the bank!"
-        );
     }
 
     @Override
