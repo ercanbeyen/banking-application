@@ -1,9 +1,7 @@
 package com.ercanbeyen.bankingapplication.controller;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
+import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
@@ -14,6 +12,7 @@ import com.ercanbeyen.bankingapplication.embeddable.RegisteredRecipient;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
+import com.ercanbeyen.bankingapplication.service.EmailService;
 import com.ercanbeyen.bankingapplication.util.*;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
@@ -44,11 +43,13 @@ import java.util.*;
 public class CustomerController extends BaseController<CustomerDto, CustomerFilteringOption> {
     private final CustomerService customerService;
     private final AccountService accountService;
+    private final EmailService emailService;
 
-    public CustomerController(CustomerService customerService, AccountService accountService) {
+    public CustomerController(CustomerService customerService, AccountService accountService, EmailService emailService) {
         super(customerService);
         this.customerService = customerService;
         this.accountService = accountService;
+        this.emailService = emailService;
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
@@ -222,38 +223,56 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
     }
 
-    @PreAuthorize("hasAuthority('READ_DATA') OR #customerNationalId == authentication.principal.username")
-    @PostMapping(value = "/{nationalId}/financial-status/report/pdf", produces = MediaType.APPLICATION_PDF_VALUE)
-    public ResponseEntity<byte[]> generateFinancialStatusReportPdf(@PathVariable("nationalId") @P("customerNationalId") String nationalId) {
-        Customer customer = customerService.findByNationalId(nationalId);
-        Double netBalanceOfCustomer = customerService.calculateNetBalance(nationalId, null, Currency.getDeductionCurrency());
-        Map<AccountType, List<List<AccountFinancialStatus>>> accountFinancialStatusesWithConvertedCurrencies = customerService.calculateFinancialStatus(nationalId);
-        Map<AccountType, Double> accountTypeNetBalancesWithConvertedCurrencies = new EnumMap<>(AccountType.class);
-
-        for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrency : accountFinancialStatusesWithConvertedCurrencies.entrySet()) {
-            AccountType accountType = financialStatusOfAccountTypesWithConvertedCurrency.getKey();
-            Double balance = customerService.calculateNetBalance(nationalId, accountType, Currency.getDeductionCurrency());
-            accountTypeNetBalancesWithConvertedCurrencies.put(accountType, balance);
-        }
-
-        ByteArrayOutputStream outputStream;
-
-        try {
-            outputStream = PdfExporter.generatePdfStreamOfFinancialStatusReport(customer, netBalanceOfCustomer, accountTypeNetBalancesWithConvertedCurrencies, accountFinancialStatusesWithConvertedCurrencies);
-            log.info("Financial Status Report Pdf is successfully generated");
-        } catch (DocumentException | IOException exception) {
-            throw new InternalServerErrorException(exception.getMessage());
-        }
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @PostMapping(value = "/{id}/financial-status/report/pdf/download", produces = MediaType.APPLICATION_PDF_VALUE)
+    public ResponseEntity<byte[]> downloadFinancialStatusReportPdf(@PathVariable("id") Integer id) {
+        ByteArrayOutputStream byteArrayOutputStream = generateFinancialStatusReportPdf(id);
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentLength(outputStream.size());
+        headers.setContentLength(byteArrayOutputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename("customer_" + customer.getId() + "_financialStatusReport.pdf")
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, AttachmentFile.FINANCIAL_STATUS_REPORT))
                 .build());
 
         return ResponseEntity.ok()
                 .headers(headers)
-                .body(outputStream.toByteArray());
+                .body(byteArrayOutputStream.toByteArray());
+    }
+
+    @PreAuthorize("#customerId == authentication.principal.id")
+    @PostMapping(value = "/{id}/financial-status/report/pdf/email")
+    public ResponseEntity<MessageResponse<String>> sendFinancialStatusReportPdf(@PathVariable("id") @P("customerId") Integer id, @RequestParam("to") String email) {
+        ByteArrayOutputStream byteArrayOutputStream = generateFinancialStatusReportPdf(id);
+        AttachmentFile attachmentFile = AttachmentFile.FINANCIAL_STATUS_REPORT;
+
+        emailService.sendEmail(
+                email,
+                attachmentFile.getValue(),
+                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, attachmentFile),
+                byteArrayOutputStream.toByteArray()
+        );
+
+        MessageResponse<String> messageResponse = new MessageResponse<>(ResponseMessage.EMAIL_SENT_SUCCESS);
+        return ResponseEntity.ok(messageResponse);
+    }
+
+    private ByteArrayOutputStream generateFinancialStatusReportPdf(Integer id) {
+        Customer customer = customerService.findById(id);
+        Double netBalanceOfCustomer = customerService.calculateNetBalance(id, null, Currency.getDeductionCurrency());
+        Map<AccountType, List<List<AccountFinancialStatus>>> accountFinancialStatusesWithConvertedCurrencies = customerService.calculateFinancialStatus(id);
+        Map<AccountType, Double> accountTypeNetBalancesWithConvertedCurrencies = new EnumMap<>(AccountType.class);
+
+        for (Map.Entry<AccountType, List<List<AccountFinancialStatus>>> financialStatusOfAccountTypesWithConvertedCurrency : accountFinancialStatusesWithConvertedCurrencies.entrySet()) {
+            AccountType accountType = financialStatusOfAccountTypesWithConvertedCurrency.getKey();
+            Double balance = customerService.calculateNetBalance(id, accountType, Currency.getDeductionCurrency());
+            accountTypeNetBalancesWithConvertedCurrencies.put(accountType, balance);
+        }
+
+        try {
+            return PdfExporter.generatePdfStreamOfFinancialStatusReport(customer, netBalanceOfCustomer, accountTypeNetBalancesWithConvertedCurrencies, accountFinancialStatusesWithConvertedCurrencies);
+        } catch (DocumentException | IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
     }
 }

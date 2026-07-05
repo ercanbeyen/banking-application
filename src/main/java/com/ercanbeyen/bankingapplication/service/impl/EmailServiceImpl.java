@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.message.EmailMessage;
+import com.ercanbeyen.bankingapplication.util.EmailUtil;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.service.EmailService;
 import lombok.RequiredArgsConstructor;
@@ -40,9 +40,7 @@ public class EmailServiceImpl implements EmailService {
             throw new InternalServerErrorException("Failed to process file: " + exception.getMessage());
         }
 
-        String content = "<p>Hello,"
-                + "<br><br>Here is your requested attachment.</p>"
-                + EmailMessage.FOOTER;
+        String content = EmailUtil.constructContent(null, "Here is your requested attachment.");
 
         executeMailSender(to, subject, content, file);
     }

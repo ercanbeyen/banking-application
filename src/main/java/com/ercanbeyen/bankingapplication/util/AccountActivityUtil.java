@@ -30,10 +30,13 @@ public class AccountActivityUtil {
             default -> throw new BadRequestException("Unknown file type");
         };
 
-        return switch (attachmentFile) {
-            case ACCOUNT_STATEMENT -> String.format("account_%s_statement.%s", id, fileType);
-            case RECEIPT -> String.format("receipt_%s.%s", id, fileType);
+        String fileNameTemplate = switch (attachmentFile) {
+            case ACCOUNT_STATEMENT -> "account_%s_statement.%s";
+            case FINANCIAL_STATUS_REPORT -> "customer_%s_financial_status_report.%s";
+            case RECEIPT -> "account_activity_%s_receipt.%s";
         };
+
+        return String.format(fileNameTemplate, id, fileType);
     }
 
     private void checkDates(LocalDate fromDate, LocalDate toDate) {

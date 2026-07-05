@@ -33,8 +33,8 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month);
     List<CustomerAgreementDto> getAgreements(Integer id);
     List<RegisteredRecipient> getRegisteredRecipients(Integer id);
-    Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId);
-    Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency);
+    Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(Integer id);
+    Double calculateNetBalance(Integer id, AccountType accountType, Currency currency);
     Customer findById(Integer id);
     Customer findByNationalId(String nationalId);
     Customer findByEmail(String email);

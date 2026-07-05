@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.annotation.RolesRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
-import com.ercanbeyen.bankingapplication.constant.message.EmailMessage;
+import com.ercanbeyen.bankingapplication.util.EmailUtil;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.IncorrectLoginAttemptDto;
 import com.ercanbeyen.bankingapplication.dto.request.UpdatePasswordRequest;
@@ -54,11 +54,10 @@ public class AuthController {
         String email = customerDto.getEmail();
         String otp = otpService.generateOtp(email);
 
-        String content =  "<p>Hello,"
-                + "<br><br>Your verification code for logging into the application: <b>" + otp + "</b>"
-                + "<br>This code is valid for " + AuthUtil.getOtpValidMinutes() + " minutes.</p>"
-                + EmailMessage.FOOTER;
+        String body = "Your verification code for logging into the application: <b>" + otp + "</b>"
+                + "<br>This code is valid for " + AuthUtil.getOtpValidMinutes() + " minutes.";
 
+        String content = EmailUtil.constructContent(null, body);
         emailService.sendEmail(
                 email,
                 "Verification Code (OTP)",
@@ -105,9 +104,7 @@ public class AuthController {
 
         authService.registerUser(request);
 
-        String content = "<p>Hello " + requestedCustomer.getFullName() + ","
-                + "<br><br>Welcome to the bank! &#x1F44B</p>"
-                + EmailMessage.FOOTER;
+        String content = EmailUtil.constructContent(requestedCustomer.getFullName(), "Welcome to the bank! &#x1F44B");
 
         emailService.sendEmail(
                 requestedCustomer.getEmail(),

@@ -7,6 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum AttachmentFile {
     ACCOUNT_STATEMENT("Account Statement"),
+    FINANCIAL_STATUS_REPORT("Financial Status Report"),
     RECEIPT("Receipt");
 
     private final String value;

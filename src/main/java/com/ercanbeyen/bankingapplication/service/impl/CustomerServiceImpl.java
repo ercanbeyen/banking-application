@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.message.EmailMessage;
+import com.ercanbeyen.bankingapplication.util.EmailUtil;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
@@ -125,10 +125,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         if (!currentEmail.equals(nextEmail)) {
             customer.setEmail(nextEmail);
-            String content = "<p>Dear " + customer.getFullName() + ","
-                    + "<br><br>Your email is successfully updated! &#x1F44D;</p>"
-                    + EmailMessage.FOOTER;
-
+            String content = EmailUtil.constructContent(customer.getFullName(), "Your email is successfully updated! &#x1F44D;");
             emailService.sendEmail(
                     nextEmail,
                     "Email Update",
@@ -415,10 +412,10 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId) {
+    public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = findByNationalId(nationalId)
+        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = findById(id)
                 .getAccounts()
                 .stream()
                 .collect(Collectors.groupingBy(account -> new Pair<>(account.getType(), account.getCurrency()), Collectors.summingDouble(Account::getBalance)));
@@ -452,9 +449,9 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency) {
+    public Double calculateNetBalance(Integer id, AccountType accountType, Currency currency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return calculateNetBalanceOfAccounts(findByNationalId(nationalId).getAccounts(), accountType, currency);
+        return calculateNetBalanceOfAccounts(findById(id).getAccounts(), accountType, currency);
     }
 
     @Override
