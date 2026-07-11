@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.FilePreviewInfo;
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -43,6 +44,26 @@ public class FileServiceImpl implements FileService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         String fileName = name + "." + FileUtil.getPlainContentType(request.getContentType()); // file extension is added
         return saveFile(request, fileName);
+    }
+
+    @Async
+    @Override
+    public void storeFiles(List<FileUploadRequest> request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        for (FileUploadRequest fileToUpload : request) {
+            String entity = Entity.FILE.getValue();
+
+            try {
+                File file = new File(fileToUpload.name(), fileToUpload.contentType(), fileToUpload.data());
+                fileRepository.save(file);
+                log.info("The {} was successfully saved in the background: {}", entity, file.getName());
+            } catch (Exception exception) {
+                log.error("While saving the {} {} in the background an error occurred: {}", entity, fileToUpload.name(), exception.getMessage());
+            }
+        }
+
+        log.info("Multiple file uploads are completed!");
     }
 
     @Override
