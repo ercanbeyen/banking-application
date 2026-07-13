@@ -6,6 +6,7 @@ import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.File;
+import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.factory.MockAgreementFactory;
 import com.ercanbeyen.bankingapplication.factory.MockCustomerFactory;
 import com.ercanbeyen.bankingapplication.factory.MockFileFactory;
@@ -51,6 +52,7 @@ import static org.hamcrest.Matchers.is;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
+@DisplayName("Customer Controller Integration Test")
 class CustomerControllerTest {
     @Container
     @ServiceConnection
@@ -139,8 +141,8 @@ class CustomerControllerTest {
         systemAdminAccessToken = generateAccessTokenFromUsername(systemAdminProperties.getUsername());
 
         given()
-                .when()
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(systemAdminAccessToken))
+                .when()
                 .get(CUSTOMER_COLLECTION_ENDPOINT)
                 .then()
                 .assertThat()
@@ -197,8 +199,8 @@ class CustomerControllerTest {
     @DisplayName("Happy path test: Get customer case")
     void givenId_whenGetEntity_thenReturnCustomerDto() {
         given()
-                .when()
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
+                .when()
                 .get(CUSTOMER_RESOURCE_ENDPOINT, 2)
                 .then()
                 .assertThat()
@@ -211,8 +213,8 @@ class CustomerControllerTest {
     @DisplayName("Exception path test: Get customer case")
     void givenId_whenGetEntity_thenThrowAccessDeniedException() {
         given()
-                .when()
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
+                .when()
                 .get(CUSTOMER_RESOURCE_ENDPOINT, 3)
                 .then()
                 .assertThat()
@@ -232,7 +234,7 @@ class CustomerControllerTest {
                 .contentType(ContentType.JSON)
                 .body(body)
                 .when()
-                .put(CUSTOMER_RESOURCE_ENDPOINT, MockCustomerFactory.generateMockCustomers().getFirst().getId())
+                .put(CUSTOMER_RESOURCE_ENDPOINT, 2)
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.BAD_REQUEST.value())
@@ -242,7 +244,7 @@ class CustomerControllerTest {
     @Test
     @Order(7)
     @DisplayName("Happy path test: Upload valid profile photo case")
-    void givenIdAndMultipartFile_whenUploadProfilePhoto_thenSuccessReturnMessage() throws IOException {
+    void givenIdAndMultipartFile_whenUploadProfilePhoto_thenSuccessReturnMessage() {
         MultiPartSpecification multiPartSpecification = constructMultiPartSpecification("valid_profilePhoto.png", MediaType.IMAGE_PNG_VALUE);
 
         given()
@@ -251,17 +253,17 @@ class CustomerControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.get(1)))
                 .multiPart(multiPartSpecification)
                 .when()
-                .post(PROFILE_PHOTO_UPLOAD_ENDPOINT, MockCustomerFactory.generateMockCustomers().get(1).getId())
+                .post(PROFILE_PHOTO_UPLOAD_ENDPOINT, 3)
                 .then()
                 .assertThat()
-                .statusCode(HttpStatus.OK.value())
-                .body("response", equalTo(ResponseMessage.FILE_UPLOAD_SUCCESS));
+                .statusCode(HttpStatus.ACCEPTED.value())
+                .body("response", equalTo(ResponseMessage.FILE_UPLOAD_APPROVAL));
     }
 
     @Test
     @Order(8)
     @DisplayName("Exception path test: Upload invalid profile photo case")
-    void givenIdAndMultipartFile_whenUploadProfilePhoto_thenReturnFailMessage() throws IOException {
+    void givenIdAndMultipartFile_whenUploadProfilePhoto_thenReturnFailMessage() {
         MultiPartSpecification multiPartSpecification = constructMultiPartSpecification("invalid_profilePhoto.txt", MediaType.TEXT_PLAIN_VALUE);
 
         given()
@@ -270,7 +272,7 @@ class CustomerControllerTest {
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.getFirst()))
                 .multiPart(multiPartSpecification)
                 .when()
-                .post(PROFILE_PHOTO_UPLOAD_ENDPOINT, MockCustomerFactory.generateMockCustomers().getFirst().getId())
+                .post(PROFILE_PHOTO_UPLOAD_ENDPOINT, 2)
                 .then()
                 .assertThat()
                 .statusCode(HttpStatus.EXPECTATION_FAILED.value())
@@ -284,17 +286,16 @@ class CustomerControllerTest {
         given()
                 .when()
                 .header(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(accessTokens.get(1)))
-                .get(PROFILE_PHOTO_DOWNLOAD_ENDPOINT, MockCustomerFactory.generateMockCustomers().get(1).getId())
+                .get(PROFILE_PHOTO_DOWNLOAD_ENDPOINT, 3)
                 .then()
+                .assertThat()
                 .statusCode(HttpStatus.OK.value());
     }
 
     private void registerCustomer(RegistrationRequest request) {
-        String body = gson.toJson(request);
-
         given()
                 .contentType(ContentType.JSON)
-                .body(body)
+                .body(gson.toJson(request))
                 .when()
                 .post(REGISTER_ENDPOINT)
                 .then()
@@ -331,17 +332,22 @@ class CustomerControllerTest {
         File savedFile = fileRepository.save(file);
 
         Agreement agreement = MockAgreementFactory.getMockAgreement();
-        agreement.setFile(savedFile);
+        agreement.setFiles(List.of(savedFile));
 
         agreementRepository.save(agreement);
     }
 
-    private static MultiPartSpecification constructMultiPartSpecification(String profilePhotoName, String mediaType) throws IOException {
+    private static MultiPartSpecification constructMultiPartSpecification(String profilePhotoName, String mediaType) {
         java.io.File file = new java.io.File(PHOTO_PATH + profilePhotoName);
-        return new MultiPartSpecBuilder(Files.readAllBytes(file.toPath()))
-                .fileName(file.getName())
-                .controlName("file")
-                .mimeType(mediaType)
-                .build();
+
+        try {
+            return new MultiPartSpecBuilder(Files.readAllBytes(file.toPath()))
+                    .fileName(file.getName())
+                    .controlName("file")
+                    .mimeType(mediaType)
+                    .build();
+        } catch (IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
     }
 }

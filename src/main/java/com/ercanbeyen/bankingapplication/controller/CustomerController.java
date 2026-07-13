@@ -118,8 +118,8 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     public ResponseEntity<MessageResponse<String>> uploadProfilePhoto(@PathVariable("id") @P("customerId") Integer id, @RequestParam("file") MultipartFile request) {
         PhotoUtil.checkPhoto(request);
         customerService.uploadProfilePhoto(id, request);
-        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_UPLOAD_SUCCESS);
-        return ResponseEntity.ok(response);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_UPLOAD_APPROVAL);
+        return ResponseEntity.accepted().body(response);
     }
 
     @PreAuthorize("#customerId == authentication.principal.id")
@@ -143,7 +143,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @DeleteMapping("/{id}/photo")
     public ResponseEntity<MessageResponse<String>> deleteProfilePhoto(@PathVariable("id") @P("customerId") Integer id) {
         customerService.deleteProfilePhoto(id);
-        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.FILE_DELETE_SUCCESS);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.DELETE_SUCCESS, Entity.FILE.getValue()));
         return ResponseEntity.ok(response);
     }
 

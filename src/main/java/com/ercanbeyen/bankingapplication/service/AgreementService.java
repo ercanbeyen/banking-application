@@ -2,14 +2,14 @@ package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
 import com.ercanbeyen.bankingapplication.entity.Customer;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
 public interface AgreementService {
-    AgreementDto createAgreement(String title, String subject, MultipartFile request);
-    AgreementDto updateAgreement(String id, String title, String subject, MultipartFile request);
+    void createAgreement(String title, String subject, List<FileUploadRequest> fileUploadRequests);
+    void updateAgreement(String id, String title, String subject, List<FileUploadRequest> fileUploadRequests);
     List<AgreementDto> getAgreements();
     AgreementDto getAgreement(String id);
     void approveAgreement(String title, Customer customer);

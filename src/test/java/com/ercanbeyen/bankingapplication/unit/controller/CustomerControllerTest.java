@@ -16,6 +16,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -25,6 +26,7 @@ import static org.mockito.Mockito.*;
 
 @Slf4j
 @ExtendWith(MockitoExtension.class)
+@DisplayName("Customer Controller Unit Test")
 class CustomerControllerTest {
     @InjectMocks
     private CustomerController customerController;
@@ -34,8 +36,8 @@ class CustomerControllerTest {
     public static final String TESTED_CLASS = "Customer Controller";
     private List<CustomerDto> customerDtos;
 
-    @BeforeEach
-    void start() {
+    @BeforeAll
+    static void start() {
       log.info(LogMessage.Test.START, LogMessage.Test.UNIT, TESTED_CLASS);
     }
 
@@ -60,7 +62,7 @@ class CustomerControllerTest {
     void givenFilteringOption_whenGetEntity_thenReturnCustomerDtos() {
         // given
         CustomerFilteringOption filteringOption = new CustomerFilteringOption();
-        filteringOption.setBirthDate(LocalDate.of(1980, 8, 15));
+        filteringOption.setBirthDate(LocalDate.of(1980, Month.NOVEMBER, 15));
 
         doReturn(customerDtos)
                 .when(customerService)

@@ -98,7 +98,7 @@ class CustomerServiceTest {
         // given
         List<CustomerDto> expected = List.of(customerDtos.getFirst());
         CustomerFilteringOption filteringOption = new CustomerFilteringOption();
-        filteringOption.setBirthDate(LocalDate.of(1980, Month.AUGUST, 15));
+        filteringOption.setBirthDate(LocalDate.of(1980, Month.NOVEMBER, 15));
 
         doReturn(customers)
                 .when(customerRepository)
@@ -333,7 +333,7 @@ class CustomerServiceTest {
                 .findById(customers.getFirst().getId());
         doReturn(fileCompletableFuture)
                 .when(fileService)
-                .storeFile(any(), any());
+                .saveFile(any());
         doReturn(customers.getFirst())
                 .when(customerRepository)
                 .save(any());
@@ -344,22 +344,19 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(fileService, times(1)).storeFile(any(), any());
+        verify(fileService, times(1)).saveFile(any());
     }
 
     @Test
     @DisplayName("Exception path test: given multipartFile when uploadFile then throw ResourceExpectationFailedException")
     void givenMultipartFile_whenUploadFile_thenThrowResourceExpectationFailedException() {
         // given
-        String expected = ResponseMessage.FILE_UPLOAD_ERROR;
+        String expected = "File should not be empty";
         int id = 1;
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
-        doThrow(new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR))
-                .when(fileService)
-                .storeFile(any(), any());
 
         // when
         RuntimeException exception = assertThrows(ResourceExpectationFailedException.class, () -> customerService.uploadProfilePhoto(id, null));
@@ -367,8 +364,7 @@ class CustomerServiceTest {
 
         // then
         verify(customerRepository, times(1)).findById(anyInt());
-        verify(fileService, times(1)).storeFile(any(), any());
-        verifyNoMoreInteractions(customerRepository);
+        verifyNoMoreInteractions(fileService, customerRepository);
 
         assertEquals(expected, actual);
     }

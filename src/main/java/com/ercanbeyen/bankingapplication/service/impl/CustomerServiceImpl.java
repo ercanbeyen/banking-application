@@ -2,7 +2,9 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.util.EmailUtil;
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
+import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
+import com.ercanbeyen.bankingapplication.util.*;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
@@ -21,10 +23,6 @@ import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOpti
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.service.*;
-import com.ercanbeyen.bankingapplication.util.AccountUtil;
-import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
-import com.ercanbeyen.bankingapplication.util.LoggingUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.javatuples.Pair;
@@ -34,7 +32,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -200,25 +197,31 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public void uploadProfilePhoto(Integer id, MultipartFile request) {
+    public void uploadProfilePhoto(Integer id, MultipartFile file) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
+        String customFileName = customer.getFullName() + " - Profile Photo";
+        FileUploadRequest fileUploadRequest = FileUtil.createFileUploadRequest(file, customFileName);
 
-        String fileName = customer.getNationalId() + "_photo";
-        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
-        customer.setProfilePhoto(fileCompletableFuture.join()); // Profile photo upload
-
-        customerRepository.save(customer);
+        fileService.saveFile(fileUploadRequest)
+                .thenAccept(profilePhoto -> {
+                    customer.setProfilePhoto(profilePhoto);
+                    customerRepository.save(customer);
+                }) // Profile photo upload
+                .exceptionally(exception -> {
+                    log.error("Unable to upload photo. Error: {}", exception.getMessage());
+                    throw new ResourceExpectationFailedException(exception.getMessage());
+                });
     }
 
     @Override
     public File downloadProfilePhoto(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        return findById(id)
-                .getProfilePhoto()
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Profile Photo")));
+        Customer customer = findById(id);
+        return customer.getProfilePhoto()
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.FILE.getValue())));
     }
 
     @Override

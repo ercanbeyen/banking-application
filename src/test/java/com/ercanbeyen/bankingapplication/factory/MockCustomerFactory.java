@@ -48,7 +48,7 @@ public class MockCustomerFactory {
         customerDto1.setEmail("test1@email.com");
         customerDto1.setPhoneNumber("+905328465701");
         customerDto1.setGender(Gender.MALE);
-        customerDto1.setBirthDate(LocalDate.of(1980, Month.AUGUST, 15));
+        customerDto1.setBirthDate(LocalDate.of(1980, Month.AUGUST, 7));
         customerDto1.setAddresses(new ArrayList<>());
 
         id++;
@@ -61,7 +61,7 @@ public class MockCustomerFactory {
         customerDto2.setEmail("test2@email.com");
         customerDto2.setPhoneNumber("+905328465702");
         customerDto2.setGender(Gender.FEMALE);
-        customerDto2.setBirthDate(LocalDate.of(1985, Month.APRIL, 6));
+        customerDto2.setBirthDate(LocalDate.of(1985, Month.NOVEMBER, 15));
         customerDto2.setAddresses(new ArrayList<>());
 
         id++;

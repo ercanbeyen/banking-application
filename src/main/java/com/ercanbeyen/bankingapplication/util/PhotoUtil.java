@@ -13,7 +13,7 @@ public class PhotoUtil {
     private final List<String> validContentTypes = List.of(MediaType.IMAGE_PNG_VALUE, MediaType.IMAGE_JPEG_VALUE);
 
     public void checkPhoto(MultipartFile request) {
-        FileUtil.checkIsFileEmpty(request);
+        FileUtil.checkFileContent(request);
         checkContentTypeOfPhoto(request);
     }
 

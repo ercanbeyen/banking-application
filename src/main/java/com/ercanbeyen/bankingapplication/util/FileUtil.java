@@ -1,11 +1,14 @@
 package com.ercanbeyen.bankingapplication.util;
 
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
+import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.util.StringUtil;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
@@ -15,14 +18,34 @@ import java.util.Optional;
 public class FileUtil {
     private final int FILE_NAME_LENGTH_THRESHOLD = 100;
 
+    public FileUploadRequest createFileUploadRequest(MultipartFile request, String customFileName) {
+        checkFile(request);
+
+        try {
+            byte[] data = request.getBytes();
+            String name = customFileName != null
+                    ? customFileName + "." + getPlainContentType(request.getContentType()) // file extension is added
+                    : request.getOriginalFilename();
+            return new FileUploadRequest(name, request.getContentType(), data);
+        } catch (IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
+    }
+
     public void checkFile(MultipartFile request) {
-        checkIsFileEmpty(request);
+        checkFileContent(request);
         checkLengthOfFileName(request);
     }
 
-    public void checkIsFileEmpty(MultipartFile request) {
-        if (request.isEmpty()) {
+    public void checkFileContent(MultipartFile request) {
+        if (request == null || request.isEmpty()) {
             throw new ResourceExpectationFailedException("File should not be empty");
+        }
+
+        try {
+            request.getBytes();
+        } catch (IOException _) {
+            throw new InternalServerErrorException("An error occurred while reading the file");
         }
     }
 
