@@ -15,6 +15,8 @@ public final class LogMessage {
             Response is returned successfully after rest template call.
             Response: {}
             """;
+    public static final String POSITIVE_CALLBACK_MESSAGE = "+++ [CALLBACK] Background process completed successfully! Response: {}";
+    public static final String NEGATIVE_CALLBACK_MESSAGE = "--- [CALLBACK] Error occurred in the background process: {}";
     public static final String PROCESS_NEWS = "Processing {} news...{}";
     public static final String RESOURCE_CREATE_SUCCESS = "{} {} is successfully created";
     public static final String RESOURCE_DELETE_SUCCESS = "{} {} is successfully deleted";

@@ -32,7 +32,7 @@ public non-sealed class Customer extends BaseEntity {
     @Column(name = "phone_number", length = 13, unique = true)
     private String phoneNumber;
     @Getter
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
     @Getter
     @Enumerated(EnumType.STRING)

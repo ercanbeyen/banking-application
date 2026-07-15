@@ -16,6 +16,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DataJpaTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.NONE)
+@DisplayName("Customer Repository Integration Test")
 class CustomerRepositoryTest {
     @Container
     @ServiceConnection
@@ -49,7 +51,7 @@ class CustomerRepositoryTest {
         customer.setEmail("test1@email.com");
         customer.setPhoneNumber("+905328465701");
         customer.setGender(Gender.MALE);
-        customer.setBirthDate(LocalDate.of(2005, 8, 15));
+        customer.setBirthDate(LocalDate.of(1994, Month.JUNE, 28));
 
         customerRepository.save(customer);
 

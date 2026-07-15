@@ -4,23 +4,20 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.FilePreviewInfo;
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.repository.FileRepository;
 import com.ercanbeyen.bankingapplication.service.FileService;
-import com.ercanbeyen.bankingapplication.util.FileUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -31,18 +28,42 @@ public class FileServiceImpl implements FileService {
 
     @Async
     @Override
-    public void storeFile(MultipartFile request) {
+    public CompletableFuture<File> saveFile(FileUploadRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        String name = StringUtils.cleanPath(Objects.requireNonNull(request.getOriginalFilename()));
-        saveFile(request, name);
+
+        return CompletableFuture.supplyAsync(() -> {
+                File file = new File(request.name(), request.contentType(), request.data());
+                return fileRepository.save(file);
+        }).exceptionally(exception -> {
+            log.error(LogMessage.EXCEPTION, exception.getMessage());
+            throw new ResourceExpectationFailedException(exception.getMessage());
+        });
     }
 
     @Async
     @Override
-    public CompletableFuture<File> storeFile(MultipartFile request, String name) {
+    public CompletableFuture<List<File>> saveFiles(List<FileUploadRequest> fileUploadRequests) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        String fileName = name + "." + FileUtil.getPlainContentType(request.getContentType()); // file extension is added
-        return saveFile(request, fileName);
+
+        List<File> files = new ArrayList<>();
+
+        for (FileUploadRequest fileUploadRequest : fileUploadRequests) {
+            String entity = Entity.FILE.getValue();
+
+            try {
+                File file = new File(fileUploadRequest.name(), fileUploadRequest.contentType(), fileUploadRequest.data());
+                File savedFile = fileRepository.save(file);
+                files.add(savedFile);
+                log.info("The {} was successfully saved in the background: {}", entity, file.getName());
+            }
+            catch (Exception exception) {
+                log.error("While saving the {} {} in the background an error occurred: {}", entity, fileUploadRequest.name(), exception.getMessage());
+            }
+        }
+
+        log.info("Multiple file saves are completed!");
+
+        return CompletableFuture.completedFuture(files);
     }
 
     @Override
@@ -65,7 +86,7 @@ public class FileServiceImpl implements FileService {
                         fileRepository.delete(file);
                     } catch (Exception exception) {
                         log.error(LogMessage.EXCEPTION, exception.getMessage());
-                        String message = "File is a profile photo. So, it might only be deleted from customer api";
+                        String message = entity + " is a profile photo. So, it might only be deleted from " + Entity.CUSTOMER.getValue() + " API";
                         throw new ResourceExpectationFailedException(message);
                     }
                 }, () -> {
@@ -90,25 +111,5 @@ public class FileServiceImpl implements FileService {
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
         return file;
-    }
-
-    private CompletableFuture<File> saveFile(MultipartFile multipartFile, String name) {
-        return CompletableFuture.supplyAsync(() -> {
-            File file;
-
-            try {
-                file = new File(name, multipartFile.getContentType(), multipartFile.getBytes());
-            } catch (IOException _) {
-                throw new ResourceExpectationFailedException("Error occurred while processing the file");
-            }
-
-            File savedFile = fileRepository.save(file);
-            log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.FILE.getValue(), savedFile.getId());
-
-            return savedFile;
-        }).exceptionally(exception -> {
-            log.error(LogMessage.EXCEPTION, exception.getMessage());
-            throw new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR);
-        });
     }
 }

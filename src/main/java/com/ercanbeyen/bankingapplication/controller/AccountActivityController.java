@@ -11,7 +11,6 @@ import com.ercanbeyen.bankingapplication.view.entity.AccountActivityView;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.mail.MessagingException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -19,7 +18,6 @@ import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.util.List;
 
 @RestController
@@ -53,8 +51,8 @@ public class AccountActivityController {
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
-    @PostMapping("/{id}/receipt/download")
-    public ResponseEntity<byte[]> generateReceipt(@PathVariable("id") String id) {
+    @PostMapping("/{id}/receipt/pdf/download")
+    public ResponseEntity<byte[]> downloadReceiptPdf(@PathVariable("id") String id) {
         ByteArrayOutputStream outputStream = accountActivityService.generateReceiptStream(id);
 
         HttpHeaders headers = new HttpHeaders();
@@ -70,8 +68,8 @@ public class AccountActivityController {
     }
 
     @PreAuthorize("@accountActivitySecurityService.isOwner(#accountActivityId, authentication)")
-    @PostMapping("/{id}/receipt/email")
-    public ResponseEntity<MessageResponse<String>> sendReceipt(@PathVariable("id") @P("accountActivityId") String id, @RequestParam("to") String email) throws MessagingException, IOException {
+    @PostMapping("/{id}/receipt/pdf/email")
+    public ResponseEntity<MessageResponse<String>> sendReceiptPdf(@PathVariable("id") @P("accountActivityId") String id, @RequestParam("to") String email) {
         ByteArrayOutputStream outputStream = accountActivityService.generateReceiptStream(id);
         AttachmentFile attachmentFile = AttachmentFile.RECEIPT;
 

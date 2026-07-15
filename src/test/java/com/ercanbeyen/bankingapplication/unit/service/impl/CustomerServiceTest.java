@@ -14,6 +14,7 @@ import com.ercanbeyen.bankingapplication.mapper.CustomerAgreementMapper;
 import com.ercanbeyen.bankingapplication.mapper.CustomerMapper;
 import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
 import com.ercanbeyen.bankingapplication.service.AgreementService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
@@ -31,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 
@@ -58,6 +60,8 @@ class CustomerServiceTest {
     private AgreementService agreementService;
     @Mock
     private EmailService emailService;
+    @Mock
+    private SystemAdminProperties systemAdminProperties;
 
     private List<Customer> customers;
     private List<CustomerAgreementDto> customerAgreementDtos;
@@ -94,7 +98,7 @@ class CustomerServiceTest {
         // given
         List<CustomerDto> expected = List.of(customerDtos.getFirst());
         CustomerFilteringOption filteringOption = new CustomerFilteringOption();
-        filteringOption.setBirthDate(LocalDate.of(1980, 8, 15));
+        filteringOption.setBirthDate(LocalDate.of(1980, Month.NOVEMBER, 15));
 
         doReturn(customers)
                 .when(customerRepository)
@@ -191,6 +195,7 @@ class CustomerServiceTest {
         verify(customerMapper, times(1)).dtoToEntity(any());
         verify(cashFlowCalendarService, times(1)).createCashFlowCalendar();
         verify(customerRepository, times(1)).save(any());
+        verify(systemAdminProperties, times(1)).getUsername();
         verify(agreementService, times(1)).approveAgreements(any(), any());
         verify(customerMapper, times(1)).entityToDto(any());
 
@@ -212,6 +217,7 @@ class CustomerServiceTest {
 
         // then
         verify(customerRepository, times(1)).findAll();
+        verifyNoInteractions(systemAdminProperties);
         verifyNoMoreInteractions(customerRepository, customerMapper);
 
         assertEquals(expected, actual);
@@ -327,7 +333,7 @@ class CustomerServiceTest {
                 .findById(customers.getFirst().getId());
         doReturn(fileCompletableFuture)
                 .when(fileService)
-                .storeFile(any(), any());
+                .saveFile(any());
         doReturn(customers.getFirst())
                 .when(customerRepository)
                 .save(any());
@@ -338,22 +344,19 @@ class CustomerServiceTest {
         // then
         verify(customerRepository, times(1))
                 .findById(anyInt());
-        verify(fileService, times(1)).storeFile(any(), any());
+        verify(fileService, times(1)).saveFile(any());
     }
 
     @Test
     @DisplayName("Exception path test: given multipartFile when uploadFile then throw ResourceExpectationFailedException")
     void givenMultipartFile_whenUploadFile_thenThrowResourceExpectationFailedException() {
         // given
-        String expected = ResponseMessage.FILE_UPLOAD_ERROR;
+        String expected = "File should not be empty";
         int id = 1;
 
         doReturn(Optional.of(customers.getFirst()))
                 .when(customerRepository)
                 .findById(anyInt());
-        doThrow(new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR))
-                .when(fileService)
-                .storeFile(any(), any());
 
         // when
         RuntimeException exception = assertThrows(ResourceExpectationFailedException.class, () -> customerService.uploadProfilePhoto(id, null));
@@ -361,8 +364,7 @@ class CustomerServiceTest {
 
         // then
         verify(customerRepository, times(1)).findById(anyInt());
-        verify(fileService, times(1)).storeFile(any(), any());
-        verifyNoMoreInteractions(customerRepository);
+        verifyNoMoreInteractions(fileService, customerRepository);
 
         assertEquals(expected, actual);
     }

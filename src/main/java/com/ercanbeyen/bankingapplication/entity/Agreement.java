@@ -25,9 +25,8 @@ public class Agreement {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AgreementSubject subject;
-    @ManyToOne
-    @JoinColumn(name = "file_id", referencedColumnName = "id")
-    private File file;
+    @ManyToMany
+    private List<File> files;
     @OneToMany(mappedBy = "agreement", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<CustomerAgreement> customers;
     @CreationTimestamp(source = SourceType.DB)
@@ -41,11 +40,15 @@ public class Agreement {
                 .map(customerAgreement -> customerAgreement.getCustomer().getNationalId())
                 .toList();
 
+        List<String> fileNames = files.stream()
+                .map(File::getName)
+                .toList();
+
         return "Agreement{" +
                 "id='" + id + '\'' +
                 ", title='" + title + '\'' +
                 ", subject=" + subject +
-                ", file=" + file.getName() +
+                ", files=" + fileNames +
                 ", customers=" + customerNationalIds +
                 ", createdAt=" + createdAt +
                 '}';

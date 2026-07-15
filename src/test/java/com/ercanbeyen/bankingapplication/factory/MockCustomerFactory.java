@@ -9,6 +9,7 @@ import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 
 import java.time.LocalDate;
+import java.time.Month;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -37,7 +38,7 @@ public class MockCustomerFactory {
     }
 
     public static List<CustomerDto> generateMockCustomerDtos() {
-        int id = 1;
+        int id = 2;
 
         CustomerDto customerDto1 = new CustomerDto();
         customerDto1.setId(id);
@@ -47,7 +48,7 @@ public class MockCustomerFactory {
         customerDto1.setEmail("test1@email.com");
         customerDto1.setPhoneNumber("+905328465701");
         customerDto1.setGender(Gender.MALE);
-        customerDto1.setBirthDate(LocalDate.of(1980, 8, 15));
+        customerDto1.setBirthDate(LocalDate.of(1980, Month.AUGUST, 7));
         customerDto1.setAddresses(new ArrayList<>());
 
         id++;
@@ -60,7 +61,7 @@ public class MockCustomerFactory {
         customerDto2.setEmail("test2@email.com");
         customerDto2.setPhoneNumber("+905328465702");
         customerDto2.setGender(Gender.FEMALE);
-        customerDto2.setBirthDate(LocalDate.of(1985, 4, 6));
+        customerDto2.setBirthDate(LocalDate.of(1985, Month.NOVEMBER, 15));
         customerDto2.setAddresses(new ArrayList<>());
 
         id++;
@@ -73,7 +74,7 @@ public class MockCustomerFactory {
         customerDto3.setEmail("test3@email.com");
         customerDto3.setPhoneNumber("+905328465703");
         customerDto3.setGender(Gender.FEMALE);
-        customerDto3.setBirthDate(LocalDate.of(1993, 2, 20));
+        customerDto3.setBirthDate(LocalDate.of(1993, Month.FEBRUARY, 20));
         customerDto3.setAddresses(new ArrayList<>());
 
         return List.of(customerDto1, customerDto2, customerDto3);

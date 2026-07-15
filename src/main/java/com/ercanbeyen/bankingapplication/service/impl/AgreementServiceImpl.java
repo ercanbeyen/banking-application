@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AgreementDto;
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
@@ -21,8 +22,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
@@ -36,28 +37,40 @@ public class AgreementServiceImpl implements AgreementService {
     private final FileService fileService;
 
     @Override
-    public AgreementDto createAgreement(String title, String subject, MultipartFile request) {
+    public void createAgreement(String title, String subject, List<FileUploadRequest> fileUploadRequests) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         if (agreementRepository.existsByTitle(title)) {
             throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
         }
 
-        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, title);
+        CompletableFuture<List<File>> futureResult = fileService.saveFiles(fileUploadRequests);
+        List<File> savedFiles = new ArrayList<>();
+
+        futureResult.thenAccept(uploadedFiles -> {
+            List<String> fileNames = uploadedFiles.stream()
+                    .map(File::getName)
+                    .toList();
+            log.info(LogMessage.POSITIVE_CALLBACK_MESSAGE, fileNames);
+            savedFiles.addAll(uploadedFiles);
+        }).exceptionally(exception -> {
+            log.error(LogMessage.NEGATIVE_CALLBACK_MESSAGE, exception.getMessage());
+            return null;
+        });
 
         Agreement agreement = new Agreement();
-        agreement.setFile(fileCompletableFuture.join());
+        agreement.setFiles(savedFiles);
         agreement.setTitle(title);
         agreement.setSubject(AgreementSubject.valueOf(subject));
 
         Agreement savedAgreement = agreementRepository.save(agreement);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.AGREEMENT.getValue(), savedAgreement.getId());
 
-        return agreementMapper.entityToDto(savedAgreement);
+        agreementMapper.entityToDto(savedAgreement);
     }
 
     @Override
-    public AgreementDto updateAgreement(String id, String title, String subject, MultipartFile request) {
+    public void updateAgreement(String id, String title, String subject, List<FileUploadRequest> fileUploadRequests) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Agreement agreement = findById(id);
@@ -66,20 +79,31 @@ public class AgreementServiceImpl implements AgreementService {
             throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
         }
 
-        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, title);
+        CompletableFuture<List<File>> futureResult = fileService.saveFiles(fileUploadRequests);
+        List<File> files = new ArrayList<>();
 
-        agreement.setFile(fileCompletableFuture.join());
+        futureResult.thenAccept(savedFiles -> {
+            List<String> fileNames = savedFiles.stream()
+                    .map(File::getName)
+                    .toList();
+            log.info(LogMessage.POSITIVE_CALLBACK_MESSAGE, fileNames);
+            files.addAll(savedFiles);
+        }).exceptionally(exception -> {
+            log.error(LogMessage.NEGATIVE_CALLBACK_MESSAGE, exception.getMessage());
+            return null;
+        });
+
         agreement.setTitle(title);
+        agreement.setFiles(files);
         agreement.setSubject(AgreementSubject.valueOf(subject));
 
-        Agreement savedAgreement = agreementRepository.save(agreement);
-
-        return agreementMapper.entityToDto(savedAgreement);
+        agreementRepository.save(agreement);
     }
 
     @Override
     public List<AgreementDto> getAgreements() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         return agreementRepository.findAll()
                 .stream()
                 .map(agreementMapper::entityToDto)
@@ -89,6 +113,7 @@ public class AgreementServiceImpl implements AgreementService {
     @Override
     public AgreementDto getAgreement(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         return agreementMapper.entityToDto(findById(id));
     }
 

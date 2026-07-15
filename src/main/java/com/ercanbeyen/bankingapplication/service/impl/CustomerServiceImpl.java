@@ -2,6 +2,9 @@ package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
+import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
+import com.ercanbeyen.bankingapplication.util.*;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
@@ -18,10 +21,8 @@ import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.option.CustomerFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
+import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.service.*;
-import com.ercanbeyen.bankingapplication.util.AccountUtil;
-import com.ercanbeyen.bankingapplication.util.CashFlowCalendarUtil;
-import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.javatuples.Pair;
@@ -31,7 +32,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -52,6 +52,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final CashFlowCalendarService cashFlowCalendarService;
     private final AgreementService agreementService;
     private final EmailService emailService;
+    private final SystemAdminProperties systemAdminProperties;
 
     @Override
     public List<CustomerDto> getEntities(CustomerFilteringOption filteringOption) {
@@ -62,7 +63,7 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDate customerBirthday = customer.getBirthDate();
 
             Boolean birthDayFilter = (birthDateOption == null
-                    || birthDateOption.getMonth() == customerBirthday.getMonth() && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
+                    || birthDateOption.getMonth().equals(customerBirthday.getMonth()) && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
             Boolean createdAtFilter = (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().isEqual(filteringOption.getCreatedAt()));
 
             return (birthDayFilter && createdAtFilter);
@@ -95,12 +96,13 @@ public class CustomerServiceImpl implements CustomerService {
         Customer savedCustomer = customerRepository.save(customer);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), savedCustomer.getId());
 
-        agreementService.approveAgreements(AgreementSubject.CUSTOMER, customer);
+        if (!request.getNationalId().equals(systemAdminProperties.getUsername())) {
+            agreementService.approveAgreements(AgreementSubject.CUSTOMER, customer);
+        }
 
         return customerMapper.entityToDto(savedCustomer);
     }
 
-    @Transactional
     @Override
     public CustomerDto updateEntity(Integer id, CustomerDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
@@ -108,28 +110,23 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = findById(id);
         checkUniqueness(customer, request);
 
+        customer.setName(request.getName());
+        customer.setSurname(request.getSurname());
         customer.setPhoneNumber(request.getPhoneNumber());
         customer.setGender(request.getGender());
         customer.setBirthDate(request.getBirthDate());
         customer.setAddresses(request.getAddresses());
-
-        String currentFullName = customer.getFullName();
-        String nextFullName = request.getName() + " " + request.getSurname();
-
-        if (!currentFullName.equals(nextFullName)) {
-            customer.setName(request.getName());
-            customer.setSurname(request.getSurname());
-        }
 
         String currentEmail = customer.getEmail();
         String nextEmail = request.getEmail();
 
         if (!currentEmail.equals(nextEmail)) {
             customer.setEmail(nextEmail);
+            String content = EmailUtil.constructContent(customer.getFullName(), "Your email is successfully updated! &#x1F44D;");
             emailService.sendEmail(
                     nextEmail,
                     "Email Update",
-                    "Dear " + customer.getFullName() + ",\n\nYour email is successfully updated!"
+                    content
             );
         }
 
@@ -200,25 +197,31 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public void uploadProfilePhoto(Integer id, MultipartFile request) {
+    public void uploadProfilePhoto(Integer id, MultipartFile file) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Customer customer = findById(id);
+        String customFileName = customer.getFullName() + " - Profile Photo";
+        FileUploadRequest fileUploadRequest = FileUtil.createFileUploadRequest(file, customFileName);
 
-        String fileName = customer.getNationalId() + "_photo";
-        CompletableFuture<File> fileCompletableFuture = fileService.storeFile(request, fileName);
-        customer.setProfilePhoto(fileCompletableFuture.join()); // Profile photo upload
-
-        customerRepository.save(customer);
+        fileService.saveFile(fileUploadRequest)
+                .thenAccept(profilePhoto -> {
+                    customer.setProfilePhoto(profilePhoto);
+                    customerRepository.save(customer);
+                }) // Profile photo upload
+                .exceptionally(exception -> {
+                    log.error("Unable to upload photo. Error: {}", exception.getMessage());
+                    throw new ResourceExpectationFailedException(exception.getMessage());
+                });
     }
 
     @Override
     public File downloadProfilePhoto(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        return findById(id)
-                .getProfilePhoto()
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Profile Photo")));
+        Customer customer = findById(id);
+        return customer.getProfilePhoto()
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.FILE.getValue())));
     }
 
     @Override
@@ -319,7 +322,7 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = findById(id);
         CashFlowCalendar cashFlowCalendar = customer.getCashFlowCalendar();
         List<CashFlow> cashFlows = new ArrayList<>();
-        LocalDate today = LocalDate.now();
+        LocalDate today = TimeUtil.getTurkeyDate();
 
         if (CashFlowCalendarUtil.isDateFuture(today, year, month)) {
             log.info("Past cash flows are requested");
@@ -347,7 +350,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         Customer customer = findById(id);
         List<ExpectedTransaction> expectedTransactions = new ArrayList<>();
-        LocalDate finalDate = LocalDate.now().plusMonths(month);
+        LocalDate finalDate = TimeUtil.getTurkeyDate().plusMonths(month);
 
         for (Account account : customer.getAccounts()) {
             AccountType accountType = account.getType();
@@ -412,10 +415,10 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(String nationalId) {
+    public Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = findByNationalId(nationalId)
+        Map<Pair<AccountType, Currency>, Double> balancesOfAccountTypes = findById(id)
                 .getAccounts()
                 .stream()
                 .collect(Collectors.groupingBy(account -> new Pair<>(account.getType(), account.getCurrency()), Collectors.summingDouble(Account::getBalance)));
@@ -449,9 +452,9 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     @Override
-    public Double calculateNetBalance(String nationalId, AccountType accountType, Currency currency) {
+    public Double calculateNetBalance(Integer id, AccountType accountType, Currency currency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return calculateNetBalanceOfAccounts(findByNationalId(nationalId).getAccounts(), accountType, currency);
+        return calculateNetBalanceOfAccounts(findById(id).getAccounts(), accountType, currency);
     }
 
     @Override
@@ -477,6 +480,19 @@ public class CustomerServiceImpl implements CustomerService {
 
         String entity = Entity.CUSTOMER.getValue();
         Customer customer = customerRepository.findByNationalId(nationalId)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
+
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        return customer;
+    }
+
+    @Override
+    public Customer findByEmail(String email) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        String entity = Entity.CUSTOMER.getValue();
+        Customer customer = customerRepository.findByEmail(email)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
         log.info(LogMessage.RESOURCE_FOUND, entity);
@@ -524,7 +540,7 @@ public class CustomerServiceImpl implements CustomerService {
     private static void addFutureCashFlowsForMoneyTransferOrders(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
         for (MoneyTransferOrder moneyTransferOrder : account.getMoneyTransferOrders()) {
             LocalDate paymentDate = moneyTransferOrder.getTransferDate();
-            LocalDate counterDate = LocalDate.now();
+            LocalDate counterDate = TimeUtil.getTurkeyDate();
             PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
             AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
             Double amount = moneyTransferOrder.getRegularMoneyTransfer().getAmount();
@@ -563,7 +579,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private static void addFutureCashFlowsForInterestIncomePayments(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
         LocalDate paymentDate = account.getUpdatedAt().toLocalDate();
-        LocalDate counterDate = LocalDate.now();
+        LocalDate counterDate = TimeUtil.getTurkeyDate();
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
             AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
@@ -628,19 +644,24 @@ public class CustomerServiceImpl implements CustomerService {
     private void checkUniqueness(Customer customerInDb, CustomerDto request) {
         String nationalId = request.getNationalId();
         String phoneNumber = request.getPhoneNumber();
+        String email = request.getEmail();
 
         Predicate<Customer> nationalIdPredicate = customer -> customer.getNationalId().equals(nationalId);
         Predicate<Customer> phoneNumberPredicate = customer -> customer.getPhoneNumber().equals(phoneNumber);
+        Predicate<Customer> emailPredicate = customer -> customer.getEmail().equals(email);
 
-        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateDeduction case
+        if (Optional.ofNullable(customerInDb).isPresent()) { // Add related predicates for updateEntity case
             Predicate<Customer> customerInDbPredicate = _ -> !customerInDb.getNationalId().equals(nationalId);
             nationalIdPredicate = customerInDbPredicate.and(nationalIdPredicate);
 
             customerInDbPredicate = _ -> !customerInDb.getPhoneNumber().equals(phoneNumber);
             phoneNumberPredicate = customerInDbPredicate.and(phoneNumberPredicate);
+
+            customerInDbPredicate = _ -> !customerInDb.getEmail().equals(email);
+            emailPredicate = customerInDbPredicate.and(emailPredicate);
         }
 
-        Predicate<Customer> customerPredicate = nationalIdPredicate.or(phoneNumberPredicate);
+        Predicate<Customer> customerPredicate = nationalIdPredicate.or(phoneNumberPredicate).or(emailPredicate);
 
         boolean customerExists = customerRepository.findAll()
                 .stream()
