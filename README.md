@@ -8,8 +8,9 @@
 It is a banking application includes basic banking services. Abstract CRUD approach is used throughout the development.<br/>
 
 ### Information
-- Customers must register and then log in before they can use banking services.
-- Customers can attempt to log in a maximum of 5 times consecutively. If they fail to log in 5 times consecutively, their account will be locked for 30 minutes.
+- Customers must register and then log in using Two-Factor Authentication (2FA) in order to use banking services.
+- Customers can attempt to log in a maximum of 5 times consecutively in Step 1. If they fail to log in 5 times consecutively, their account will be locked for 30 minutes.
+- Customers can attempt to log in a maximum of 3 times consecutively within 5 minutes using the OTP code sent to their email address in Step 2. If they fail to log in, the OTP code will be considered invalid.
 - Customers cannot use their last 3 passwords during password renewal.
 - Customers can transfer money to their deposit accounts using their current accounts.
 - Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
@@ -86,11 +87,11 @@ In order to monitor the application, you should use the following URL to get met
 If you want to monitor specific metric, you should append the metric to the actuator URL. For example, in order to check health, you should use the following URL to check health.<br/>
 `http://localhost:${PORT}/actuator/health`
 
-### MailPit Page
+### Mailpit Page
 ---
 
-You may use MailPit page to access the incoming emails.<br/>
-You can access MailPit page using the following URL.<br/>
+You may use Mailpit page to access the incoming emails.<br/>
+You can access Mailpit page using the following URL.<br/>
 `http://localhost:8025`
 
 ### API Documentation
