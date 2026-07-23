@@ -4,9 +4,9 @@ import com.ercanbeyen.bankingapplication.constant.enums.NewsType;
 import com.ercanbeyen.bankingapplication.entity.NewsReport;
 import com.ercanbeyen.bankingapplication.repository.NewsReportRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.batch.item.ItemReader;
-import org.springframework.batch.item.data.RepositoryItemReader;
-import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
+import org.springframework.batch.infrastructure.item.ItemReader;
+import org.springframework.batch.infrastructure.item.data.RepositoryItemReader;
+import org.springframework.batch.infrastructure.item.file.builder.FlatFileItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.core.io.ClassPathResource;
@@ -21,9 +21,10 @@ import java.util.Map;
 @Component
 @RequiredArgsConstructor
 public class Reader {
+    private static final String FIND_BY_TYPE_METHOD = "findByType";
     @Value("${dataset.news.path}")
     private String newsPath;
-    private static final String FIND_BY_TYPE_METHOD = "findByType";
+
     private final NewsReportRepository newsReportRepository;
 
     @Bean(name = "readerNewsReportCSVFile")
@@ -49,17 +50,16 @@ public class Reader {
     }
 
     private RepositoryItemReader<NewsReport> getNewsReportRepositoryItemReader(NewsType newsType) {
-        RepositoryItemReader<NewsReport> reader = new RepositoryItemReader<>();
+        Map<String, Sort.Direction> sorts = new LinkedHashMap<>();
+        sorts.put("id", Sort.Direction.ASC);
+
+        RepositoryItemReader<NewsReport> reader = new RepositoryItemReader<>(newsReportRepository, sorts);
         reader.setRepository(newsReportRepository);
         reader.setMethodName(FIND_BY_TYPE_METHOD);
 
         List<Object> queryMethodArguments = new ArrayList<>();
         queryMethodArguments.add(newsType);
         reader.setArguments(queryMethodArguments);
-
-        Map<String, Sort.Direction> sorts = new LinkedHashMap<>();
-        sorts.put("id", Sort.Direction.ASC);
-        reader.setSort(sorts);
 
         return reader;
     }

@@ -5,7 +5,7 @@ import com.ercanbeyen.bankingapplication.entity.NewsReport;
 import com.ercanbeyen.bankingapplication.entity.OfferNews;
 import lombok.NonNull;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.batch.item.ItemProcessor;
+import org.springframework.batch.infrastructure.item.ItemProcessor;
 import org.springframework.stereotype.Component;
 
 @Slf4j

@@ -7,10 +7,15 @@ spring:
   jpa:
     properties:
       hibernate:
-        dialect: "org.hibernate.dialect.MySQL8Dialect"
+        #dialect: "org.hibernate.dialect.MySQL8Dialect"
+        dialect: "org.hibernate.dialect.MySQLDialect"
       ddl-auto: update
     generate-ddl: true
     show-sql: true
+  #data:
+    #jpa:
+      #repositories:
+        #bootstrap-mode: deferred
   servlet:
     multipart:
       max-file-size: 2MB
