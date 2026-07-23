@@ -37,7 +37,6 @@ import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import org.testcontainers.utility.DockerImageName;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -56,13 +55,13 @@ import static org.hamcrest.Matchers.is;
 class CustomerControllerTest {
     @Container
     @ServiceConnection
-    private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>(DockerImageName.parse("mysql:latest"));
+    private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:latest");
     @Container
     @ServiceConnection
-    private static final CassandraContainer cassandraContainer = new CassandraContainer(DockerImageName.parse("cassandra:latest"));
+    private static final CassandraContainer cassandraContainer = new CassandraContainer("cassandra:latest");
     @Container
     @ServiceConnection
-    private static final GenericContainer<?> redisContainer = new GenericContainer<>(DockerImageName.parse("redis:latest")).withExposedPorts(6379);
+    private static final GenericContainer<?> redisContainer = new GenericContainer<>("redis:latest").withExposedPorts(6379);
     @LocalServerPort
     private Integer port;
     @Autowired
