@@ -42,7 +42,24 @@ public class TransactionService {
     private final TermDepositInterestRateService termDepositInterestRateService;
     private final CashFlowCalendarService cashFlowCalendarService;
 
-    public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation) {
+    public void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
+        Channel channel = Channel.APP;
+
+        Map<String, Object> summary = new HashMap<>();
+        summary.put(SummaryField.ACCOUNT_ACTIVITY, activityType.getValue());
+        summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
+        summary.put(SummaryField.FULL_NAME, account.getCustomer().getFullName());
+        summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
+        summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
+        summary.put(SummaryField.BRANCH, account.getBranch().getName());
+        summary.put(SummaryField.CHANNEL, channel);
+        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
+
+        AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null, channel);
+        accountActivityService.createAccountActivity(request);
+    }
+
+    public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation, Channel channel) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account[] accounts = new Account[2]; // first account is sender, second account is recipient
@@ -92,15 +109,16 @@ public class TransactionService {
         summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + account.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee);
+        summary.put(SummaryField.CHANNEL, channel);
         summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
-        AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null);
+        AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null, channel);
         createAccountActivityForDeduction(transactionFee, summary, account);
 
         cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, cashFlowExplanation);
     }
 
-    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount) {
+    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount, Channel channel) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
@@ -140,12 +158,14 @@ public class TransactionService {
         summary.put(recipientWord + SummaryField.ACCOUNT_IDENTITY, recipientAccount.getId());
 
         putDeducteeAccountInformationIntoSummary(senderAccount, deducteeAccount, summary);
+
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
         summary.put(SummaryField.PAYMENT_TYPE, request.paymentType());
+        summary.put(SummaryField.CHANNEL, channel);
         summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
-        AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation());
+        AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation(), channel);
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
 
         if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
@@ -157,7 +177,7 @@ public class TransactionService {
         }
     }
 
-    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount) {
+    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount, Channel channel) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
@@ -203,9 +223,10 @@ public class TransactionService {
         summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
         summary.put(SummaryField.RATE, FormatterUtil.convertNumberToFormalExpression(rate));
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
+        summary.put(SummaryField.CHANNEL, channel);
         summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
 
-        createAccountActivity(activityType, earnedAmount, summary, accounts, null);
+        createAccountActivity(activityType, earnedAmount, summary, accounts, null, channel);
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
     }
 
@@ -299,11 +320,11 @@ public class TransactionService {
         Account[] accounts = new Account[2];
         accounts[0] = deducteeAccount;
 
-        createAccountActivity(AccountActivityType.DEDUCTION, transactionFee, summary, accounts, null);
+        createAccountActivity(AccountActivityType.DEDUCTION, transactionFee, summary, accounts, null, Channel.AUTOMATIC);
     }
 
-    private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation) {
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation);
+    private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation, Channel channel) {
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation, channel);
         return accountActivityService.createAccountActivity(accountActivityRequest);
     }
 

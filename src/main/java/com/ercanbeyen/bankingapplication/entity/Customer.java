@@ -15,9 +15,12 @@ import java.util.*;
 @EqualsAndHashCode(callSuper = true)
 @Setter
 @Entity
-@Table(name = "customers", indexes = {
-        @Index(name = "nationalId_index", columnList = "nationalId")
-})
+@Table(
+        name = "customers",
+        indexes = {
+                @Index(name = "nationalId_index", columnList = "nationalId")
+        }
+)
 public non-sealed class Customer extends BaseEntity {
     @Getter
     @Column(nullable = false, length = 100)
@@ -43,7 +46,7 @@ public non-sealed class Customer extends BaseEntity {
     @Getter
     @ElementCollection
     @CollectionTable(
-            name =  "customer_addresses",
+            name = "customer_addresses",
             joinColumns = @JoinColumn(
                     name = "customer_national_id",
                     referencedColumnName = "national_id"

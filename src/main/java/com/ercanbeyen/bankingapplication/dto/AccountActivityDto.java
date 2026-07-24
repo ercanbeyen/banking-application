@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.Channel;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -11,8 +12,9 @@ public record AccountActivityDto(
         Integer senderAccountId,
         Integer recipientAccountId,
         Double amount,
-        LocalDateTime createdAt,
         Map<String, Object> summary,
-        String explanation) {
+        String explanation,
+        Channel channel,
+        LocalDateTime createdAt) {
 
 }

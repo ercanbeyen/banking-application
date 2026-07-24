@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto.option;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.Channel;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -15,6 +16,7 @@ public record AccountActivityFilteringOption(
         @Min(value = 0, message = "Minimum amount value should be at least {value}")
         Double minimumAmount,
         LocalDate fromDate,
-        LocalDate toDate) {
+        LocalDate toDate,
+        List<Channel> channels) {
 
 }

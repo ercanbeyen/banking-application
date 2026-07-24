@@ -49,8 +49,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             boolean recipientAccountIdFilter = filteringOption.recipientAccountId() == null
                     || (accountActivity.getRecipientAccount() != null && filteringOption.recipientAccountId().equals(accountActivity.getRecipientAccount().getId()));
             boolean minimumAmountFilter = (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount());
+            boolean channelsFilter = (filteringOption.channels() == null || filteringOption.channels().contains(accountActivity.getChannel()));
 
-            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter;
+            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter && channelsFilter;
         };
 
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
@@ -94,7 +95,16 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.ACCOUNT_ACTIVITY.getValue() + " request"));
         }
 
-        AccountActivity accountActivity = new AccountActivity(request.activityType(), request.senderAccount(), request.recipientAccount(), request.amount(), request.summary(), request.explanation());
+        AccountActivity accountActivity = new AccountActivity(
+                request.activityType(),
+                request.senderAccount(),
+                request.recipientAccount(),
+                request.amount(),
+                request.summary(),
+                request.explanation(),
+                request.channel()
+        );
+
         AccountActivity savedAccountActivity = accountActivityRepository.save(accountActivity);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT_ACTIVITY.getValue(), savedAccountActivity.getId());
 

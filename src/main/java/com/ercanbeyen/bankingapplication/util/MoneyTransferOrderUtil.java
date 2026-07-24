@@ -10,7 +10,7 @@ import java.util.function.Predicate;
 @UtilityClass
 public class MoneyTransferOrderUtil {
     public void checkMoneyTransferDate(LocalDate request) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = TimeUtil.getTurkeyDate();
 
         if (!request.isAfter(today)) {
             throw new BadRequestException(String.format("The earliest date for the transfer order can be tomorrow (%s)", today.plusDays(1)));
@@ -31,7 +31,7 @@ public class MoneyTransferOrderUtil {
          */
         return moneyTransferOrderDto -> {
             LocalDate nextMoneyTransferDate = moneyTransferOrderDto.getCreatedAt().toLocalDate();
-            LocalDate todayDate = LocalDate.now();
+            LocalDate todayDate = TimeUtil.getTurkeyDate();
 
             do {
                 nextMoneyTransferDate = switch (moneyTransferOrderDto.getRegularMoneyTransferDto().paymentPeriod()) {

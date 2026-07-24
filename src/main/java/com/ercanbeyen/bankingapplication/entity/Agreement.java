@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
-import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -30,9 +29,7 @@ public class Agreement {
     @OneToMany(mappedBy = "agreement", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<CustomerAgreement> customers;
     @CreationTimestamp(source = SourceType.DB)
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
-    LocalDateTime createdAt;
+    private LocalDateTime createdAt;
 
     @Override
     public String toString() {
