@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 
-import com.ercanbeyen.bankingapplication.constant.query.Query;
 import com.ercanbeyen.bankingapplication.listener.BaseEntityListener;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -19,11 +18,7 @@ public abstract sealed class BaseEntity permits Account, Branch, Customer, Excha
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     @CreationTimestamp(source = SourceType.DB)
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     private LocalDateTime createdAt;
     @UpdateTimestamp(source = SourceType.DB)
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "updated_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
     private LocalDateTime updatedAt;
 }

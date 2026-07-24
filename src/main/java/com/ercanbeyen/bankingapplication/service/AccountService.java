@@ -1,9 +1,6 @@
 package com.ercanbeyen.bankingapplication.service;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
-import com.ercanbeyen.bankingapplication.constant.enums.City;
-import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
@@ -16,11 +13,11 @@ import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import java.util.List;
 
 public interface AccountService extends BaseService<AccountDto, AccountFilteringOption> {
-    void depositMoney(Integer id, Double amount);
-    void withdrawMoney(Integer id, Double amount);
+    void depositMoney(Integer id, Double amount, Channel channel);
+    void withdrawMoney(Integer id, Double amount, Channel channel);
     String payInterestIncome(Integer id);
-    void transferMoney(MoneyTransferRequest request);
-    void exchangeMoney(MoneyExchangeRequest request);
+    void transferMoney(MoneyTransferRequest request, Channel channel);
+    void exchangeMoney(MoneyExchangeRequest request, Channel channel);
     String updateBlockStatus(Integer id, boolean status);
     void closeAccount(Integer id);
     Integer getTotalActiveAccounts(AccountType type, Currency currency, City city);

@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
 import com.ercanbeyen.bankingapplication.security.service.JwtService;
 import com.ercanbeyen.bankingapplication.security.util.JwtUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -42,7 +43,7 @@ public class CustomerScheduledTask {
         final String task = "celebrate customers' birthday";
         log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
-        LocalDate birthday = LocalDate.now();
+        LocalDate birthday = TimeUtil.getTurkeyDate();
         UriComponents uriComponents = UriComponentsBuilder.fromUriString(Entity.CUSTOMER.getCollectionUrl())
                 .queryParam("birthDate", birthday.toString())
                 .build();

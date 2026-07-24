@@ -20,7 +20,7 @@ public class CashFlowCalendarUtil {
     }
 
     public void checkMonthAndYearForCashFlowCalendar(Integer year, Integer month) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = TimeUtil.getTurkeyDate();
         int mostDistantMonth = Collections.max(VALID_MONTHS);
         LocalDate mostDistantFuture = today.plusMonths(mostDistantMonth);
 

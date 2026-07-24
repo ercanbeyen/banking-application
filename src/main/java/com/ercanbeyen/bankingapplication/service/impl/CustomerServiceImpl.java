@@ -631,9 +631,11 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     private double calculateTotalAmount(Account account, BalanceActivity balanceActivity, Currency toCurrency) {
+        List<Channel> channels = Arrays.asList(Channel.values());
+
         AccountActivityFilteringOption filteringOption = balanceActivity == BalanceActivity.INCREASE
-                ? new AccountActivityFilteringOption(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.INTEREST_INCOME), null, account.getId(), null, null, null)
-                : new AccountActivityFilteringOption(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.DEDUCTION), account.getId(), null, null, null, null);
+                ? new AccountActivityFilteringOption(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.INTEREST_INCOME), null, account.getId(), null, null, null, channels)
+                : new AccountActivityFilteringOption(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.DEDUCTION), account.getId(), null, null, null, null, channels);
 
         return accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency())
                 .stream()

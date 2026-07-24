@@ -90,7 +90,7 @@ public class AccountUtil {
     public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositMaturity) {
         checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(accountType, depositMaturity);
         LocalDate isGoingToBeUpdatedAt = updatedAt.toLocalDate().plusMonths(depositMaturity);
-        return isGoingToBeUpdatedAt.isEqual(LocalDate.now());
+        return isGoingToBeUpdatedAt.isEqual(TimeUtil.getTurkeyDate());
     }
 
     public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {

@@ -8,7 +8,6 @@ import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
-import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
@@ -34,7 +33,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.function.Predicate;
@@ -107,7 +105,7 @@ public class AccountServiceImpl implements AccountService {
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedAccount.getId());
 
-        createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
+        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -136,7 +134,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void depositMoney(Integer id, Double amount) {
+    public void depositMoney(Integer id, Double amount, Channel channel) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -147,7 +145,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channel);
 
         String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -156,7 +154,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void withdrawMoney(Integer id, Double amount) {
+    public void withdrawMoney(Integer id, Double amount, Channel channel) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -167,7 +165,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue();
         String cashFlowExplanation = entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channel);
 
         String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -189,7 +187,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, Channel.AUTOMATIC);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
         notificationService.sendNotification(notificationDto);
@@ -200,7 +198,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void transferMoney(MoneyTransferRequest request) {
+    public void transferMoney(MoneyTransferRequest request, Channel channel) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account senderAccount = findActiveAccountById(request.senderAccountId());
@@ -216,7 +214,7 @@ public class AccountServiceImpl implements AccountService {
 
         checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
-        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount);
+        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, channel);
 
         if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -230,7 +228,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void exchangeMoney(MoneyExchangeRequest request) {
+    public void exchangeMoney(MoneyExchangeRequest request, Channel channel) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account sellerAccount = findActiveAccountById(request.sellerAccountId());
@@ -242,7 +240,7 @@ public class AccountServiceImpl implements AccountService {
         checkDailyAccountActivityLimit(sellerAccount, request.amount(), activityType);
 
         Account deducteeAccount = getDeducteeAccount(AccountActivityType.MONEY_EXCHANGE, request.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
-        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount);
+        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount, channel);
     }
 
     @Transactional
@@ -261,7 +259,7 @@ public class AccountServiceImpl implements AccountService {
             account.setBlocked(status);
             accountRepository.save(account);
 
-            createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_BLOCKING);
+            transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_BLOCKING);
         }
 
         return status ? entity + " is successfully blocked" : entity + " blockage is successfully removed";
@@ -283,7 +281,7 @@ public class AccountServiceImpl implements AccountService {
         account.setClosedAt(TimeUtil.getTurkeyDateTime());
         accountRepository.save(account);
 
-        createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_CLOSING);
+        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_CLOSING);
     }
 
     @Override
@@ -414,17 +412,17 @@ public class AccountServiceImpl implements AccountService {
         return switch (balanceActivity) {
             case DECREASE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate());
+                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate(), request.channels());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case INCREASE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate());
+                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate(), request.channels());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case STABLE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate());
+                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate(), request.channels());
                 yield accountActivityService.getAccountActivities(filteringOption)
                         .stream()
                         .filter(accountActivityDto -> {
@@ -507,7 +505,7 @@ public class AccountServiceImpl implements AccountService {
         Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
         for (Account currentAccount : account.getCustomer().getAccounts()) {
-            AccountActivityFilteringOption filteringOption = constructAccountActivityFilteringOption(currentAccount.getId(), activityType);
+            AccountActivityFilteringOption filteringOption = constructAccountActivityFilteringOptionForDailyAccountActivityCheck(currentAccount.getId(), activityType);
             accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency()));
         }
 
@@ -529,7 +527,7 @@ public class AccountServiceImpl implements AccountService {
         log.info("Daily limit of {} is not exceeded", activityType.getValue());
     }
 
-    private static AccountActivityFilteringOption constructAccountActivityFilteringOption(Integer accountId, AccountActivityType activityType) {
+    private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, AccountActivityType activityType) {
         Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is recipient id
 
         switch (activityType) {
@@ -539,7 +537,7 @@ public class AccountServiceImpl implements AccountService {
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
-        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, LocalDate.now(), LocalDate.now());
+        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, TimeUtil.getTurkeyDate(), TimeUtil.getTurkeyDate(), List.of(Channel.APP, Channel.ATM));
     }
 
     private static void checkAccountBlocked(Account account) {
@@ -565,19 +563,5 @@ public class AccountServiceImpl implements AccountService {
         }
 
         log.info("{} {} has not been closed", entity, id);
-    }
-
-    private void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
-        Map<String, Object> summary = new HashMap<>();
-        summary.put(SummaryField.ACCOUNT_ACTIVITY, activityType.getValue());
-        summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
-        summary.put(SummaryField.FULL_NAME, account.getCustomer().getFullName());
-        summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
-        summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
-        summary.put(SummaryField.BRANCH, account.getBranch().getName());
-        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
-
-        AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null);
-        accountActivityService.createAccountActivity(request);
     }
 }
