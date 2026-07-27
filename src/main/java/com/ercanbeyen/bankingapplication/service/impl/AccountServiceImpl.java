@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.DailyAccountActivityLimitDto;
 import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
@@ -50,7 +51,7 @@ public class AccountServiceImpl implements AccountService {
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
-    private final DailyActivityLimitService dailyActivityLimitService;
+    private final DailyAccountActivityLimitService dailyAccountActivityLimitService;
     private final AgreementService agreementService;
 
     @Override
@@ -509,22 +510,24 @@ public class AccountServiceImpl implements AccountService {
             accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency()));
         }
 
-        double dailyActivityAmount = accountActivityDtos.stream()
+        double dailyAccountActivityAmount = accountActivityDtos.stream()
                 .map(AccountActivityDto::amount)
                 .reduce(0D, Double::sum);
 
-        log.info("Daily activity amount: {}", dailyActivityAmount);
-        dailyActivityAmount += amount;
-        log.info("Updated daily activity amount: {}", dailyActivityAmount);
+        log.info("Daily account activity amount: {}", dailyAccountActivityAmount);
+        dailyAccountActivityAmount += amount;
+        log.info("Updated daily account activity amount: {}", dailyAccountActivityAmount);
 
-        Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
-        log.info("Remaining daily activity limit: {}", activityLimit - dailyActivityAmount);
+        DailyAccountActivityLimitDto dailyAccountActivityLimit = dailyAccountActivityLimitService.getDailyAccountActivityLimit(activityType);
+        Double lowerLimit = dailyAccountActivityLimit.lowerLimit();
+        Double upperLimit = dailyAccountActivityLimit.upperLimit();
+        log.info("Remaining daily account activity limit: {}", upperLimit - dailyAccountActivityAmount);
 
-        if (dailyActivityAmount > activityLimit) {
-            throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType.getValue(), activityLimit));
+        if (dailyAccountActivityAmount < lowerLimit || dailyAccountActivityAmount > upperLimit) {
+            throw new ResourceConflictException(String.format("Daily limits of %s are going to be exceeded. Daily limits are %s - %s", activityType.getValue(), lowerLimit, upperLimit));
         }
 
-        log.info("Daily limit of {} is not exceeded", activityType.getValue());
+        log.info("Daily limits of {} are not exceeded", activityType.getValue());
     }
 
     private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, AccountActivityType activityType) {
@@ -537,7 +540,15 @@ public class AccountServiceImpl implements AccountService {
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
-        return new AccountActivityFilteringOption(List.of(activityType), accountIds[0], accountIds[1], null, TimeUtil.getTurkeyDate(), TimeUtil.getTurkeyDate(), List.of(Channel.APP, Channel.ATM));
+        return new AccountActivityFilteringOption(
+                List.of(activityType),
+                accountIds[0],
+                accountIds[1],
+                null,
+                TimeUtil.getTurkeyDate(),
+                TimeUtil.getTurkeyDate(),
+                List.of(Channel.APP, Channel.ATM, Channel.BRANCH)
+        );
     }
 
     private static void checkAccountBlocked(Account account) {

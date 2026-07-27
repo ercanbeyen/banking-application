@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
-@Table(name = "customer_agreement")
+@Table(name = "customers_agreements")
 public class CustomerAgreement {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -20,7 +20,7 @@ public class CustomerAgreement {
     @JoinColumn(name = "customer_national_id", referencedColumnName = "national_id")
     private Customer customer;
     @ManyToOne
-    @JoinColumn(name = "agreement_title", referencedColumnName = "title")
+    @JoinColumn(name = "agreement_id", referencedColumnName = "id")
     private Agreement agreement;
     @CreationTimestamp(source = SourceType.DB)
     private LocalDateTime approvedAt;
@@ -30,7 +30,7 @@ public class CustomerAgreement {
         return "CustomerAgreement{" +
                 "id='" + id + '\'' +
                 ", customer=" + customer.getNationalId() +
-                ", agreement=" + agreement.getTitle() +
+                ", agreement=" + agreement.getId() +
                 ", approvedAt=" + approvedAt +
                 '}';
     }

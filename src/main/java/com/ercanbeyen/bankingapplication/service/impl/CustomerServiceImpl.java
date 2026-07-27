@@ -204,15 +204,13 @@ public class CustomerServiceImpl implements CustomerService {
         String customFileName = customer.getFullName() + " - Profile Photo";
         FileUploadRequest fileUploadRequest = FileUtil.createFileUploadRequest(file, customFileName);
 
-        fileService.saveFile(fileUploadRequest)
-                .thenAccept(profilePhoto -> {
-                    customer.setProfilePhoto(profilePhoto);
-                    customerRepository.save(customer);
-                }) // Profile photo upload
-                .exceptionally(exception -> {
-                    log.error("Unable to upload photo. Error: {}", exception.getMessage());
-                    throw new ResourceExpectationFailedException(exception.getMessage());
-                });
+        fileService.saveFile(fileUploadRequest).thenAccept(profilePhoto -> {
+            customer.setProfilePhoto(profilePhoto);
+            customerRepository.save(customer);
+        }).exceptionally(exception -> {
+            log.error("Unable to upload photo. Error: {}", exception.getMessage());
+            throw new ResourceExpectationFailedException(exception.getMessage());
+        });
     }
 
     @Override

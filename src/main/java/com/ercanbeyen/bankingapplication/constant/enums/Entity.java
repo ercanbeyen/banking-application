@@ -13,13 +13,14 @@ public enum Entity {
     NOTIFICATION("Notification"),
     ACCOUNT_ACTIVITY("Account Activity"),
     MONEY_TRANSFER_ORDER("Money Transfer Order"),
+    NEWS("News"),
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
     BRANCH("Branch"),
     TERM_DEPOSIT_INTEREST_RATE("Term Deposit Interest Rate"),
     DEDUCTION("Deduction"),
     AGREEMENT("Agreement"),
-    DAILY_ACTIVITY_LIMIT("Daily Activity Limit"),
+    DAILY_ACCOUNT_ACTIVITY_LIMIT("Daily Account Activity Limit"),
     CASH_FLOW_CALENDAR("Cash Flow Calendar"),
     USER_CREDENTIALS("User Credentials"),
     ROLE("Role"),
@@ -35,12 +36,25 @@ public enum Entity {
 
     private String getResource() {
         return switch (this) {
-            case MONEY_TRANSFER_ORDER -> "money-transfer-order";
             case ACCOUNT_ACTIVITY -> "account-activitie";
             case BRANCH -> "branche";
-            case TERM_DEPOSIT_INTEREST_RATE -> "term-deposit-interest-rate";
-            case USER_CREDENTIALS, ROLE, REFRESH_TOKEN, INCORRECT_LOGIN_ATTEMPT -> throw new ResourceNotFoundException("Resource is not found");
-            default -> value.toLowerCase();
+            case NEWS -> "new";
+            case CASH_FLOW_CALENDAR, USER_CREDENTIALS, ROLE, REFRESH_TOKEN, INCORRECT_LOGIN_ATTEMPT -> throw new ResourceNotFoundException("Resource is not found");
+            default -> {
+                String[] words = value.toLowerCase().split(" ");
+                StringBuilder stringBuilder = new StringBuilder();
+
+                for (int i = 0; i < words.length; i++) {
+                    String word = words[i];
+                    stringBuilder.append(word);
+
+                    if (i != words.length - 1) {
+                        stringBuilder.append("-");
+                    }
+                }
+
+                yield stringBuilder.toString();
+            }
         };
     }
 }

@@ -32,7 +32,7 @@ public class NewsServiceImpl implements NewsService {
     public List<NewsDto> getNews(NewsType type, int pageNumber, int pageSize) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        List<NewsDto> newsDtoList = new ArrayList<>();
+        List<NewsDto> newsList = new ArrayList<>();
 
         Sort newsSort = Sort.by("createdAt", "updatedAt")
                 .descending()
@@ -44,14 +44,14 @@ public class NewsServiceImpl implements NewsService {
             case BANK_NEWS -> bankNewsRepository.findAll(pageable)
                     .stream()
                     .map(News.class::cast)
-                    .forEach(news -> newsDtoList.add(newsMapper.entityToDto(news)));
+                    .forEach(currentNews -> newsList.add(newsMapper.entityToDto(currentNews)));
             case OFFER_NEWS -> offerNewsRepository.findAll(pageable)
                     .stream()
                     .map(News.class::cast)
-                    .forEach(news -> newsDtoList.add(newsMapper.entityToDto(news)));
+                    .forEach(news -> newsList.add(newsMapper.entityToDto(news)));
             case null, default -> throw new ResourceExpectationFailedException("Invalid news type");
         }
 
-        return newsDtoList;
+        return newsList;
     }
 }

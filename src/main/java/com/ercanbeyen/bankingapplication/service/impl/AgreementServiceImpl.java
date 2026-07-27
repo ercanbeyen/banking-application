@@ -11,6 +11,7 @@ import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
 import com.ercanbeyen.bankingapplication.entity.File;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.AgreementMapper;
 import com.ercanbeyen.bankingapplication.repository.AgreementRepository;
@@ -23,9 +24,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -40,64 +40,58 @@ public class AgreementServiceImpl implements AgreementService {
     public void createAgreement(String title, String subject, List<FileUploadRequest> fileUploadRequests) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        if (agreementRepository.existsByTitle(title)) {
-            throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
-        }
+            if (agreementRepository.existsByTitle(title)) {
+                throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
+            }
 
-        CompletableFuture<List<File>> futureResult = fileService.saveFiles(fileUploadRequests);
-        List<File> savedFiles = new ArrayList<>();
+            fileService.saveFiles(fileUploadRequests).thenAccept(files -> {
+                List<String> fileNames = files.stream()
+                        .map(File::getName)
+                        .toList();
 
-        futureResult.thenAccept(uploadedFiles -> {
-            List<String> fileNames = uploadedFiles.stream()
-                    .map(File::getName)
-                    .toList();
-            log.info(LogMessage.POSITIVE_CALLBACK_MESSAGE, fileNames);
-            savedFiles.addAll(uploadedFiles);
-        }).exceptionally(exception -> {
-            log.error(LogMessage.NEGATIVE_CALLBACK_MESSAGE, exception.getMessage());
-            return null;
-        });
+                log.info(LogMessage.POSITIVE_CALLBACK_MESSAGE, fileNames);
 
-        Agreement agreement = new Agreement();
-        agreement.setFiles(savedFiles);
-        agreement.setTitle(title);
-        agreement.setSubject(AgreementSubject.valueOf(subject));
+                Agreement agreement = new Agreement();
+                agreement.setTitle(title);
+                agreement.setFiles(Set.copyOf(files));
+                agreement.setSubject(AgreementSubject.valueOf(subject));
 
-        Agreement savedAgreement = agreementRepository.save(agreement);
-        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.AGREEMENT.getValue(), savedAgreement.getId());
-
-        agreementMapper.entityToDto(savedAgreement);
+                agreementRepository.save(agreement);
+            }).exceptionally(exception -> {
+                log.error(LogMessage.NEGATIVE_CALLBACK_MESSAGE, exception.getMessage());
+                throw new ResourceExpectationFailedException(exception.getMessage());
+            });
     }
 
     @Override
     public void updateAgreement(String id, String title, String subject, List<FileUploadRequest> fileUploadRequests) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Agreement agreement = findById(id);
+        agreementRepository.findById(id).ifPresentOrElse(agreement -> {
+            if (!agreement.getTitle().equals(title) && agreementRepository.existsByTitle(title)) {
+                throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
+            }
 
-        if (!agreement.getTitle().equals(title) && agreementRepository.existsByTitle(title)) {
-            throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, Entity.AGREEMENT.getValue()));
-        }
+            fileService.saveFiles(fileUploadRequests).thenAccept(files -> {
+                List<String> fileNames = files.stream()
+                        .map(File::getName)
+                        .toList();
 
-        CompletableFuture<List<File>> futureResult = fileService.saveFiles(fileUploadRequests);
-        List<File> files = new ArrayList<>();
+                log.info(LogMessage.POSITIVE_CALLBACK_MESSAGE, fileNames);
 
-        futureResult.thenAccept(savedFiles -> {
-            List<String> fileNames = savedFiles.stream()
-                    .map(File::getName)
-                    .toList();
-            log.info(LogMessage.POSITIVE_CALLBACK_MESSAGE, fileNames);
-            files.addAll(savedFiles);
-        }).exceptionally(exception -> {
-            log.error(LogMessage.NEGATIVE_CALLBACK_MESSAGE, exception.getMessage());
-            return null;
+                agreement.setTitle(title);
+                agreement.setFiles(Set.copyOf(files));
+                agreement.setSubject(AgreementSubject.valueOf(subject));
+
+                agreementRepository.save(agreement);
+            }).exceptionally(exception -> {
+                log.error(LogMessage.NEGATIVE_CALLBACK_MESSAGE, exception.getMessage());
+                throw new ResourceExpectationFailedException(exception.getMessage());
+            });
+        }, () -> {
+            log.error(LogMessage.RESOURCE_NOT_FOUND, Entity.AGREEMENT.getValue());
+            throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.AGREEMENT.getValue()));
         });
-
-        agreement.setTitle(title);
-        agreement.setFiles(files);
-        agreement.setSubject(AgreementSubject.valueOf(subject));
-
-        agreementRepository.save(agreement);
     }
 
     @Override

@@ -331,7 +331,7 @@ class CustomerControllerTest {
         File savedFile = fileRepository.save(file);
 
         Agreement agreement = MockAgreementFactory.getMockAgreement();
-        agreement.setFiles(List.of(savedFile));
+        agreement.setFiles(Set.of(savedFile));
 
         agreementRepository.save(agreement);
     }

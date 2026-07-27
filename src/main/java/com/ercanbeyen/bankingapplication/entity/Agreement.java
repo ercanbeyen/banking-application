@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
+import org.hibernate.annotations.UpdateTimestamp;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,12 +25,19 @@ public class Agreement {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AgreementSubject subject;
-    @ManyToMany
-    private List<File> files;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "agreements_files",
+            joinColumns = @JoinColumn(name = "agreement_id"),
+            inverseJoinColumns = @JoinColumn(name = "file_id")
+    )
+    private Set<File> files;
     @OneToMany(mappedBy = "agreement", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<CustomerAgreement> customers;
     @CreationTimestamp(source = SourceType.DB)
     private LocalDateTime createdAt;
+    @UpdateTimestamp(source = SourceType.DB)
+    private LocalDateTime updatedAt;
 
     @Override
     public String toString() {
@@ -48,6 +56,7 @@ public class Agreement {
                 ", files=" + fileNames +
                 ", customers=" + customerNationalIds +
                 ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
 }

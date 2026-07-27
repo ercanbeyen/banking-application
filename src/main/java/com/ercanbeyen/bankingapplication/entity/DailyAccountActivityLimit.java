@@ -10,8 +10,8 @@ import java.time.LocalDateTime;
 
 @Data
 @Entity
-@Table(name = "daily_activity_limits")
-public class DailyActivityLimit {
+@Table(name = "daily_account_activity_limits")
+public class DailyAccountActivityLimit {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
@@ -19,7 +19,9 @@ public class DailyActivityLimit {
     @Column(unique = true, nullable = false)
     private AccountActivityType activityType;
     @Column(nullable = false)
-    private Double amount;
+    private Double lowerLimit;
+    @Column(nullable = false)
+    private Double upperLimit;
     @UpdateTimestamp(source = SourceType.DB)
     private LocalDateTime modifiedAt;
 }

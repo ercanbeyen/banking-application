@@ -8,13 +8,16 @@ import jakarta.validation.constraints.NotNull;
 import java.io.Serializable;
 import java.time.LocalDateTime;
 
-public record DailyActivityLimitDto(
+public record DailyAccountActivityLimitDto(
         String id,
         @NotNull(message = "Activity type should not be null")
         AccountActivityType activityType,
-        @NotNull(message = "Amount should not be null")
-        @Min(value = 0, message = "Amount should be at least {value}")
-        Double amount,
+        @NotNull(message = "Upper limit should not be null")
+        @Min(value = 0, message = "Upper limit should be at least {value}")
+        Double lowerLimit,
+        @NotNull(message = "Upper limit should not be null")
+        @Min(value = 0, message = "Upper limit should be at least {value}")
+        Double upperLimit,
         @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
         LocalDateTime modifiedAt) implements Serializable {
 
