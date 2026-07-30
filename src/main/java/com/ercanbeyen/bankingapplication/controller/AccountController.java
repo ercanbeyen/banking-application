@@ -15,7 +15,6 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
@@ -34,7 +33,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -283,5 +284,5 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         }
     }
 
-    private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : TimeUtil.getTurkeyDate();
+    private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
 }

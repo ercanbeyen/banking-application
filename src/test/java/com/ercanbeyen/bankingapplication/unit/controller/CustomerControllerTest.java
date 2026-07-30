@@ -28,12 +28,13 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Customer Controller Unit Test")
 class CustomerControllerTest {
+    private static final String TESTED_CLASS = "Customer Controller";
+
     @InjectMocks
     private CustomerController customerController;
     @Mock
     private CustomerServiceImpl customerService;
 
-    public static final String TESTED_CLASS = "Customer Controller";
     private List<CustomerDto> customerDtos;
 
     @BeforeAll

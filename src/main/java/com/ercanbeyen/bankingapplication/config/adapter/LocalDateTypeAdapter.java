@@ -10,12 +10,12 @@ public class LocalDateTypeAdapter implements JsonSerializer<LocalDate>, JsonDese
     private final DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
 
     @Override
-    public JsonElement serialize(final LocalDate date, final Type typeOfSrc, final JsonSerializationContext context) {
-        return new JsonPrimitive(date.format(formatter));
+    public LocalDate deserialize(JsonElement jsonElement, Type type, JsonDeserializationContext jsonDeserializationContext) throws JsonParseException {
+        return LocalDate.parse(jsonElement.getAsString(), formatter);
     }
 
     @Override
-    public LocalDate deserialize(final JsonElement json, final Type typeOfT, final JsonDeserializationContext context) throws JsonParseException {
-        return LocalDate.parse(json.getAsString(), formatter);
+    public JsonElement serialize(LocalDate localDate, Type type, JsonSerializationContext jsonSerializationContext) {
+        return new JsonPrimitive(localDate.format(formatter));
     }
 }

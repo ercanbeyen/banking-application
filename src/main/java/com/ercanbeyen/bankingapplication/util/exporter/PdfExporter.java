@@ -26,8 +26,7 @@ import lombok.experimental.UtilityClass;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Paths;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.*;
 import java.util.*;
 import java.util.List;
 import java.util.function.BiConsumer;
@@ -115,7 +114,7 @@ public class PdfExporter {
         Chunk fullNameOutputChunk = new Chunk(customer.getFullName());
 
         Chunk dateInputChunk = new Chunk("  Date: ", boldFont);
-        LocalDateTime today = TimeUtil.getTurkeyDateTime();
+        LocalDateTime today = LocalDateTime.now(ZoneId.systemDefault());
         String todayDate = today.toLocalDate().toString();
         String todayTime = TimeUtil.getTimeStatement(today.toLocalTime());
 
@@ -253,7 +252,7 @@ public class PdfExporter {
         transactionInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         transactionInformationTable.setTableEvent(borderEvent);
 
-        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + AccountStatementUtil.writeDocumentIssueDate(TimeUtil.getTurkeyDateTime()));
+        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(ZoneId.systemDefault())));
         transactionInformationTable.addCell(AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
 
         table.addCell(transactionInformationTable);

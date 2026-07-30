@@ -14,7 +14,7 @@ import java.util.Optional;
 @Table(name = "branches", indexes = {
         @Index(name = "city_and_district_index", columnList = "city, district")
 })
-public final class Branch extends BaseEntity {
+public non-sealed class Branch extends BaseEntity {
     @Column(unique = true)
     private String name;
     @Embedded

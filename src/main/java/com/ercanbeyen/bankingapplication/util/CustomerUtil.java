@@ -4,7 +4,9 @@ import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.temporal.ChronoUnit;
 
 @UtilityClass
@@ -12,7 +14,7 @@ public class CustomerUtil {
     private final long MINIMUM_AGE = 18;
 
     public void checkRequest(CustomerDto request) {
-        if (ChronoUnit.YEARS.between(request.getBirthDate(), LocalDate.from(TimeUtil.getTurkeyDateTime())) < MINIMUM_AGE) {
+        if (ChronoUnit.YEARS.between(request.getBirthDate(), LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault())) < MINIMUM_AGE) {
             throw new BadRequestException("Candidate customer is not an adult");
         }
 

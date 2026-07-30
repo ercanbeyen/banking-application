@@ -5,12 +5,13 @@ import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.function.Predicate;
 
 @UtilityClass
 public class MoneyTransferOrderUtil {
     public void checkMoneyTransferDate(LocalDate request) {
-        LocalDate today = TimeUtil.getTurkeyDate();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
 
         if (!request.isAfter(today)) {
             throw new BadRequestException(String.format("The earliest date for the transfer order can be tomorrow (%s)", today.plusDays(1)));
@@ -30,8 +31,8 @@ public class MoneyTransferOrderUtil {
             2) If next transfer date comes then it returns true, else it returns false
          */
         return moneyTransferOrderDto -> {
-            LocalDate nextMoneyTransferDate = moneyTransferOrderDto.getCreatedAt().toLocalDate();
-            LocalDate todayDate = TimeUtil.getTurkeyDate();
+            LocalDate nextMoneyTransferDate = LocalDate.ofInstant(moneyTransferOrderDto.getCreatedAt(), ZoneId.systemDefault());
+            LocalDate todayDate = LocalDate.now(ZoneId.systemDefault());
 
             do {
                 nextMoneyTransferDate = switch (moneyTransferOrderDto.getRegularMoneyTransferDto().paymentPeriod()) {

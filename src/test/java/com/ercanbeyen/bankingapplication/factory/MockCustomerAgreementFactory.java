@@ -4,8 +4,8 @@ import com.ercanbeyen.bankingapplication.dto.CustomerAgreementDto;
 import com.ercanbeyen.bankingapplication.entity.Agreement;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.entity.CustomerAgreement;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -17,7 +17,7 @@ public class MockCustomerAgreementFactory {
 
         customerAgreements.forEach(customerAgreement -> {
             CustomerAgreementDto customerAgreementDto = new CustomerAgreementDto(
-                    UUID.randomUUID().toString(), customerAgreement.getCustomer().getNationalId(), customerAgreement.getAgreement().getTitle(), TimeUtil.getTurkeyDateTime());
+                    UUID.randomUUID().toString(), customerAgreement.getCustomer().getNationalId(), customerAgreement.getAgreement().getTitle(), Instant.now());
             customerAgreementDtos.add(customerAgreementDto);
         });
 
@@ -32,7 +32,7 @@ public class MockCustomerAgreementFactory {
         customerAgreement.setId(UUID.randomUUID().toString());
         customerAgreement.setAgreement(agreement);
         customerAgreement.setCustomer(customer);
-        customerAgreement.setApprovedAt(TimeUtil.getTurkeyDateTime());
+        customerAgreement.setApprovedAt(Instant.now());
 
         return List.of(customerAgreement);
     }

@@ -5,7 +5,9 @@ import com.ercanbeyen.bankingapplication.dto.SurveyDto;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Optional;
 
 @UtilityClass
@@ -13,7 +15,7 @@ public class SurveyUtil {
     private final int AT_LEAST_VALIDATION_HOUR = 1;
 
     public void checkRequestBeforeSave(SurveyDto request) {
-        if (request.validUntil().isBefore(TimeUtil.getTurkeyDateTime().plusHours(AT_LEAST_VALIDATION_HOUR))) {
+        if (request.validUntil().isBefore(Instant.now().plusSeconds(60L * AT_LEAST_VALIDATION_HOUR))) {
             throw new BadRequestException(Entity.SURVEY.getValue() + " must be valid for at least " + AT_LEAST_VALIDATION_HOUR + " hour");
         }
     }
@@ -26,8 +28,8 @@ public class SurveyUtil {
         });
     }
 
-    public void checkStatisticsParameters(LocalDateTime createdAt, Integer frequency) {
-        if (createdAt.isAfter(TimeUtil.getTurkeyDateTime())) {
+    public void checkStatisticsParameters(LocalDate createdDate, Integer frequency) {
+        if (createdDate.isAfter(LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault()))) {
             throw new BadRequestException("Value of created at should not be after now");
         }
 

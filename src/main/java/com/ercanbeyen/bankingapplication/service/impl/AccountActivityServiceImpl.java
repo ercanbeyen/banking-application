@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -83,8 +85,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     @Override
     public AccountActivityDto getAccountActivity(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        AccountActivity accountActivity = findById(id);
-        return accountActivityMapper.entityToDto(accountActivity);
+        return accountActivityMapper.entityToDto(findById(id));
     }
 
     @Override
@@ -206,8 +207,11 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .stream()
                 .anyMatch(activityType -> accountActivity.getType() == activityType);
         boolean amountCheck = Optional.ofNullable(filteringOption.minimumAmount()).isEmpty() || filteringOption.minimumAmount() <= accountActivity.getAmount();
-        boolean fromDateCheck = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(accountActivity.getCreatedAt().toLocalDate());
-        boolean toDateCheck = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(accountActivity.getCreatedAt().toLocalDate());
+
+        LocalDate createdDate = LocalDate.ofInstant(accountActivity.getCreatedAt(), ZoneId.systemDefault());
+
+        boolean fromDateCheck = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(createdDate);
+        boolean toDateCheck = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(createdDate);
 
         return typeCheck && amountCheck && fromDateCheck && toDateCheck;
     }

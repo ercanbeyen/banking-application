@@ -11,6 +11,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.ArrayList;
 
 @Slf4j
@@ -33,7 +35,7 @@ public class CashFlowCalendarServiceImpl implements CashFlowCalendarService {
     public void createCashFlow(CashFlowCalendar cashFlowCalendar, AccountActivity accountActivity, String explanation) {
         CashFlow cashFlow = new CashFlow();
 
-        cashFlow.setDate(accountActivity.getCreatedAt().toLocalDate());
+        cashFlow.setDate(LocalDate.ofInstant(accountActivity.getCreatedAt(), ZoneId.systemDefault()));
         cashFlow.setExplanation(explanation);
 
         cashFlowCalendar.getCashFlows().add(cashFlow);

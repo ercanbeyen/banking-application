@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.integration.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ERole;
+import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.CustomerDto;
 import com.ercanbeyen.bankingapplication.dto.request.RegistrationRequest;
@@ -20,6 +21,7 @@ import io.restassured.RestAssured;
 import io.restassured.builder.MultiPartSpecBuilder;
 import io.restassured.http.ContentType;
 import io.restassured.specification.MultiPartSpecification;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -48,11 +50,14 @@ import static io.restassured.RestAssured.given;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.is;
 
+@Slf4j
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("Customer Controller Integration Test")
 class CustomerControllerTest {
+    private static final String TESTED_CLASS = "Customer Controller";
+
     @Container
     @ServiceConnection
     private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:latest");
@@ -116,21 +121,31 @@ class CustomerControllerTest {
         redisContainer.start();
     }
 
-    @BeforeEach
-    void setUp() {
-        RestAssured.port = port;
-    }
-
     @BeforeAll
     static void start() {
+        log.info(LogMessage.Test.START, LogMessage.Test.INTEGRATION, TESTED_CLASS);
         mySQLContainer.start();
+        redisContainer.start();
         cassandraContainer.start();
     }
 
     @AfterAll
     static void end() {
+        log.info(LogMessage.Test.END, LogMessage.Test.INTEGRATION, TESTED_CLASS);
         mySQLContainer.stop();
+        redisContainer.stop();
         cassandraContainer.stop();
+    }
+
+    @BeforeEach
+    void setUp() {
+        log.info(LogMessage.Test.SETUP);
+        RestAssured.port = port;
+    }
+
+    @AfterEach
+    void tearDown() {
+        log.info(LogMessage.Test.TEAR_DOWN);
     }
 
     @Test
@@ -331,7 +346,7 @@ class CustomerControllerTest {
         File savedFile = fileRepository.save(file);
 
         Agreement agreement = MockAgreementFactory.getMockAgreement();
-        agreement.setFiles(List.of(savedFile));
+        agreement.setFiles(Set.of(savedFile));
 
         agreementRepository.save(agreement);
     }

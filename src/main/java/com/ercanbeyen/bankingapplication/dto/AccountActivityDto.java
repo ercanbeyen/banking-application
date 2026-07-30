@@ -2,8 +2,9 @@ package com.ercanbeyen.bankingapplication.dto;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Map;
 
 public record AccountActivityDto(
@@ -15,6 +16,11 @@ public record AccountActivityDto(
         Map<String, Object> summary,
         String explanation,
         Channel channel,
-        LocalDateTime createdAt) {
+        @JsonFormat(
+                shape = JsonFormat.Shape.STRING,
+                pattern = "yyyy-MM-dd HH:mm:ss",
+                timezone = "UTC"
+        )
+        Instant createdAt) {
 
 }

@@ -14,8 +14,9 @@ import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedExce
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiPredicate;
@@ -87,10 +88,10 @@ public class AccountUtil {
         return balanceAfterNextInterestIncome;
     }
 
-    public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositMaturity) {
+    public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, Instant updatedAt, Integer depositMaturity) {
         checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(accountType, depositMaturity);
-        LocalDate isGoingToBeUpdatedAt = updatedAt.toLocalDate().plusMonths(depositMaturity);
-        return isGoingToBeUpdatedAt.isEqual(TimeUtil.getTurkeyDate());
+        LocalDate isGoingToBeUpdatedAt = LocalDate.ofInstant(updatedAt, ZoneId.systemDefault()).plusMonths(depositMaturity);
+        return isGoingToBeUpdatedAt.isEqual(LocalDate.now(ZoneId.systemDefault()));
     }
 
     public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {
