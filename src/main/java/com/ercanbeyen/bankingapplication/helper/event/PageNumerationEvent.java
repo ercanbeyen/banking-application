@@ -1,9 +1,11 @@
 package com.ercanbeyen.bankingapplication.helper.event;
 
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.itextpdf.text.*;
 import com.itextpdf.text.pdf.*;
 import lombok.extern.slf4j.Slf4j;
+
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 @Slf4j
 public class PageNumerationEvent extends PdfPageEventHelper {
@@ -33,7 +35,7 @@ public class PageNumerationEvent extends PdfPageEventHelper {
             cell.setBorder(0);
             cell.setBorderWidthTop(1);
             cell.setHorizontalAlignment(Element.ALIGN_LEFT);
-            cell.setPhrase(new Phrase(TimeUtil.getTurkeyDateTime().toString(), smallFont));
+            cell.setPhrase(new Phrase(LocalDateTime.now(ZoneId.systemDefault()).toString(), smallFont));
             table.addCell(cell);
 
             cell = new PdfPCell();

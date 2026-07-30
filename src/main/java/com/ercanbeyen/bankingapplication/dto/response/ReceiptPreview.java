@@ -2,8 +2,8 @@ package com.ercanbeyen.bankingapplication.dto.response;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
-public record ReceiptPreview(String id, AccountActivityType activityType, LocalDateTime time, Double amount) {
+public record ReceiptPreview(String id, AccountActivityType activityType, Instant time, Double amount) {
 
 }

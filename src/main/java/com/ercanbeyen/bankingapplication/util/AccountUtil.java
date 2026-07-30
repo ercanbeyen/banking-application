@@ -16,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.BiPredicate;
@@ -90,7 +91,7 @@ public class AccountUtil {
     public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositMaturity) {
         checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(accountType, depositMaturity);
         LocalDate isGoingToBeUpdatedAt = updatedAt.toLocalDate().plusMonths(depositMaturity);
-        return isGoingToBeUpdatedAt.isEqual(TimeUtil.getTurkeyDate());
+        return isGoingToBeUpdatedAt.isEqual(LocalDate.now(ZoneId.systemDefault()));
     }
 
     public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {

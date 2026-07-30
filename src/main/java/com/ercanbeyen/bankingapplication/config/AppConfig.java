@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.config;
 
+import com.ercanbeyen.bankingapplication.config.adapter.InstantTypeAdapter;
 import com.ercanbeyen.bankingapplication.config.adapter.LocalDateTimeTypeAdapter;
 import com.ercanbeyen.bankingapplication.config.adapter.LocalDateTypeAdapter;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,6 +12,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
@@ -26,6 +28,7 @@ public class AppConfig {
         return new GsonBuilder()
                 .registerTypeAdapter(LocalDate.class, new LocalDateTypeAdapter())
                 .registerTypeAdapter(LocalDateTime.class, new LocalDateTimeTypeAdapter())
+                .registerTypeAdapter(Instant.class, new InstantTypeAdapter())
                 .create();
     }
 
@@ -34,6 +37,7 @@ public class AppConfig {
         ObjectMapper objectMapper = new  ObjectMapper();
         objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
         objectMapper.registerModule(new JavaTimeModule());
+
         return objectMapper;
     }
 }

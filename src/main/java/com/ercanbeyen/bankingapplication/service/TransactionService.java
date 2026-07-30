@@ -18,12 +18,13 @@ import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +54,7 @@ public class TransactionService {
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
+        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
 
         AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null, channel);
         accountActivityService.createAccountActivity(request);
@@ -110,7 +111,7 @@ public class TransactionService {
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + account.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee);
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
+        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null, channel);
         createAccountActivityForDeduction(transactionFee, summary, account);
@@ -163,7 +164,7 @@ public class TransactionService {
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
         summary.put(SummaryField.PAYMENT_TYPE, request.paymentType());
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
+        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation(), channel);
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
@@ -224,7 +225,7 @@ public class TransactionService {
         summary.put(SummaryField.RATE, FormatterUtil.convertNumberToFormalExpression(rate));
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, TimeUtil.getTurkeyDateTime().toString());
+        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null, channel);
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);

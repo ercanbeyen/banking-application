@@ -5,7 +5,6 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.dto.response.ErrorResponse;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.MessageSourceResolvable;
 import org.springframework.http.HttpStatus;
@@ -22,6 +21,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.HandlerMethodValidationException;
 import org.springframework.web.multipart.MaxUploadSizeExceededException;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -119,7 +119,7 @@ public class GlobalExceptionHandler {
     }
 
     private ResponseEntity<ErrorResponse> generateErrorResponse(Exception exception, HttpStatus httpStatus) {
-        ErrorResponse response = new ErrorResponse(httpStatus.value(), exception.getMessage(), TimeUtil.getTurkeyDateTime());
+        ErrorResponse response = new ErrorResponse(httpStatus.value(), exception.getMessage(), Instant.now());
         return new ResponseEntity<>(response, httpStatus);
     }
 }

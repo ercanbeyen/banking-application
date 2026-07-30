@@ -5,15 +5,22 @@ import jakarta.persistence.MappedSuperclass;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @MappedSuperclass
-public sealed class BaseDto implements Serializable
-        permits AccountDto, BranchDto, CustomerDto, ExchangeDto, NewsDto, MoneyTransferOrderDto, TermDepositInterestRateDto {
+public sealed class BaseDto implements Serializable permits AccountDto, BranchDto, CustomerDto, ExchangeDto, NewsDto, MoneyTransferOrderDto, TermDepositInterestRateDto {
     private Integer id;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime createdAt;
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-    private LocalDateTime updatedAt;
+    @JsonFormat(
+            shape = JsonFormat.Shape.STRING,
+            pattern = "yyyy-MM-dd HH:mm:ss",
+            timezone = "UTC"
+    )
+    private Instant createdAt;
+    @JsonFormat(
+            shape = JsonFormat.Shape.STRING,
+            pattern = "yyyy-MM-dd HH:mm:ss",
+            timezone = "UTC"
+    )
+    private Instant updatedAt;
 }

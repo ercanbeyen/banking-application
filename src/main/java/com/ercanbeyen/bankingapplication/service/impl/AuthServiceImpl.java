@@ -20,7 +20,6 @@ import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +33,7 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -55,10 +55,10 @@ public class AuthServiceImpl implements AuthService {
     private final PasswordEncoder passwordEncoder;
 
     @Override
-    public void loginUser(LoginRequest loginRequest) {
+    public void loginUser(LoginRequest request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        String username = loginRequest.username();
+        String username = request.username();
         UserCredentials userCredentials = userCredentialsService.findByUsername(username);
         userCredentialsService.checkLockStatus(userCredentials);
 
@@ -66,7 +66,7 @@ public class AuthServiceImpl implements AuthService {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(
                             username,
-                            loginRequest.password()
+                            request.password()
                     )
             );
 
@@ -82,7 +82,7 @@ public class AuthServiceImpl implements AuthService {
                 refreshTokenService.revokeAllRefreshTokens(userCredentials.getUsername());
             }
 
-            IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(username, TimeUtil.getTurkeyDateTime());
+            IncorrectLoginAttemptDto incorrectLoginAttemptRequest = new IncorrectLoginAttemptDto(username, Instant.now());
             incorrectLoginAttemptService.createIncorrectLoginAttempt(incorrectLoginAttemptRequest);
 
             throw exception;

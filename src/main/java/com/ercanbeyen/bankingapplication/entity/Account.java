@@ -7,7 +7,7 @@ import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,7 +38,7 @@ public non-sealed class Account extends BaseEntity {
     private Currency currency;
     private double balance;
     private boolean isBlocked;
-    private LocalDateTime closedAt;
+    private Instant closedAt;
     @OneToMany(mappedBy = "senderAccount", cascade = CascadeType.ALL)
     private List<MoneyTransferOrder> moneyTransferOrders = new ArrayList<>();
     /* Deposit Account fields */

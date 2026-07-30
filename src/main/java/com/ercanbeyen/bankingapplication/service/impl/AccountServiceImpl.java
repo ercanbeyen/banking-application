@@ -28,13 +28,15 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -60,7 +62,7 @@ public class AccountServiceImpl implements AccountService {
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (Optional.ofNullable(filteringOption.getType()).isEmpty() || filteringOption.getType() == account.getType());
-            boolean timeFilter = (Optional.ofNullable(filteringOption.getCreatedAt()).isEmpty() || filteringOption.getCreatedAt().isEqual(filteringOption.getCreatedAt()));
+            boolean timeFilter = (Optional.ofNullable(filteringOption.getCreatedAt()).isEmpty() || filteringOption.getCreatedAt().isEqual(LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault())));
             boolean blockedFilter = (Optional.ofNullable(filteringOption.getIsBlocked()).isEmpty() || filteringOption.getIsBlocked() == account.isBlocked());
             boolean closedAtFilter = (Optional.ofNullable(filteringOption.getIsClosed()).isEmpty() || filteringOption.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
             return typeFilter && timeFilter && blockedFilter && closedAtFilter;
@@ -179,7 +181,7 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = findActiveAccountById(id);
 
-        if (!AccountUtil.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositMaturity())) {
+        if (!AccountUtil.checkAccountForPeriodicMoneyAdd(account.getType(), LocalDateTime.now(ZoneId.systemDefault()), account.getDepositMaturity())) {
             return "Maturity date has not arrived yet";
         }
 
@@ -279,7 +281,7 @@ public class AccountServiceImpl implements AccountService {
             throw new ResourceConflictException(String.format("In order to close %s, balance of the %s must be zero. Currently balance is %s. Please Withdraw or transfer the remaining money.", entity, balance, entity));
         }
 
-        account.setClosedAt(TimeUtil.getTurkeyDateTime());
+        account.setClosedAt(Instant.now());
         accountRepository.save(account);
 
         transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_CLOSING);
@@ -312,10 +314,8 @@ public class AccountServiceImpl implements AccountService {
 
                 yield getDeducteeAccountInMoneyTransfer(extraDeducteeAccountId, senderAccount);
             }
-            case AccountActivityType.MONEY_EXCHANGE ->
-                    getDeducteeAccountInMoneyExchange(extraDeducteeAccountId, relatedAccounts);
-            default ->
-                    throw new InternalServerErrorException("Unknown account activity type for getting deductee account");
+            case AccountActivityType.MONEY_EXCHANGE -> getDeducteeAccountInMoneyExchange(extraDeducteeAccountId, relatedAccounts);
+            default -> throw new InternalServerErrorException("Unknown account activity type for getting deductee account");
         };
     }
 
@@ -540,13 +540,15 @@ public class AccountServiceImpl implements AccountService {
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
+        LocalDate today = LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
+
         return new AccountActivityFilteringOption(
                 List.of(activityType),
                 accountIds[0],
                 accountIds[1],
                 null,
-                TimeUtil.getTurkeyDate(),
-                TimeUtil.getTurkeyDate(),
+                today,
+                today,
                 List.of(Channel.APP, Channel.ATM, Channel.BRANCH)
         );
     }
@@ -566,9 +568,9 @@ public class AccountServiceImpl implements AccountService {
     private static void checkAccountClosed(Account account) {
         String entity = Entity.ACCOUNT.getValue();
         int id = account.getId();
-        LocalDateTime closedAt = account.getClosedAt();
+        Instant closedAt = account.getClosedAt();
 
-        if (Optional.ofNullable(closedAt).isPresent()) {
+        if (closedAt != null) {
             log.error("{} {} has already been closed at {}", entity, id, closedAt);
             throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_ACCOUNT + ". It has already been closed at %s", closedAt));
         }

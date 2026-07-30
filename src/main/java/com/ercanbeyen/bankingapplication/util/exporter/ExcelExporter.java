@@ -7,7 +7,6 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.experimental.UtilityClass;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
@@ -21,6 +20,8 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 @UtilityClass
@@ -161,7 +162,7 @@ public class ExcelExporter {
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, customer.getNationalId(), valueColumnStyle, sheet);
         writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeDocumentIssueDate(TimeUtil.getTurkeyDateTime()), valueColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(ZoneId.systemDefault())), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.BRANCH, fieldColumnStyle, sheet);

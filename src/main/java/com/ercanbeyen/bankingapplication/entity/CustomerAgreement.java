@@ -6,7 +6,7 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -23,7 +23,7 @@ public class CustomerAgreement {
     @JoinColumn(name = "agreement_id", referencedColumnName = "id")
     private Agreement agreement;
     @CreationTimestamp(source = SourceType.DB)
-    private LocalDateTime approvedAt;
+    private Instant approvedAt;
 
     @Override
     public String toString() {

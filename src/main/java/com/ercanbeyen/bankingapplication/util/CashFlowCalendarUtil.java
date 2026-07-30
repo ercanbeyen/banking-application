@@ -5,6 +5,7 @@ import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Set;
 
@@ -20,7 +21,7 @@ public class CashFlowCalendarUtil {
     }
 
     public void checkMonthAndYearForCashFlowCalendar(Integer year, Integer month) {
-        LocalDate today = TimeUtil.getTurkeyDate();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
         int mostDistantMonth = Collections.max(VALID_MONTHS);
         LocalDate mostDistantFuture = today.plusMonths(mostDistantMonth);
 

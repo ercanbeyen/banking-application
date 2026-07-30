@@ -1,7 +1,17 @@
 package com.ercanbeyen.bankingapplication.dto.response;
 
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
-public record ErrorResponse(int httpStatus, String message, LocalDateTime createdAt) {
+import java.time.Instant;
+
+public record ErrorResponse(
+        int httpStatus,
+        String message,
+        @JsonFormat(
+                shape = JsonFormat.Shape.STRING,
+                pattern = "yyyy-MM-dd HH:mm:ss",
+                timezone = "UTC"
+        )
+        Instant createdAt) {
 
 }

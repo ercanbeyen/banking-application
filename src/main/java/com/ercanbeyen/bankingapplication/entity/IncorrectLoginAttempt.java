@@ -3,7 +3,7 @@ package com.ercanbeyen.bankingapplication.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Entity
@@ -12,7 +12,7 @@ public class IncorrectLoginAttempt {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
-    private LocalDateTime attemptedAt;
+    private Instant attemptedAt;
     @ManyToOne
     @JoinColumn(name = "user_credentials_id", referencedColumnName = "username")
     private UserCredentials userCredentials;

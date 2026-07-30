@@ -30,7 +30,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
@@ -62,9 +64,8 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDate birthDateOption = filteringOption.getBirthDate();
             LocalDate customerBirthday = customer.getBirthDate();
 
-            Boolean birthDayFilter = (birthDateOption == null
-                    || birthDateOption.getMonth().equals(customerBirthday.getMonth()) && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
-            Boolean createdAtFilter = (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().isEqual(filteringOption.getCreatedAt()));
+            Boolean birthDayFilter = (birthDateOption == null || birthDateOption.getMonth().equals(customerBirthday.getMonth()) && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
+            Boolean createdAtFilter = (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().isEqual(LocalDate.ofInstant(customer.getCreatedAt(), ZoneId.systemDefault())));
 
             return (birthDayFilter && createdAtFilter);
         };
@@ -257,7 +258,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         Predicate<Account> accountPredicate = account -> (filteringOption == null)
                 || (filteringOption.getType() == null || filteringOption.getType() == account.getType())
-                || (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
+                || (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault()).getYear());
 
         Comparator<Account> accountComparator = Comparator.comparing(Account::getCreatedAt)
                 .reversed();
@@ -320,7 +321,7 @@ public class CustomerServiceImpl implements CustomerService {
         Customer customer = findById(id);
         CashFlowCalendar cashFlowCalendar = customer.getCashFlowCalendar();
         List<CashFlow> cashFlows = new ArrayList<>();
-        LocalDate today = TimeUtil.getTurkeyDate();
+        LocalDate today = LocalDate.now(ZoneId.systemDefault());
 
         if (CashFlowCalendarUtil.isDateFuture(today, year, month)) {
             log.info("Past cash flows are requested");
@@ -348,7 +349,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         Customer customer = findById(id);
         List<ExpectedTransaction> expectedTransactions = new ArrayList<>();
-        LocalDate finalDate = TimeUtil.getTurkeyDate().plusMonths(month);
+        LocalDate finalDate = LocalDate.now(ZoneId.systemDefault()).plusMonths(month);
 
         for (Account account : customer.getAccounts()) {
             AccountType accountType = account.getType();
@@ -356,7 +357,7 @@ public class CustomerServiceImpl implements CustomerService {
 
             if (accountType == AccountType.DEPOSIT) {
                 log.info("Only expected interest income payments are going to be processed for {} {}", accountType.getValue(), entity);
-                LocalDate nextPaymentDate = account.getUpdatedAt().plusMonths(account.getDepositMaturity()).toLocalDate();
+                LocalDate nextPaymentDate = LocalDate.ofInstant(account.getUpdatedAt(), ZoneId.systemDefault()).plusMonths(account.getDepositMaturity());
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
                     ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.INTEREST_INCOME, account.getInterestRate(), nextPaymentDate);
@@ -538,7 +539,7 @@ public class CustomerServiceImpl implements CustomerService {
     private static void addFutureCashFlowsForMoneyTransferOrders(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
         for (MoneyTransferOrder moneyTransferOrder : account.getMoneyTransferOrders()) {
             LocalDate paymentDate = moneyTransferOrder.getTransferDate();
-            LocalDate counterDate = TimeUtil.getTurkeyDate();
+            LocalDate counterDate = LocalDate.now(ZoneId.systemDefault());
             PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
             AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
             Double amount = moneyTransferOrder.getRegularMoneyTransfer().getAmount();
@@ -576,8 +577,8 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     private static void addFutureCashFlowsForInterestIncomePayments(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
-        LocalDate paymentDate = account.getUpdatedAt().toLocalDate();
-        LocalDate counterDate = TimeUtil.getTurkeyDate();
+        LocalDate paymentDate = LocalDate.ofInstant(account.getUpdatedAt(), ZoneId.systemDefault());
+        LocalDate counterDate = LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
             AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
@@ -585,7 +586,7 @@ public class CustomerServiceImpl implements CustomerService {
                 log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, activityType.getValue());
                 String entity = Entity.ACCOUNT.getValue();
 
-                if (doesDateMatchesWithYearAndMonth(account.getCreatedAt().toLocalDate(), counterDate.getYear(), counterDate.getMonthValue())) {
+                if (doesDateMatchesWithYearAndMonth(LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault()), counterDate.getYear(), counterDate.getMonthValue())) {
                     log.info("Calendar shows for {} {} creating time, so no interest income", AccountType.DEPOSIT.getValue(), entity);
                 } else {
                     log.info("Add the interest income to the balance");
