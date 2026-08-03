@@ -135,7 +135,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void depositMoney(Integer id, Double amount, Channel channel) {
+    public void depositMoney(Integer id, Double amount, ChannelType channelType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -146,7 +146,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channel);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channelType);
 
         String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -155,7 +155,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void withdrawMoney(Integer id, Double amount, Channel channel) {
+    public void withdrawMoney(Integer id, Double amount, ChannelType channelType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -166,7 +166,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue();
         String cashFlowExplanation = entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channel);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channelType);
 
         String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -188,7 +188,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, Channel.AUTOMATIC);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, ChannelType.AUTOMATIC);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
         notificationService.sendNotification(notificationDto);
@@ -199,7 +199,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void transferMoney(MoneyTransferRequest request, Channel channel) {
+    public void transferMoney(MoneyTransferRequest request, ChannelType channelType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account senderAccount = findActiveAccountById(request.senderAccountId());
@@ -215,7 +215,7 @@ public class AccountServiceImpl implements AccountService {
 
         checkDailyAccountActivityLimit(senderAccount, amount, activityType);
 
-        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, channel);
+        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, channelType);
 
         if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -229,7 +229,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void exchangeMoney(MoneyExchangeRequest request, Channel channel) {
+    public void exchangeMoney(MoneyExchangeRequest request, ChannelType channelType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account sellerAccount = findActiveAccountById(request.sellerAccountId());
@@ -241,7 +241,7 @@ public class AccountServiceImpl implements AccountService {
         checkDailyAccountActivityLimit(sellerAccount, request.amount(), activityType);
 
         Account deducteeAccount = getDeducteeAccount(AccountActivityType.MONEY_EXCHANGE, request.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
-        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount, channel);
+        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount, channelType);
     }
 
     @Transactional
@@ -413,17 +413,17 @@ public class AccountServiceImpl implements AccountService {
         return switch (balanceActivity) {
             case DECREASE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate(), request.channels());
+                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate(), request.channelTypes());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case INCREASE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate(), request.channels());
+                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate(), request.channelTypes());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case STABLE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate(), request.channels());
+                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate(), request.channelTypes());
                 yield accountActivityService.getAccountActivities(filteringOption)
                         .stream()
                         .filter(accountActivityDto -> {
@@ -547,7 +547,7 @@ public class AccountServiceImpl implements AccountService {
                 null,
                 today,
                 today,
-                List.of(Channel.APP, Channel.ATM, Channel.BRANCH)
+                List.of(ChannelType.APP, ChannelType.ATM, ChannelType.BRANCH)
         );
     }
 

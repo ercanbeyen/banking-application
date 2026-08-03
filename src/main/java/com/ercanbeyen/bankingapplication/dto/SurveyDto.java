@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -24,7 +24,7 @@ public record SurveyDto(
                 pattern = "yyyy-MM-dd HH:mm:ss",
                 timezone = "UTC"
         )
-        Channel channel,
+        ChannelType channelType,
         @JsonFormat(
                 shape = JsonFormat.Shape.STRING,
                 pattern = "yyyy-MM-dd HH:mm:ss",

@@ -99,8 +99,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
-            @RequestHeader("Channel") Channel channel) {
-        accountService.depositMoney(id, amount, channel);
+            @RequestHeader("Channel") ChannelType channelType) {
+        accountService.depositMoney(id, amount, channelType);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_DEPOSIT.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -110,8 +110,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
-            @RequestHeader("Channel") Channel channel) {
-        accountService.withdrawMoney(id, amount, channel);
+            @RequestHeader("Channel") ChannelType channelType) {
+        accountService.withdrawMoney(id, amount, channelType);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.WITHDRAWAL.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -125,18 +125,18 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication) OR hasRole('ADMIN')")
     @PutMapping("/transfer")
-    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request, @RequestHeader("Channel") Channel channel) {
+    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request, @RequestHeader("Channel") ChannelType channelType) {
         AccountUtil.checkMoneyTransferRequest(request);
-        accountService.transferMoney(request, channel);
+        accountService.transferMoney(request, channelType);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyExchange.sellerAccountId, authentication)")
     @PutMapping("/exchange")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request, @RequestHeader("Channel") Channel channel) {
+    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request, @RequestHeader("Channel") ChannelType channelType) {
         AccountUtil.checkMoneyExchangeRequest(request);
-        accountService.exchangeMoney(request, channel);
+        accountService.exchangeMoney(request, channelType);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

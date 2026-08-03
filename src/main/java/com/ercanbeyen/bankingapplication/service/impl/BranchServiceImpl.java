@@ -42,9 +42,9 @@ public class BranchServiceImpl implements BranchService {
             LocalDate createdAtOption = filteringOption.getCreatedAt();
             Address address = branch.getAddress();
 
-            boolean cityFilter = (Optional.ofNullable(cityOption).isEmpty() || address.getCity() == cityOption);
-            boolean districtFilter = (Optional.ofNullable(districtOption).isEmpty() || address.getDistrict().equals(districtOption));
-            boolean createdAtFilter = LocalDate.ofInstant(branch.getCreatedAt(), ZoneId.systemDefault()).isEqual(createdAtOption);
+            boolean cityFilter = Optional.ofNullable(cityOption).isEmpty() || address.getCity() == cityOption;
+            boolean districtFilter = Optional.ofNullable(districtOption).isEmpty() || address.getDistrict().equals(districtOption);
+            boolean createdAtFilter = Optional.ofNullable(createdAtOption).isEmpty() || LocalDate.ofInstant(branch.getCreatedAt(), ZoneId.systemDefault()).isEqual(createdAtOption);
 
             return cityFilter && districtFilter && createdAtFilter;
         };

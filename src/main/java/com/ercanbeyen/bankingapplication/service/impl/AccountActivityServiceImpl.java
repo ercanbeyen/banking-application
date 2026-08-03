@@ -51,7 +51,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             boolean recipientAccountIdFilter = filteringOption.recipientAccountId() == null
                     || (accountActivity.getRecipientAccount() != null && filteringOption.recipientAccountId().equals(accountActivity.getRecipientAccount().getId()));
             boolean minimumAmountFilter = (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount());
-            boolean channelsFilter = (filteringOption.channels() == null || filteringOption.channels().contains(accountActivity.getChannel()));
+            boolean channelsFilter = (filteringOption.channelTypes() == null || filteringOption.channelTypes().contains(accountActivity.getChannelType()));
 
             return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter && channelsFilter;
         };
@@ -103,7 +103,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 request.amount(),
                 request.summary(),
                 request.explanation(),
-                request.channel()
+                request.channelType()
         );
 
         AccountActivity savedAccountActivity = accountActivityRepository.save(accountActivity);

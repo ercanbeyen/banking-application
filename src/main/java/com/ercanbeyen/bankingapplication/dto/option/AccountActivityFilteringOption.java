@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto.option;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
@@ -17,6 +17,6 @@ public record AccountActivityFilteringOption(
         Double minimumAmount,
         LocalDate fromDate,
         LocalDate toDate,
-        List<Channel> channels) {
+        List<ChannelType> channelTypes) {
 
 }

@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.constant.enums;
 
-public enum Channel {
+public enum ChannelType {
     APP,
     ATM,
     BRANCH,

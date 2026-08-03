@@ -162,7 +162,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @PreAuthorize("#customerId == authentication.principal.id")
     @GetMapping("/{id}/accounts/receipt-previews")
     public ResponseEntity<List<ReceiptPreview>> getReceiptPreviews(@PathVariable("id") @P("customerId") Integer id) {
-        AccountActivityFilteringRequest request = new AccountActivityFilteringRequest(null, null, null, null, null, Arrays.asList(Channel.values()));
+        AccountActivityFilteringRequest request = new AccountActivityFilteringRequest(null, null, null, null, null, Arrays.asList(ChannelType.values()));
         SortedSet<AccountActivityDto> accountActivityDtos = new TreeSet<>(Comparator.comparing(AccountActivityDto::createdAt).reversed());
 
         customerService.findById(id)

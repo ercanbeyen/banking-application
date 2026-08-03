@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -32,17 +32,17 @@ public class AccountActivity {
     private Map<String, Object> summary;
     private String explanation;
     @Enumerated(EnumType.STRING)
-    private Channel channel;
+    private ChannelType channelType;
     private Instant createdAt;
 
-    public AccountActivity(AccountActivityType type, Account senderAccount, Account recipientAccount, Double amount, Map<String, Object> summary, String explanation, Channel channel) {
+    public AccountActivity(AccountActivityType type, Account senderAccount, Account recipientAccount, Double amount, Map<String, Object> summary, String explanation, ChannelType channelType) {
         this.type = type;
         this.senderAccount = senderAccount;
         this.recipientAccount = recipientAccount;
         this.amount = amount;
         this.summary = summary;
         this.explanation = explanation;
-        this.channel = channel;
+        this.channelType = channelType;
         this.createdAt = Instant.now();
     }
 }

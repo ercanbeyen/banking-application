@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.dto.request;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
-import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -13,6 +13,6 @@ public record AccountActivityFilteringRequest(
         LocalDate toDate,
         Double minimumAmount,
         List<AccountActivityType> activityTypes,
-        List<Channel> channels) {
+        List<ChannelType> channelTypes) {
 
 }

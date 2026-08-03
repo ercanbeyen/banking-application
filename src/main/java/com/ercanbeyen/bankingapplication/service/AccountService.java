@@ -13,11 +13,11 @@ import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import java.util.List;
 
 public interface AccountService extends BaseService<AccountDto, AccountFilteringOption> {
-    void depositMoney(Integer id, Double amount, Channel channel);
-    void withdrawMoney(Integer id, Double amount, Channel channel);
+    void depositMoney(Integer id, Double amount, ChannelType channelType);
+    void withdrawMoney(Integer id, Double amount, ChannelType channelType);
     String payInterestIncome(Integer id);
-    void transferMoney(MoneyTransferRequest request, Channel channel);
-    void exchangeMoney(MoneyExchangeRequest request, Channel channel);
+    void transferMoney(MoneyTransferRequest request, ChannelType channelType);
+    void exchangeMoney(MoneyExchangeRequest request, ChannelType channelType);
     String updateBlockStatus(Integer id, boolean status);
     void closeAccount(Integer id);
     Integer getTotalActiveAccounts(AccountType type, Currency currency, City city);
