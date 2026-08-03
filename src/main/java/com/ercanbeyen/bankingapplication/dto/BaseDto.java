@@ -9,7 +9,7 @@ import java.time.Instant;
 
 @Data
 @MappedSuperclass
-public sealed class BaseDto implements Serializable permits AccountDto, BranchDto, CustomerDto, ExchangeDto, NewsDto, MoneyTransferOrderDto, TermDepositInterestRateDto {
+public sealed class BaseDto implements Serializable permits AccountDto, AtmDto, BranchDto, CustomerDto, ExchangeDto, NewsDto, MoneyTransferOrderDto, TermDepositInterestRateDto {
     private Integer id;
     @JsonFormat(
             shape = JsonFormat.Shape.STRING,

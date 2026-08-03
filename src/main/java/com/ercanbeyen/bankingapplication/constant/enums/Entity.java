@@ -16,6 +16,7 @@ public enum Entity {
     NEWS("News"),
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
+    ATM("Atm"),
     BRANCH("Branch"),
     TERM_DEPOSIT_INTEREST_RATE("Term Deposit Interest Rate"),
     DEDUCTION("Deduction"),
