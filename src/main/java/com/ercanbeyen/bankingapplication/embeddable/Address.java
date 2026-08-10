@@ -3,7 +3,6 @@ package com.ercanbeyen.bankingapplication.embeddable;
 
 import com.ercanbeyen.bankingapplication.annotation.PhoneNumberRequest;
 import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
-import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Ownership;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
@@ -17,9 +16,8 @@ import org.hibernate.validator.constraints.Range;
 public class Address {
     @NotBlank(message = "Country cannot be blank")
     private String country;
-    @NotNull(message = "City should not be null")
-    @Enumerated(EnumType.STRING)
-    private City city;
+    @NotBlank(message = "City should not be blank")
+    private String city;
     private String district;
     @NotNull(message = "Address type should not be null")
     @Enumerated(EnumType.STRING)

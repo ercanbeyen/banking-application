@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AddressType;
-import com.ercanbeyen.bankingapplication.constant.enums.City;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
@@ -37,12 +36,12 @@ public class BranchServiceImpl implements BranchService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Predicate<Branch> branchPredicate = branch -> {
-            City cityOption = filteringOption.getCity();
+            String cityOption = filteringOption.getCity();
             String districtOption = filteringOption.getDistrict();
             LocalDate createdAtOption = filteringOption.getCreatedAt();
             Address address = branch.getAddress();
 
-            boolean cityFilter = Optional.ofNullable(cityOption).isEmpty() || address.getCity() == cityOption;
+            boolean cityFilter = Optional.ofNullable(cityOption).isEmpty() || address.getCity().equals(cityOption);
             boolean districtFilter = Optional.ofNullable(districtOption).isEmpty() || address.getDistrict().equals(districtOption);
             boolean createdAtFilter = Optional.ofNullable(createdAtOption).isEmpty() || LocalDate.ofInstant(branch.getCreatedAt(), ZoneId.systemDefault()).isEqual(createdAtOption);
 
