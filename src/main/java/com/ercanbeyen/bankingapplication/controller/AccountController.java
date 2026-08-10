@@ -161,7 +161,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> getTotalAccounts(
             @RequestParam("type") AccountType type,
             @RequestParam("currency") Currency currency,
-            @RequestParam(name = "city", required = false) City city) {
+            @RequestParam(name = "city", required = false) String city) {
         Integer count = accountService.getTotalActiveAccounts(type, currency, city);
         MessageResponse<String> response = new MessageResponse<>(String.format("Total %s %s accounts is %d", type.getValue(), currency, count));
         return new ResponseEntity<>(response, HttpStatus.OK);

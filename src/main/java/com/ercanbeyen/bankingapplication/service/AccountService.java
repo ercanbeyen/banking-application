@@ -20,7 +20,7 @@ public interface AccountService extends BaseService<AccountDto, AccountFiltering
     void exchangeMoney(MoneyExchangeRequest request, Channel channel);
     String updateBlockStatus(Integer id, boolean status);
     void closeAccount(Integer id);
-    Integer getTotalActiveAccounts(AccountType type, Currency currency, City city);
+    Integer getTotalActiveAccounts(AccountType type, Currency currency, String city);
     List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency);
     Account getDeducteeAccount(AccountActivityType accountActivityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts);
     Account findDeducteeAccountById(Integer id);

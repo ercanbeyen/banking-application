@@ -18,7 +18,6 @@ import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.service.TransactionService;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
@@ -48,7 +47,7 @@ public class AccountServiceImpl implements AccountService {
     private static final Currency DEDUCTION_CURRENCY = Currency.getDeductionCurrency();
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
-    private final CustomerServiceImpl customerService;
+    private final CustomerService customerService;
     private final TransactionService transactionService;
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
@@ -288,9 +287,9 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Integer getTotalActiveAccounts(AccountType type, Currency currency, City city) {
+    public Integer getTotalActiveAccounts(AccountType type, Currency currency, String city) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return accountRepository.getTotalAccountsByCityAndTypeAndCurrency(city.name(), type.name(), currency.name());
+        return accountRepository.getTotalAccountsByCityAndTypeAndCurrency(city, type.name(), currency.name());
     }
 
     @Override
