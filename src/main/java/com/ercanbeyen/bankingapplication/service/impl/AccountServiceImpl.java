@@ -206,19 +206,22 @@ public class AccountServiceImpl implements AccountService {
         Account senderAccount = findActiveAccountById(request.senderAccountId());
         Account recipientAccount = findActiveAccountById(request.recipientAccountId());
 
-        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+        AccountActivityType accountActivityType = AccountActivityType.MONEY_TRANSFER;
         Double amount = request.amount();
         Currency currency = senderAccount.getCurrency();
 
         checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
-        Account deducteeAccount = getDeducteeAccount(AccountActivityType.MONEY_TRANSFER, request.deducteeAccountId(), List.of(senderAccount, recipientAccount));
+        Account deducteeAccount = getDeducteeAccount(accountActivityType, request.deducteeAccountId(), List.of(senderAccount, recipientAccount));
+        boolean areAccountsOwnedBySameCustomer = Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId());
 
-        checkDailyAccountActivityLimit(senderAccount, amount, activityType);
+        if (!areAccountsOwnedBySameCustomer) {
+            checkDailyAccountActivityLimit(senderAccount, amount, accountActivityType);
+        }
 
         transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, channel);
 
-        if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
+        if (!areAccountsOwnedBySameCustomer) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
             NotificationDto senderNotificationDto = new NotificationDto(senderAccount.getCustomer().getNationalId(), String.format("%s %s money transfer has been made from your %s.", amount, currency, entity));
@@ -313,8 +316,10 @@ public class AccountServiceImpl implements AccountService {
 
                 yield getDeducteeAccountInMoneyTransfer(extraDeducteeAccountId, senderAccount);
             }
-            case AccountActivityType.MONEY_EXCHANGE -> getDeducteeAccountInMoneyExchange(extraDeducteeAccountId, relatedAccounts);
-            default -> throw new InternalServerErrorException("Unknown account activity type for getting deductee account");
+            case AccountActivityType.MONEY_EXCHANGE ->
+                    getDeducteeAccountInMoneyExchange(extraDeducteeAccountId, relatedAccounts);
+            default ->
+                    throw new InternalServerErrorException("Unknown account activity type for getting deductee account");
         };
     }
 

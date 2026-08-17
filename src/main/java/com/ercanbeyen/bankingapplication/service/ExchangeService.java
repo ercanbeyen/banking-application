@@ -10,5 +10,6 @@ import java.util.List;
 public interface ExchangeService extends BaseService<ExchangeDto, ExchangeFilteringOption> {
     Double convertMoneyBetweenCurrencies(Currency fromCurrency, Currency toCurrency, Double amount);
     List<ExchangeView> getExchangeViews();
+    ExchangeView getExchangeView(Currency fromCurrency, Currency toCurrency);
     Double getBankExchangeRate(Currency fromCurrency, Currency toCurrency);
 }

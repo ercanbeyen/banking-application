@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 @Data
 @Entity
 @Table(name = "exchanges")
-public final class Exchange extends BaseEntity {
+public non-sealed class Exchange extends BaseEntity {
     private Currency targetCurrency;
     private Currency baseCurrency;
     private Double rate;

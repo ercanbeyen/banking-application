@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.dto.TermDepositInterestRateDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
@@ -19,6 +20,7 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -43,6 +45,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final DeductionService deductionService;
     private final TermDepositInterestRateService termDepositInterestRateService;
     private final CashFlowCalendarService cashFlowCalendarService;
+    private final TimeZoneService timeZoneService;
 
     @Override
     public void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
@@ -56,7 +59,12 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
+
+        Address address = account.getBranch().getAddress();
+        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
+                zoneId -> summary.put(SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
+                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+        );
 
         AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null, channel);
         accountActivityService.createAccountActivity(request);
@@ -114,7 +122,12 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + account.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee);
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
+
+        Address address = account.getBranch().getAddress();
+        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
+                zoneId -> summary.put(SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
+                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+        );
 
         AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null, channel);
         createAccountActivityForDeduction(transactionFee, summary, account);
@@ -152,13 +165,20 @@ public class TransactionServiceImpl implements TransactionService {
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
-        summary.put(senderWord + SummaryField.FULL_NAME, senderAccount.getCustomer().getFullName());
 
-        if (!Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId())) {
+        boolean areAccountsOwnedBySameCustomer = Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId());
+
+        if (areAccountsOwnedBySameCustomer) {
+            summary.put(SummaryField.FULL_NAME, senderAccount.getCustomer().getFullName());
+            summary.put(SummaryField.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
+        } else {
+            summary.put(senderWord + SummaryField.FULL_NAME, senderAccount.getCustomer().getFullName());
             summary.put(recipientWord + SummaryField.FULL_NAME, recipientAccount.getCustomer().getFullName());
+            summary.put(senderWord + SummaryField.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
+            summary.put(recipientWord + SummaryField.NATIONAL_IDENTITY, recipientAccount.getCustomer().getNationalId());
+            summary.put(SummaryField.PAYMENT_TYPE, request.paymentType().getValue());
         }
 
-        summary.put(SummaryField.NATIONAL_IDENTITY, senderAccount.getCustomer().getNationalId());
         summary.put(senderWord + SummaryField.ACCOUNT_IDENTITY, senderAccount.getId());
         summary.put(recipientWord + SummaryField.ACCOUNT_IDENTITY, recipientAccount.getId());
 
@@ -166,14 +186,24 @@ public class TransactionServiceImpl implements TransactionService {
 
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
-        summary.put(SummaryField.PAYMENT_TYPE, request.paymentType());
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
+
+        Address address = senderAccount.getBranch().getAddress();
+        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
+                zoneId -> summary.put(senderWord + SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
+                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+        );
+
+        address = recipientAccount.getBranch().getAddress();
+        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
+                zoneId -> summary.put(recipientWord + SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
+                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+        );
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation(), channel);
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
 
-        if (!senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
+        if (!areAccountsOwnedBySameCustomer) {
             String entity = Entity.ACCOUNT.getValue();
             String explanation = entity + " " + senderAccount.getId() + " sent " + amountInSummary + " " + senderAccount.getCurrency();
             cashFlowCalendarService.createCashFlow(senderAccount.getCustomer().getCashFlowCalendar(), accountActivity, explanation);
@@ -192,9 +222,11 @@ public class TransactionServiceImpl implements TransactionService {
         double transactionFee = getTransactionFee(activityType, accountsInMoneyExchange);
         checkBalanceBeforeMoneyTransferAndExchange(deducteeAccount, accountsInMoneyExchange, request.amount(), transactionFee, activityType);
 
-        Double rate = exchangeService.getBankExchangeRate(sellerAccount.getCurrency(), buyerAccount.getCurrency());
+        Currency sellerAccountCurrency = sellerAccount.getCurrency();
+        Currency buyerAccountCurrency = buyerAccount.getCurrency();
+        Double rate = exchangeService.getBankExchangeRate(sellerAccountCurrency, buyerAccountCurrency);
         Double spentAmount = request.amount();
-        Double earnedAmount = exchangeService.convertMoneyBetweenCurrencies(sellerAccount.getCurrency(), buyerAccount.getCurrency(), spentAmount);
+        Double earnedAmount = exchangeService.convertMoneyBetweenCurrencies(sellerAccountCurrency, buyerAccountCurrency, spentAmount);
 
         /* Balance update of seller account */
         double newBalance = sellerAccount.getBalance() - spentAmount;
@@ -222,15 +254,38 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(Entity.ACCOUNT_ACTIVITY.getValue(), activityType.getValue());
         summary.put(SummaryField.FULL_NAME, sellerAccount.getCustomer().getFullName());
         summary.put(SummaryField.NATIONAL_IDENTITY, sellerAccount.getCustomer().getNationalId());
-        summary.put("Seller " + SummaryField.ACCOUNT_IDENTITY, sellerAccount.getId());
-        summary.put("Buyer " + SummaryField.ACCOUNT_IDENTITY, buyerAccount.getId());
+
+        String sellerWord = "Seller ";
+        String buyerWord = "Buyer ";
+        summary.put(sellerWord + SummaryField.ACCOUNT_IDENTITY, sellerAccount.getId());
+        summary.put(buyerWord + SummaryField.ACCOUNT_IDENTITY, buyerAccount.getId());
+
         putDeducteeAccountInformationIntoSummary(sellerAccount, deducteeAccount, summary);
-        summary.put("Spent " + SummaryField.AMOUNT, spentAmountInSummary + " " + sellerAccount.getCurrency());
-        summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccount.getCurrency());
+
+        summary.put("Spent " + SummaryField.AMOUNT, spentAmountInSummary + " " + sellerAccountCurrency);
+        summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccountCurrency);
         summary.put(SummaryField.RATE, FormatterUtil.convertNumberToFormalExpression(rate));
+
+        ExchangeView exchangeView = exchangeService.getExchangeView(sellerAccountCurrency, buyerAccountCurrency);
+
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
         summary.put(SummaryField.CHANNEL, channel);
-        summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString());
+
+        Address addressOfTargetCurrency;
+        String timeKey;
+
+        if (exchangeView.getTargetCurrency() == sellerAccountCurrency) {
+            addressOfTargetCurrency = sellerAccount.getBranch().getAddress();
+            timeKey = sellerWord + SummaryField.TIME;
+        } else {
+            addressOfTargetCurrency = buyerAccount.getBranch().getAddress();
+            timeKey = buyerWord + SummaryField.TIME;
+        }
+
+        timeZoneService.getZoneId(addressOfTargetCurrency.getCountry(), addressOfTargetCurrency.getCity()).ifPresentOrElse(
+                zoneId -> summary.put(timeKey, LocalDateTime.now(zoneId).toString()),
+                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+        );
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null, channel);
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
@@ -360,15 +415,23 @@ public class TransactionServiceImpl implements TransactionService {
         log.info(LogMessage.ENOUGH_BALANCE, activityType.getValue());
     }
 
-    private static void putDeducteeAccountInformationIntoSummary(Account relatedAccount, Account deducteeAccount, Map<String, Object> summary) {
+    private void putDeducteeAccountInformationIntoSummary(Account relatedAccount, Account deducteeAccount, Map<String, Object> summary) {
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 
-        if (deducteeAccount.getId().equals(relatedAccount.getId())) {
+        if (relatedAccount.getId().equals(deducteeAccount.getId())) {
             log.warn("Deduction and related {}s are same, so no need to add it into summary", entity);
             return;
         }
 
         log.info("There is a separate deductee {}, so add it into summary", entity);
-        summary.put("Deductee " + SummaryField.ACCOUNT_IDENTITY, deducteeAccount.getId());
+        final String deducteeWord = "Deductee ";
+
+        summary.put(deducteeWord + SummaryField.ACCOUNT_IDENTITY, deducteeAccount.getId());
+
+        Address address = deducteeAccount.getBranch().getAddress();
+        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
+                zoneId -> summary.put(deducteeWord + SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
+                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+        );
     }
 }

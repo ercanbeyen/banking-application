@@ -1,6 +1,8 @@
 package com.ercanbeyen.bankingapplication.util.exporter;
 
+import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
+import com.ercanbeyen.bankingapplication.constant.enums.Channel;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
@@ -14,7 +16,6 @@ import com.ercanbeyen.bankingapplication.helper.event.BorderEvent;
 import com.ercanbeyen.bankingapplication.helper.event.PageNumerationEvent;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
@@ -22,6 +23,8 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.experimental.UtilityClass;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -34,7 +37,7 @@ import java.util.function.Function;
 
 @UtilityClass
 public class PdfExporter {
-    private final List<String> customerCredentials = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
+    private final List<String> maskedSummaryFields = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
     public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer, Double netBalanceOfCustomer, Map<AccountType, Double> netBalancesOfAccountTypes, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException, IOException {
         Document document = new Document();
@@ -114,11 +117,10 @@ public class PdfExporter {
         Chunk fullNameOutputChunk = new Chunk(customer.getFullName());
 
         Chunk dateInputChunk = new Chunk("  Date: ", boldFont);
-        LocalDateTime today = LocalDateTime.now(ZoneId.systemDefault());
-        String todayDate = today.toLocalDate().toString();
-        String todayTime = TimeUtil.getTimeStatement(today.toLocalTime());
 
-        Chunk dateOutputChunk = new Chunk(todayDate + " " + todayTime);
+        String todayDateTime = AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(ZoneId.systemDefault()));
+
+        Chunk dateOutputChunk = new Chunk(todayDateTime);
 
         Phrase chunkPhrase = new Phrase();
         chunkPhrase.addAll(List.of(fullNameInputChunk, fullNameOutputChunk, dateInputChunk, dateOutputChunk));
@@ -199,18 +201,21 @@ public class PdfExporter {
         writeHeaderRowOfTable.accept(List.of("Field", "Value"), table);
 
         /* Data rows */
-        Map<String, Object> summary = accountActivity.getSummary();
+        Map<String, Object> receiptSummary = generateReceiptSummary(accountActivity);
 
-        LocalDateTime localDateTime = LocalDateTime.parse(summary.get(SummaryField.TIME).toString());
-        String timeValue = localDateTime.toLocalDate() + " " + TimeUtil.getTimeStatement(localDateTime.toLocalTime());
-        summary.put(SummaryField.TIME, timeValue);
-
-        for (Map.Entry<String, Object> entry : summary.entrySet()) {
+        for (Map.Entry<String, Object> entry : receiptSummary.entrySet()) {
             String key = entry.getKey();
             String value = entry.getValue().toString();
 
-            if (customerCredentials.contains(key)) {
-                value = maskField(entry);
+            for (String maskedSummaryField : maskedSummaryFields) {
+                if (key.contains(maskedSummaryField)) {
+                    value = maskField(entry);
+                }
+            }
+
+            if (key.contains(SummaryField.TIME)) {
+                LocalDateTime dateTime = LocalDateTime.parse(receiptSummary.get(key).toString());
+                value = AccountStatementUtil.writeDocumentIssueDate(dateTime);
             }
 
             table.addCell(key);
@@ -218,6 +223,120 @@ public class PdfExporter {
         }
 
         document.add(table);
+    }
+
+    private Map<String, Object> generateReceiptSummary(AccountActivity accountActivity) {
+        String customerNationalId = ((UserDetails) SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getPrincipal())
+                .getUsername();
+
+        Map<String, Object> summary = accountActivity.getSummary();
+        AccountActivityType accountActivityType = accountActivity.getType();
+        List<AccountActivityType> filteredAccountActivityTypes = List.of(AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.DEDUCTION);
+
+        if (!filteredAccountActivityTypes.contains(accountActivityType)) {
+            return summary;
+        }
+
+        Map<String, Object> receiptSummary = new HashMap<>(summary);
+        List<String> accountPositions = new ArrayList<>(List.of("Sender", "Recipient"));
+
+        switch (accountActivityType) {
+            case AccountActivityType.MONEY_TRANSFER -> {
+                String accountPosition = getAccountPositionFromMoneyTransfer(accountActivity, accountPositions, customerNationalId, receiptSummary);
+                accountPositions.remove(accountPosition);
+                String accountPositionRemoved = accountPositions.getFirst();
+                accountPositions.clear();
+
+                removeDeducteeInformation(receiptSummary);
+
+                for (Map.Entry<String, Object> entry : summary.entrySet()) {
+                    String key = entry.getKey();
+
+                    if (key.contains(SummaryField.FULL_NAME) || key.contains(SummaryField.ACCOUNT_IDENTITY)) {
+                        continue;
+                    }
+
+                    if (key.contains(accountPositionRemoved)) {
+                        receiptSummary.remove(key);
+                    }
+                }
+            }
+            case AccountActivityType.MONEY_EXCHANGE -> removeDeducteeInformation(receiptSummary);
+            default -> { // Deduction case
+                String accountActivityInSummary = summary.get(SummaryField.ACCOUNT_ACTIVITY).toString();
+
+                if (accountActivityInSummary.equals(AccountActivityType.MONEY_TRANSFER.getValue())) {
+                    for (Map.Entry<String, Object> entry : summary.entrySet()) {
+                        String key = entry.getKey();
+
+                        for (String currentAccountPosition : accountPositions) {
+                            if (key.contains(currentAccountPosition)) {
+                                receiptSummary.remove(key);
+                            }
+                        }
+                    }
+
+                    String fullName = accountActivity.getSenderAccount()
+                            .getCustomer()
+                            .getFullName();
+
+                    receiptSummary.put(SummaryField.FULL_NAME, fullName);
+                    receiptSummary.remove(SummaryField.PAYMENT_TYPE);
+                } else if (accountActivityInSummary.equals(AccountActivityType.MONEY_EXCHANGE.getValue())) {
+                    receiptSummary.remove("Spent " + SummaryField.AMOUNT);
+                    receiptSummary.remove("Earned " + SummaryField.AMOUNT);
+                    receiptSummary.remove(SummaryField.RATE);
+
+                    String sellerWord = "Seller ";
+                    String buyerWord = "Buyer ";
+
+                    receiptSummary.remove(sellerWord + SummaryField.ACCOUNT_IDENTITY);
+                    receiptSummary.remove(buyerWord + SummaryField.ACCOUNT_IDENTITY);
+                    receiptSummary.remove(sellerWord + SummaryField.TIME);
+                    receiptSummary.remove(buyerWord + SummaryField.TIME);
+                }
+
+                receiptSummary.put(SummaryField.ACCOUNT_ACTIVITY, AccountActivityType.DEDUCTION.getValue());
+                receiptSummary.put(SummaryField.CHANNEL, accountActivity.getChannel());
+                receiptSummary.remove(SummaryField.AMOUNT);
+            }
+        }
+
+        return receiptSummary;
+    }
+
+    private String getAccountPositionFromMoneyTransfer(AccountActivity accountActivity, List<String> accountPositions, String customerNationalId, Map<String, Object> receiptSummary) {
+        String senderAccountNationalId = accountActivity.getSenderAccount()
+                .getCustomer()
+                .getNationalId();
+        String recipientAccountNationalId = accountActivity.getRecipientAccount()
+                .getCustomer()
+                .getNationalId();
+
+        if (senderAccountNationalId.equals(recipientAccountNationalId)) { // accounts of same customer
+            return accountPositions.getFirst();
+        }
+
+        /* Accounts of different customers */
+        String accountPosition;
+
+        if (senderAccountNationalId.equals(customerNationalId)) {
+            accountPosition = accountPositions.getFirst();
+        } else { // customer's account is recipient
+            accountPosition = accountPositions.getLast();
+            receiptSummary.remove(SummaryField.TRANSACTION_FEE);
+            receiptSummary.put(SummaryField.CHANNEL, Channel.AUTOMATIC);
+        }
+
+        return accountPosition;
+    }
+
+    private void removeDeducteeInformation(Map<String, Object> receiptSummary) {
+        final String deducteeWord = "Deductee ";
+        receiptSummary.remove(deducteeWord + SummaryField.TIME);
+        receiptSummary.remove(deducteeWord + SummaryField.ACCOUNT_IDENTITY);
     }
 
     private void writeInformationTable(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
@@ -303,7 +422,7 @@ public class PdfExporter {
                     .append("*".repeat(length - endIndex));
         };
 
-        if (key.equals(SummaryField.FULL_NAME)) {
+        if (key.contains(SummaryField.FULL_NAME)) {
             int spaceIndex = value.indexOf(' ');
             String name = value.substring(0, spaceIndex);
             String surname = value.substring(spaceIndex + 1);
@@ -311,13 +430,13 @@ public class PdfExporter {
             valueBuilder.append(maskWordInFullName.apply(name))
                     .append(" ")
                     .append(maskWordInFullName.apply(surname));
-        } else if (key.equals(SummaryField.NATIONAL_IDENTITY)) {
+        } else if (key.contains(SummaryField.NATIONAL_IDENTITY)) {
             int length = value.length();
             valueBuilder.append(value, 0, 3)
                     .append("*".repeat(length - 5))
                     .append(value, length - 2, length);
         } else {
-            throw new ResourceConflictException(String.format("Summary field %s is not in %s", key, customerCredentials));
+            throw new ResourceConflictException(String.format("Summary field %s is not in %s", key, maskedSummaryFields));
         }
 
         return valueBuilder.toString();

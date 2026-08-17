@@ -16,7 +16,7 @@ public class ExporterUtil {
             written evidence.
             """;
     private final String LOGO_PATH = "/app/photo/logo.png";
-    private final String TIME_ZONE_MESSAGE = "Trading hours are shown according to Turkey time.";
+    private final String TIME_ZONE_MESSAGE = "Trading hours are displayed according to the time zone of the region where the account is located.";
 
     public Double calculateAmountForDataLine(Integer accountId, AccountActivityDto accountActivityDto) {
         Double amount = accountActivityDto.amount();
