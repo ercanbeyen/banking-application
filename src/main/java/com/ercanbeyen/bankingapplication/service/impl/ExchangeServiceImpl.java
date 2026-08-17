@@ -114,6 +114,14 @@ public class ExchangeServiceImpl implements ExchangeService {
     }
 
     @Override
+    public ExchangeView getExchangeView(Currency fromCurrency, Currency toCurrency) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+        return exchangeViewRepository.findByBaseCurrencyAndTargetCurrency(fromCurrency, toCurrency)
+                .orElseGet(() -> exchangeViewRepository.findByTargetCurrencyAndBaseCurrency(fromCurrency, toCurrency)
+                        .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.EXCHANGE.getValue()))));
+    }
+
+    @Override
     public Double getBankExchangeRate(Currency fromCurrency, Currency toCurrency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Pair<Double, Double> exchangeRate = getExchangeRate(fromCurrency, toCurrency);
