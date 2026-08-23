@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
@@ -580,7 +579,7 @@ public class CustomerServiceImpl implements CustomerService {
 
     private static void addFutureCashFlowsForInterestIncomePayments(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
         LocalDate paymentDate = LocalDate.ofInstant(account.getUpdatedAt(), ZoneId.systemDefault());
-        LocalDate counterDate = LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
+        LocalDate counterDate = LocalDate.now(ZoneId.systemDefault());
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
             AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;

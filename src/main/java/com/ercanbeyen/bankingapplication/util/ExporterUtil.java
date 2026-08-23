@@ -1,10 +1,14 @@
 package com.ercanbeyen.bankingapplication.util;
 
-import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
+import com.ercanbeyen.bankingapplication.constant.enums.BalanceActivity;
+import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
+import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import lombok.experimental.UtilityClass;
 
-import java.util.Objects;
-import java.util.Optional;
+import java.util.List;
+import java.util.Map;
+import java.util.function.Function;
 
 @UtilityClass
 public class ExporterUtil {
@@ -18,12 +22,12 @@ public class ExporterUtil {
     private final String LOGO_PATH = "/app/photo/logo.png";
     private final String TIME_ZONE_MESSAGE = "Trading hours are displayed according to the time zone of the region where the account is located.";
 
-    public Double calculateAmountForDataLine(Integer accountId, AccountActivityDto accountActivityDto) {
-        Double amount = accountActivityDto.amount();
-        boolean accountActivityForSenderExists = Optional.ofNullable(accountActivityDto.senderAccountId()).isPresent()
-                && Objects.equals(accountActivityDto.senderAccountId(), accountId);
+    public final List<String> maskedSummaryFields = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
 
-        if (accountActivityForSenderExists) {
+    public Double calculateAmountForDataLine(AccountActivityPreview accountActivityPreview) {
+        Double amount = accountActivityPreview.amount();
+
+        if (accountActivityPreview.balanceActivity() == BalanceActivity.DECREASE) {
             amount *= -1;
         }
 
@@ -48,5 +52,39 @@ public class ExporterUtil {
 
     public String getTimeZoneMessage() {
         return TIME_ZONE_MESSAGE;
+    }
+
+    public String maskField(Map.Entry<String, Object> entry) {
+        String key = entry.getKey();
+        String value = entry.getValue().toString();
+        StringBuilder valueBuilder = new StringBuilder();
+
+        Function<String, StringBuilder> maskWordInFullName = word -> {
+            int length = word.length();
+            int endIndex = length < 5 ? 1 : 2;
+
+            return new StringBuilder()
+                    .append(word, 0, endIndex)
+                    .append("*".repeat(length - endIndex));
+        };
+
+        if (key.contains(SummaryField.FULL_NAME)) {
+            int spaceIndex = value.indexOf(' ');
+            String name = value.substring(0, spaceIndex);
+            String surname = value.substring(spaceIndex + 1);
+
+            valueBuilder.append(maskWordInFullName.apply(name))
+                    .append(" ")
+                    .append(maskWordInFullName.apply(surname));
+        } else if (key.contains(SummaryField.NATIONAL_IDENTITY)) {
+            int length = value.length();
+            valueBuilder.append(value, 0, 3)
+                    .append("*".repeat(length - 5))
+                    .append(value, length - 2, length);
+        } else {
+            throw new ResourceConflictException(String.format("Summary field %s is not in %s", key, maskedSummaryFields));
+        }
+
+        return valueBuilder.toString();
     }
 }

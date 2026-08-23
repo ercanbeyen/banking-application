@@ -123,12 +123,6 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivity accountActivity = findById(id);
-
-        if (AccountActivityType.getAccountStatusUpdatingActivities().contains(accountActivity.getType())) {
-            throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY + ". Receipt cannot be generated for " + AccountActivityType.getAccountStatusUpdatingActivities());
-        }
-
-        log.info("{} is a proper account activity for receipt generation", accountActivity);
         ByteArrayOutputStream outputStream;
 
         try {
