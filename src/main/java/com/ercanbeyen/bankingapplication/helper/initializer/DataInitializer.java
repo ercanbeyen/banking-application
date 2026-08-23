@@ -39,6 +39,17 @@ public class DataInitializer {
         createSystemAdmin();
     }
 
+    private void createRolesAndPermissions() {
+        Permission manageEntityPermission = permissionService.createPermission(EPermission.MANAGE_ENTITY.toString());
+        Permission readUserPermission = permissionService.createPermission(EPermission.READ_DATA.toString());
+
+        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntityPermission, readUserPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUserPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.USER, Set.of()));
+
+        log.warn("Roles and permissions are successfully created!");
+    }
+
     private void createSystemAdmin() {
         CustomerDto customerDto = new CustomerDto();
         customerDto.setName("Admin");
@@ -58,16 +69,5 @@ public class DataInitializer {
 
         authService.registerUser(request);
         log.warn(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), customerDto.getName());
-    }
-
-    public void createRolesAndPermissions() {
-        Permission manageEntityPermission = permissionService.createPermission(EPermission.MANAGE_ENTITY.toString());
-        Permission readUserPermission = permissionService.createPermission(EPermission.READ_DATA.toString());
-
-        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntityPermission, readUserPermission)));
-        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUserPermission)));
-        roleService.createRole(new CreateRoleRequest(ERole.USER, Set.of()));
-
-        log.warn("Roles and permissions are created!");
     }
 }

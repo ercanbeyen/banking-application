@@ -11,9 +11,14 @@ import java.util.Optional;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
-@Table(name = "branches", indexes = {
-        @Index(name = "city_and_district_index", columnList = "city, district")
-})
+@Table(
+        name = "branches",
+        indexes = {
+                @Index(
+                        name = "city_and_district_index",
+                        columnList = "city, district"
+                )
+        })
 public non-sealed class Branch extends BaseEntity {
     @Column(unique = true)
     private String name;
@@ -24,7 +29,8 @@ public non-sealed class Branch extends BaseEntity {
 
     @Override
     public String toString() {
-        List<Integer> accountIds = Optional.ofNullable(accounts).isEmpty()
+        List<Integer> accountIds = Optional.ofNullable(accounts)
+                .isEmpty()
                 ? null
                 : accounts.stream()
                 .map(Account::getId)

@@ -41,6 +41,7 @@ public final class LogMessage {
 
     public static final class Test {
         public static final String UNIT = "Unit";
+        public static final String INTEGRATION = "Integration";
         public static final String SETUP = "Setup...";
         public static final String TEAR_DOWN = "Tear down...";
         private static final String TEMPLATE = "{} tests of {} are";

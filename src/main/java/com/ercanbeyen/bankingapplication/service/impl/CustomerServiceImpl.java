@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.*;
@@ -65,7 +64,7 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDate customerBirthday = customer.getBirthDate();
 
             Boolean birthDayFilter = (birthDateOption == null || birthDateOption.getMonth().equals(customerBirthday.getMonth()) && birthDateOption.getDayOfMonth() == customerBirthday.getDayOfMonth());
-            Boolean createdAtFilter = (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().isEqual(LocalDate.ofInstant(customer.getCreatedAt(), ZoneId.systemDefault())));
+            Boolean createdAtFilter = (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().isEqual(customer.getCreatedAt().toLocalDate()));
 
             return (birthDayFilter && createdAtFilter);
         };
@@ -258,7 +257,7 @@ public class CustomerServiceImpl implements CustomerService {
 
         Predicate<Account> accountPredicate = account -> (filteringOption == null)
                 || (filteringOption.getType() == null || filteringOption.getType() == account.getType())
-                || (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault()).getYear());
+                || (filteringOption.getCreatedAt() == null || filteringOption.getCreatedAt().getYear() <= account.getCreatedAt().getYear());
 
         Comparator<Account> accountComparator = Comparator.comparing(Account::getCreatedAt)
                 .reversed();
@@ -357,7 +356,7 @@ public class CustomerServiceImpl implements CustomerService {
 
             if (accountType == AccountType.DEPOSIT) {
                 log.info("Only expected interest income payments are going to be processed for {} {}", accountType.getValue(), entity);
-                LocalDate nextPaymentDate = LocalDate.ofInstant(account.getUpdatedAt(), ZoneId.systemDefault()).plusMonths(account.getDepositMaturity());
+                LocalDate nextPaymentDate = account.getUpdatedAt().toLocalDate().plusMonths(account.getDepositMaturity());
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
                     ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.INTEREST_INCOME, account.getInterestRate(), nextPaymentDate);
@@ -577,8 +576,8 @@ public class CustomerServiceImpl implements CustomerService {
     }
 
     private static void addFutureCashFlowsForInterestIncomePayments(List<CashFlow> cashFlows, Account account, Integer year, Integer month) {
-        LocalDate paymentDate = LocalDate.ofInstant(account.getUpdatedAt(), ZoneId.systemDefault());
-        LocalDate counterDate = LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
+        LocalDate paymentDate = account.getUpdatedAt().toLocalDate();
+        LocalDate counterDate = LocalDate.now(ZoneId.systemDefault());
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
             AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
@@ -586,7 +585,7 @@ public class CustomerServiceImpl implements CustomerService {
                 log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, activityType.getValue());
                 String entity = Entity.ACCOUNT.getValue();
 
-                if (doesDateMatchesWithYearAndMonth(LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault()), counterDate.getYear(), counterDate.getMonthValue())) {
+                if (doesDateMatchesWithYearAndMonth(account.getCreatedAt().toLocalDate(), counterDate.getYear(), counterDate.getMonthValue())) {
                     log.info("Calendar shows for {} {} creating time, so no interest income", AccountType.DEPOSIT.getValue(), entity);
                 } else {
                     log.info("Add the interest income to the balance");

@@ -5,7 +5,7 @@ import jakarta.persistence.MappedSuperclass;
 import lombok.Data;
 
 import java.io.Serializable;
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Data
 @MappedSuperclass
@@ -13,14 +13,12 @@ public sealed class BaseDto implements Serializable permits AccountDto, AtmDto, 
     private Integer id;
     @JsonFormat(
             shape = JsonFormat.Shape.STRING,
-            pattern = "yyyy-MM-dd HH:mm:ss",
-            timezone = "UTC"
+            pattern = "yyyy-MM-dd HH:mm:ss"
     )
-    private Instant createdAt;
+    private LocalDateTime createdAt;
     @JsonFormat(
             shape = JsonFormat.Shape.STRING,
-            pattern = "yyyy-MM-dd HH:mm:ss",
-            timezone = "UTC"
+            pattern = "yyyy-MM-dd HH:mm:ss"
     )
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 }

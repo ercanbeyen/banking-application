@@ -14,7 +14,7 @@ public class AccountSecurityService {
 
     public boolean isOwner(Integer accountId, Authentication authentication) {
         AccountDto requestedAccount = accountService.getEntity(accountId);
-        String customerNationalId = UserDetailsUtil.getUsername(authentication);
+        String customerNationalId = UserDetailsUtil.getUserDetails(authentication).getUsername();
         return requestedAccount.getCustomerNationalId().equals(customerNationalId);
     }
 }

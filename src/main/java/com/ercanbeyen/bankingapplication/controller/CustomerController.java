@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
+import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerFinancialSummaryResponse;
 import com.ercanbeyen.bankingapplication.dto.response.ReceiptPreview;
 import com.ercanbeyen.bankingapplication.embeddable.ExpectedTransaction;
@@ -163,14 +164,14 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @GetMapping("/{id}/accounts/receipt-previews")
     public ResponseEntity<List<ReceiptPreview>> getReceiptPreviews(@PathVariable("id") @P("customerId") Integer id) {
         AccountActivityFilteringRequest request = new AccountActivityFilteringRequest(null, null, null, null, null, Arrays.asList(Channel.values()));
-        SortedSet<AccountActivityDto> accountActivityDtos = new TreeSet<>(Comparator.comparing(AccountActivityDto::createdAt).reversed());
+        SortedSet<AccountActivityPreview> accountActivityPreviews = new TreeSet<>(Comparator.comparing(AccountActivityPreview::createdAt).reversed());
 
         customerService.findById(id)
                 .getAccounts()
-                .forEach(account -> accountActivityDtos.addAll(accountService.getAccountActivities(account.getId(), request)));
+                .forEach(account -> accountActivityPreviews.addAll(accountService.getAccountActivityPreviews(account.getId(), request)));
 
-        List<ReceiptPreview> receiptPreviews = accountActivityDtos.stream()
-                .map(accountActivityDto -> new ReceiptPreview(accountActivityDto.id(), accountActivityDto.type(), accountActivityDto.createdAt(), accountActivityDto.amount()))
+        List<ReceiptPreview> receiptPreviews = accountActivityPreviews.stream()
+                .map(accountActivityPreview -> new ReceiptPreview(accountActivityPreview.accountActivityId(), accountActivityPreview.accountActivityType(), accountActivityPreview.createdAt(), accountActivityPreview.amount()))
                 .toList();
 
         return ResponseEntity.ok(receiptPreviews);

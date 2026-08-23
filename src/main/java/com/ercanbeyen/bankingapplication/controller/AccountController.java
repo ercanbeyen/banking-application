@@ -2,19 +2,22 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
-import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
+import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
+import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
+import com.ercanbeyen.bankingapplication.service.TimeZoneService;
 import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
@@ -48,12 +51,14 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     private final AccountService accountService;
     private final AccountSecurityService accountSecurityService;
     private final EmailService emailService;
+    private final TimeZoneService timeZoneService;
 
-    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, EmailService emailService) {
+    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, EmailService emailService, TimeZoneService timeZoneService) {
         super(accountService);
         this.accountService = accountService;
         this.accountSecurityService = accountSecurityService;
         this.emailService = emailService;
+        this.timeZoneService = timeZoneService;
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
@@ -177,10 +182,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     }
 
     @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
-    @GetMapping("/{id}/account-activities")
-    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
+    @GetMapping("/{id}/account-activity-previews")
+    public ResponseEntity<List<AccountActivityPreview>> getAccountActivityPreviews(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
-        return ResponseEntity.ok(accountService.getAccountActivities(id, request));
+        return ResponseEntity.ok(accountService.getAccountActivityPreviews(id, request));
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
@@ -254,14 +259,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     private ByteArrayOutputStream generateAccountStatementPdf(Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
-        Account account = accountService.findActiveAccountById(id);
-        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
+        List<AccountActivityPreview> accountActivityPreviews = accountService.getAccountActivityPreviews(id, request);
+        Account account = accountService.findById(id);
+
+        ZoneId zoneId = getTimeZoneOfBranch(account.getBranch().getAddress());
 
         LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
         LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
 
         try {
-            return PdfExporter.generateAccountStatementPdf(account, fromDate, toDate, accountActivityDtos);
+            return PdfExporter.generateAccountStatementPdf(account, zoneId, fromDate, toDate, accountActivityPreviews);
         } catch (DocumentException | IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }
@@ -270,18 +277,25 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     private ByteArrayOutputStream generateAccountStatementExcel(Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
-        Account account = accountService.findActiveAccountById(id);
-        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
+        List<AccountActivityPreview> accountActivityPreviews = accountService.getAccountActivityPreviews(id, request);
+        Account account = accountService.findById(id);
+
+        ZoneId zoneId = getTimeZoneOfBranch(account.getBranch().getAddress());
 
         LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
         LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
 
-        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos, fromDate, toDate); ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, zoneId, accountActivityPreviews, fromDate, toDate); ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
             workbook.write(byteArrayOutputStream);
             return byteArrayOutputStream;
         } catch (IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }
+    }
+
+    private ZoneId getTimeZoneOfBranch(Address address) {
+        return timeZoneService.getZoneId(address.getCountry(), address.getCity())
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Time Zone of branch")));
     }
 
     private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());

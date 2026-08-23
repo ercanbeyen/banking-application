@@ -31,7 +31,7 @@ public class MoneyTransferOrderUtil {
             2) If next transfer date comes then it returns true, else it returns false
          */
         return moneyTransferOrderDto -> {
-            LocalDate nextMoneyTransferDate = LocalDate.ofInstant(moneyTransferOrderDto.getCreatedAt(), ZoneId.systemDefault());
+            LocalDate nextMoneyTransferDate = moneyTransferOrderDto.getCreatedAt().toLocalDate();
             LocalDate todayDate = LocalDate.now(ZoneId.systemDefault());
 
             do {

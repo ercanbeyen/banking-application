@@ -9,7 +9,7 @@ import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.Subselect;
 import org.hibernate.annotations.Synchronize;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Entity(name = "account_activity_views")
@@ -42,5 +42,5 @@ public class AccountActivityView {
     @Enumerated(EnumType.STRING)
     private Channel channel;
     @Column(name = "created_at")
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

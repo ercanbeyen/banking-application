@@ -12,6 +12,8 @@ import com.ercanbeyen.bankingapplication.dto.NotificationDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
+import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -23,12 +25,15 @@ import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOpti
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
+import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -54,6 +59,7 @@ public class AccountServiceImpl implements AccountService {
     private final BranchService branchService;
     private final DailyAccountActivityLimitService dailyAccountActivityLimitService;
     private final AgreementService agreementService;
+    private final TimeZoneService timeZoneService;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOption filteringOption) {
@@ -61,7 +67,7 @@ public class AccountServiceImpl implements AccountService {
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (Optional.ofNullable(filteringOption.getType()).isEmpty() || filteringOption.getType() == account.getType());
-            boolean timeFilter = (Optional.ofNullable(filteringOption.getCreatedAt()).isEmpty() || filteringOption.getCreatedAt().isEqual(LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault())));
+            boolean timeFilter = (Optional.ofNullable(filteringOption.getCreatedAt()).isEmpty() || filteringOption.getCreatedAt().isEqual(account.getCreatedAt().toLocalDate()));
             boolean blockedFilter = (Optional.ofNullable(filteringOption.getIsBlocked()).isEmpty() || filteringOption.getIsBlocked() == account.isBlocked());
             boolean closedAtFilter = (Optional.ofNullable(filteringOption.getIsClosed()).isEmpty() || filteringOption.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
             return typeFilter && timeFilter && blockedFilter && closedAtFilter;
@@ -77,7 +83,12 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountDto getEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        return accountMapper.entityToDto(findById(id));
+
+        Account account = findById(id);
+
+
+
+        return accountMapper.entityToDto(account);
     }
 
     @Transactional
@@ -119,6 +130,20 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = findActiveAccountById(id);
         Branch branch = branchService.findByName(request.getBranchName());
+
+        Address addressOfOldBranch = account.getBranch().getAddress();
+        Address addressOfNewBranch = branch.getAddress();
+
+        ZoneId zoneIdOfOldBranch = timeZoneService.getZoneId(addressOfOldBranch.getCountry(), addressOfOldBranch.getCity())
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Time Zone of old branch")));
+
+        ZoneId zoneIdOfNewBranch = timeZoneService.getZoneId(addressOfNewBranch.getCountry(), addressOfNewBranch.getCity())
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Time Zone of new branch")));
+
+        if (!zoneIdOfOldBranch.equals(zoneIdOfNewBranch)) {
+            throw new ResourceConflictException("Time Zone of account cannot be updated!");
+        }
+
         account.setBranch(branch);
 
         if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(account.getDepositMaturity(), request.getDepositMaturity())) {
@@ -302,6 +327,51 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public List<AccountActivityPreview> getAccountActivityPreviews(Integer id, AccountActivityFilteringRequest request) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Account account = findById(id);
+
+        UserDetails userDetails = UserDetailsUtil.getUserDetailsOfLoggedInUser();
+
+        if (account.getClosedAt() != null && !UserDetailsUtil.getPermissions(userDetails).contains(EPermission.READ_DATA.toString())) {
+            throw new AccessDeniedException(String.format(ResponseMessage.ACCESS_DENIED, "User cannot access to this account!"));
+        }
+
+        log.info("User can access to the account!");
+
+        List<AccountActivityDto> accountActivityDtos = getAccountActivitiesOfAccount(account, request);
+        List<AccountActivityPreview> accountActivityPreviews = new ArrayList<>();
+
+        accountActivityDtos.forEach(accountActivityDto -> {
+            Address address = account.getBranch().getAddress();
+            ZoneId zoneId = timeZoneService.getZoneId(address.getCountry(), address.getCity())
+                    .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Time Zone of branch")));
+
+            BalanceActivity balanceActivity = switch (accountActivityDto.type()) {
+                case ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING -> BalanceActivity.STABLE;
+                case MONEY_DEPOSIT, INTEREST_INCOME -> BalanceActivity.INCREASE;
+                case WITHDRAWAL, DEDUCTION -> BalanceActivity.DECREASE;
+                default -> // MONEY_TRANSFER and MONEY_EXCHANGE cases
+                        accountActivityDto.senderAccountId().equals(id) ? BalanceActivity.DECREASE : BalanceActivity.INCREASE;
+            };
+
+            AccountActivityPreview accountActivityPreview = new AccountActivityPreview(
+                    accountActivityDto.id(),
+                    accountActivityDto.type(),
+                    balanceActivity,
+                    accountActivityDto.amount(),
+                    accountActivityDto.channel(),
+                    LocalDateTime.ofInstant(accountActivityDto.createdAt(), zoneId)
+            );
+
+            accountActivityPreviews.add(accountActivityPreview);
+        });
+
+        return accountActivityPreviews;
+    }
+
+    @Override
     public Account getDeducteeAccount(AccountActivityType accountActivityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
@@ -360,6 +430,17 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
+    public Account findById(Integer id) {
+        String entity = Entity.ACCOUNT.getValue();
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
+
+        log.info(LogMessage.RESOURCE_FOUND, entity);
+
+        return account;
+    }
+
+    @Override
     public void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account recipientAccount) {
         AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), recipientAccount.getCurrency());
 
@@ -381,13 +462,10 @@ public class AccountServiceImpl implements AccountService {
         AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), recipientAccount.getType(), AccountActivityType.MONEY_TRANSFER);
     }
 
-    @Override
-    public List<AccountActivityDto> getAccountActivities(Integer id, AccountActivityFilteringRequest request) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        Account account = findActiveAccountById(id);
+    private List<AccountActivityDto> getAccountActivitiesOfAccount(Account account, AccountActivityFilteringRequest request) {
         Comparator<AccountActivityDto> accountActivityComparator = Comparator.comparing(AccountActivityDto::createdAt).reversed();
         BalanceActivity balanceActivity = request.balanceActivity();
+        int id = account.getId();
         Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
         if (Optional.ofNullable(balanceActivity).isPresent()) {
@@ -401,16 +479,6 @@ public class AccountServiceImpl implements AccountService {
         return accountActivityDtos.stream()
                 .sorted(accountActivityComparator)
                 .toList();
-    }
-
-    private Account findById(Integer id) {
-        String entity = Entity.ACCOUNT.getValue();
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
-
-        log.info(LogMessage.RESOURCE_FOUND, entity);
-
-        return account;
     }
 
     private Set<AccountActivityDto> getFilteredAccountActivities(Integer id, AccountActivityFilteringRequest request, BalanceActivity balanceActivity, Account account) {

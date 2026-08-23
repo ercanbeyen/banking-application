@@ -43,7 +43,7 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 @DisplayName("Customer Service Test")
 class CustomerServiceTest {
-    public static final String TESTED_CLASS = "Customer Service";
+    private static final String TESTED_CLASS = "Customer Service";
     @InjectMocks
     private CustomerServiceImpl customerService;
     @Mock

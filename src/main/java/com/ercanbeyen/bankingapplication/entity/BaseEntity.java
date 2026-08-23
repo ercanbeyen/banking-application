@@ -7,7 +7,7 @@ import lombok.Data;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @EntityListeners(BaseEntityListener.class)
 @Data
@@ -17,7 +17,7 @@ public abstract sealed class BaseEntity permits Account, Atm, Branch, Customer, 
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     @CreationTimestamp
-    private Instant createdAt;
+    private LocalDateTime createdAt;
     @UpdateTimestamp
-    private Instant updatedAt;
+    private LocalDateTime updatedAt;
 }

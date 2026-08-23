@@ -17,8 +17,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
@@ -39,7 +37,7 @@ public class TermDepositInterestRateServiceImpl implements TermDepositInterestRa
         Predicate<TermDepositInterestRate> termDepositInterestRatePredicate = termDepositInterestRate -> {
             boolean currencyFilter = (Optional.ofNullable(filteringOption.getCurrency()).isEmpty() || termDepositInterestRate.getCurrency() == filteringOption.getCurrency());
             boolean depositMaturityFilter = (Optional.ofNullable(filteringOption.getDepositMaturity()).isEmpty() || termDepositInterestRate.getDepositMaturity() == filteringOption.getDepositMaturity().intValue());
-            boolean updatedAtFilter = (Optional.ofNullable(filteringOption.getUpdatedAt()).isEmpty() || LocalDate.ofInstant(termDepositInterestRate.getUpdatedAt(), ZoneId.systemDefault()).isEqual(filteringOption.getUpdatedAt()));
+            boolean updatedAtFilter = (Optional.ofNullable(filteringOption.getUpdatedAt()).isEmpty() || termDepositInterestRate.getUpdatedAt().toLocalDate().isEqual(filteringOption.getUpdatedAt()));
 
             return currencyFilter && depositMaturityFilter && updatedAtFilter;
         };

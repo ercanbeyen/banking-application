@@ -14,7 +14,7 @@ public class NotificationSecurityService {
 
     public boolean isOwner(String id, Authentication authentication) {
         NotificationDto requestedNotification = notificationService.getNotification(id);
-        String customerNationalId = UserDetailsUtil.getUsername(authentication);
+        String customerNationalId = UserDetailsUtil.getUserDetails(authentication).getUsername();
         return requestedNotification.customerNationalId().equals(customerNationalId);
     }
 }

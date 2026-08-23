@@ -191,13 +191,13 @@ public class TransactionServiceImpl implements TransactionService {
         Address address = senderAccount.getBranch().getAddress();
         timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
                 zoneId -> summary.put(senderWord + SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
-                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+                () -> summary.put(senderWord + SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
         );
 
         address = recipientAccount.getBranch().getAddress();
         timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
                 zoneId -> summary.put(recipientWord + SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
-                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
+                () -> summary.put(recipientWord + SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
         );
 
         AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation(), channel);

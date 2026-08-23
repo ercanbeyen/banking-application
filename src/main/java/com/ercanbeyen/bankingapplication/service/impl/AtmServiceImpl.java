@@ -18,7 +18,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -42,7 +41,7 @@ public class AtmServiceImpl implements AtmService {
 
             boolean cityFilter = Optional.ofNullable(cityOption).isEmpty() || address.getCity().equals(cityOption);
             boolean districtFilter = Optional.ofNullable(districtOption).isEmpty() || address.getDistrict().equals(districtOption);
-            boolean createdAtFilter = Optional.ofNullable(createdAtOption).isEmpty() || LocalDate.ofInstant(atm.getCreatedAt(), ZoneId.systemDefault()).isEqual(createdAtOption);
+            boolean createdAtFilter = Optional.ofNullable(createdAtOption).isEmpty() || atm.getCreatedAt().toLocalDate().isEqual(createdAtOption);
 
             return cityFilter && districtFilter && createdAtFilter;
         };

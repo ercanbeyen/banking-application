@@ -4,14 +4,14 @@ import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Channel;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
+import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
-import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.dto.AccountFinancialStatus;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.Customer;
-import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.helper.event.BorderEvent;
 import com.ercanbeyen.bankingapplication.helper.event.PageNumerationEvent;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
@@ -23,8 +23,6 @@ import com.itextpdf.text.pdf.PdfPCell;
 import com.itextpdf.text.pdf.PdfPTable;
 import com.itextpdf.text.pdf.PdfWriter;
 import lombok.experimental.UtilityClass;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,12 +31,9 @@ import java.time.*;
 import java.util.*;
 import java.util.List;
 import java.util.function.BiConsumer;
-import java.util.function.Function;
 
 @UtilityClass
 public class PdfExporter {
-    private final List<String> maskedSummaryFields = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
-
     public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer, Double netBalanceOfCustomer, Map<AccountType, Double> netBalancesOfAccountTypes, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -80,7 +75,7 @@ public class PdfExporter {
         return outputStream;
     }
 
-    public ByteArrayOutputStream generateAccountStatementPdf(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos) throws DocumentException, IOException {
+    public ByteArrayOutputStream generateAccountStatementPdf(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -92,7 +87,7 @@ public class PdfExporter {
         writeTitle(document, ExporterUtil.getAccountStatementTitle());
         addNewLine(document);
 
-        writeAccountStatementBody(account, fromDate, toDate, accountActivityDtos, document);
+        writeAccountStatementBody(account, zoneId, fromDate, toDate, accountActivityPreviews, document);
 
         writeFooter(document);
         document.close();
@@ -186,11 +181,11 @@ public class PdfExporter {
         document.add(table);
     }
 
-    private void writeAccountStatementBody(Account account, LocalDate fromDate, LocalDate toDate, List<AccountActivityDto> accountActivityDtos, Document document) throws DocumentException {
-        writeInformationTable(document, account, fromDate, toDate);
+    private void writeAccountStatementBody(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews, Document document) throws DocumentException {
+        writeInformationTable(document, account, zoneId, fromDate, toDate);
         addNewLine(document);
 
-        writeAccountActivityTable(account, document, accountActivityDtos);
+        writeAccountActivityTable(document, accountActivityPreviews);
         addNewLine(document);
     }
 
@@ -207,9 +202,9 @@ public class PdfExporter {
             String key = entry.getKey();
             String value = entry.getValue().toString();
 
-            for (String maskedSummaryField : maskedSummaryFields) {
+            for (String maskedSummaryField : ExporterUtil.maskedSummaryFields) {
                 if (key.contains(maskedSummaryField)) {
-                    value = maskField(entry);
+                    value = ExporterUtil.maskField(entry);
                 }
             }
 
@@ -226,10 +221,7 @@ public class PdfExporter {
     }
 
     private Map<String, Object> generateReceiptSummary(AccountActivity accountActivity) {
-        String customerNationalId = ((UserDetails) SecurityContextHolder.getContext()
-                .getAuthentication()
-                .getPrincipal())
-                .getUsername();
+        String customerNationalId = UserDetailsUtil.getUserDetailsOfLoggedInUser().getUsername();
 
         Map<String, Object> summary = accountActivity.getSummary();
         AccountActivityType accountActivityType = accountActivity.getType();
@@ -339,7 +331,7 @@ public class PdfExporter {
         receiptSummary.remove(deducteeWord + SummaryField.ACCOUNT_IDENTITY);
     }
 
-    private void writeInformationTable(Document document, Account account, LocalDate fromDate, LocalDate toDate) throws DocumentException {
+    private void writeInformationTable(Document document, Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate) throws DocumentException {
         BorderEvent borderEvent = new BorderEvent();
 
         PdfPTable table = new PdfPTable(2);
@@ -357,7 +349,7 @@ public class PdfExporter {
         accountInformationTable.addCell(AccountStatementUtil.writeFullName(customer.getName()));
         accountInformationTable.addCell(new Phrase(new Paragraph("\n")));
         accountInformationTable.addCell(AccountStatementUtil.CUSTOMER_NUMBER + customer.getId());
-        accountInformationTable.addCell(AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER + maskField(entry));
+        accountInformationTable.addCell(AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER + ExporterUtil.maskField(entry));
         accountInformationTable.addCell(AccountStatementUtil.BRANCH + account.getBranch().getName());
         accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_IDENTITY + account.getId());
         accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_TYPE + account.getType());
@@ -371,7 +363,7 @@ public class PdfExporter {
         transactionInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         transactionInformationTable.setTableEvent(borderEvent);
 
-        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(ZoneId.systemDefault())));
+        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(zoneId)));
         transactionInformationTable.addCell(AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
 
         table.addCell(transactionInformationTable);
@@ -379,7 +371,7 @@ public class PdfExporter {
         document.add(table);
     }
 
-    private void writeAccountActivityTable(Account account, Document document, List<AccountActivityDto> accountActivityDtos) throws DocumentException {
+    private void writeAccountActivityTable(Document document, List<AccountActivityPreview> accountActivityPreviews) throws DocumentException {
         final int numberOfColumns = 3;
         PdfPTable table = new PdfPTable(numberOfColumns);
 
@@ -387,10 +379,10 @@ public class PdfExporter {
         writeHeaderRowOfTable.accept(List.of(SummaryField.TIME, SummaryField.ACCOUNT_ACTIVITY, SummaryField.AMOUNT), table);
 
         /* Data rows */
-        for (AccountActivityDto accountActivityDto : accountActivityDtos) {
-            table.addCell(new PdfPCell(new Phrase(accountActivityDto.createdAt().toString())));
-            table.addCell(new PdfPCell(new Phrase(accountActivityDto.type().getValue())));
-            table.addCell(new PdfPCell(new Phrase(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(account.getId(), accountActivityDto)))));
+        for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
+            table.addCell(new PdfPCell(new Phrase(accountActivityPreview.createdAt().toString())));
+            table.addCell(new PdfPCell(new Phrase(accountActivityPreview.accountActivityType().getValue())));
+            table.addCell(new PdfPCell(new Phrase(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)))));
         }
 
         document.add(table);
@@ -407,40 +399,6 @@ public class PdfExporter {
             table.addCell(header);
         });
     };
-
-    private String maskField(Map.Entry<String, Object> entry) {
-        String key = entry.getKey();
-        String value = entry.getValue().toString();
-        StringBuilder valueBuilder = new StringBuilder();
-
-        Function<String, StringBuilder> maskWordInFullName = word -> {
-            int length = word.length();
-            int endIndex = length < 5 ? 1 : 2;
-
-            return new StringBuilder()
-                    .append(word, 0, endIndex)
-                    .append("*".repeat(length - endIndex));
-        };
-
-        if (key.contains(SummaryField.FULL_NAME)) {
-            int spaceIndex = value.indexOf(' ');
-            String name = value.substring(0, spaceIndex);
-            String surname = value.substring(spaceIndex + 1);
-
-            valueBuilder.append(maskWordInFullName.apply(name))
-                    .append(" ")
-                    .append(maskWordInFullName.apply(surname));
-        } else if (key.contains(SummaryField.NATIONAL_IDENTITY)) {
-            int length = value.length();
-            valueBuilder.append(value, 0, 3)
-                    .append("*".repeat(length - 5))
-                    .append(value, length - 2, length);
-        } else {
-            throw new ResourceConflictException(String.format("Summary field %s is not in %s", key, maskedSummaryFields));
-        }
-
-        return valueBuilder.toString();
-    }
 
     private void writeFinancialStatusReportFooter(Document document) throws DocumentException {
         Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
@@ -475,9 +433,11 @@ public class PdfExporter {
     }
 
     private void writeLogo(Document document) throws DocumentException, IOException {
-        Image image = Image.getInstance(Paths.get(ExporterUtil.getLogoPath())
-                .toAbsolutePath()
-                .toString());
+        Image image = Image.getInstance(
+                Paths.get(ExporterUtil.getLogoPath())
+                        .toAbsolutePath()
+                        .toString()
+        );
         image.scalePercent(10);
         image.setAlignment(Element.ALIGN_CENTER);
         document.add(image);

@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.ERole;
 import lombok.experimental.UtilityClass;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Set;
@@ -15,9 +16,19 @@ import java.util.stream.Collectors;
 public class UserDetailsUtil {
     private final String ROLE_PREFIX = "ROLE_";
 
-    public String getUsername(Authentication authentication) {
+    public UserDetails getUserDetailsOfLoggedInUser() {
+        Authentication authentication =  SecurityContextHolder.getContext()
+                .getAuthentication();
+
+        assert authentication != null;
+        return getUserDetails(authentication);
+    }
+
+    public UserDetails getUserDetails(Authentication authentication) {
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        return userDetails.getUsername();
+
+        assert userDetails != null;
+        return userDetails;
     }
 
     public String getRole(ERole eRole) {

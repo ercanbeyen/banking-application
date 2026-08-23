@@ -1,8 +1,8 @@
 package com.ercanbeyen.bankingapplication.util.exporter;
 
+import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
 import com.ercanbeyen.bankingapplication.util.AccountStatementUtil;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
-import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
@@ -23,6 +23,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 
 @UtilityClass
 public class ExcelExporter {
@@ -30,17 +31,17 @@ public class ExcelExporter {
     private final int CENTER_COLUMN_INDEX = 1;
     private int rowIndex = 0;
 
-    public Workbook generateAccountStatementWorkbook(Account account, List<AccountActivityDto> accountActivityDtos, LocalDate fromDate, LocalDate toDate) throws IOException {
+    public Workbook generateAccountStatementWorkbook(Account account, ZoneId zoneId, List<AccountActivityPreview> accountActivityPreviews, LocalDate fromDate, LocalDate toDate) throws IOException {
         Workbook workbook = new XSSFWorkbook();
         String name = "Account Activities - " + account.getId();
 
         writeHeader(name, workbook);
         rowIndex += 3;
 
-        writeInformationTable(name, workbook, account, fromDate, toDate);
+        writeInformationTable(name, workbook, account, zoneId, fromDate, toDate);
         rowIndex += 3;
 
-        writeAccountActivityTable(account, accountActivityDtos, name, workbook);
+        writeAccountActivityTable(name, workbook, accountActivityPreviews);
         rowIndex++;
 
         writeFooter(name, workbook);
@@ -48,9 +49,9 @@ public class ExcelExporter {
         return workbook;
     }
 
-    private void writeAccountActivityTable(Account account, List<AccountActivityDto> accountActivityDtos, String name, Workbook workbook) {
+    private void writeAccountActivityTable(String name, Workbook workbook, List<AccountActivityPreview> accountActivityPreviews) {
         writeHeaderRow(name, workbook);
-        writeDataRows(account.getId(), name, workbook, accountActivityDtos);
+        writeDataRows(name, workbook, accountActivityPreviews);
     }
 
     private void writeHeaderRow(String name, Workbook workbook) {
@@ -73,7 +74,7 @@ public class ExcelExporter {
         writeCell(row, columnIndex, SummaryField.AMOUNT, style, sheet);
     }
 
-    private void writeDataRows(Integer accountId, String name, Workbook workbook, List<AccountActivityDto> accountActivityDtos) {
+    private void writeDataRows(String name, Workbook workbook, List<AccountActivityPreview> accountActivityPreviews) {
         Sheet sheet = workbook.getSheet(name);
 
         CellStyle style = workbook.createCellStyle();
@@ -81,12 +82,12 @@ public class ExcelExporter {
         font.setFontHeight(14);
         style.setFont(font);
 
-        for (AccountActivityDto accountActivityDto : accountActivityDtos) {
+        for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
             Row row = sheet.createRow(rowIndex++);
             int columnIndex = BEGINNING_INDEX;
-            writeCell(row, columnIndex++, accountActivityDto.createdAt().toString(), style, sheet);
-            writeCell(row, columnIndex++, accountActivityDto.type().getValue(), style, sheet);
-            writeCell(row, columnIndex, FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountId, accountActivityDto)), style, sheet);
+            writeCell(row, columnIndex++, accountActivityPreview.createdAt().toString(), style, sheet);
+            writeCell(row, columnIndex++, accountActivityPreview.accountActivityType().getValue(), style, sheet);
+            writeCell(row, columnIndex, FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)), style, sheet);
         }
     }
 
@@ -131,7 +132,7 @@ public class ExcelExporter {
         sheet.autoSizeColumn(rowIndex++);
     }
 
-    private void writeInformationTable(String name, Workbook workbook, Account account, LocalDate fromDate, LocalDate toDate) {
+    private void writeInformationTable(String name, Workbook workbook, Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate) {
         Sheet sheet = workbook.getSheet(name);
         Customer customer = account.getCustomer();
 
@@ -158,11 +159,13 @@ public class ExcelExporter {
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NUMBER, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getId(), valueColumnStyle, sheet);
 
+        Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
+
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER, fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfAccountInformationTable, customer.getNationalId(), valueColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfAccountInformationTable, ExporterUtil.maskField(entry), valueColumnStyle, sheet);
         writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(ZoneId.systemDefault())), valueColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(zoneId)), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.BRANCH, fieldColumnStyle, sheet);
@@ -198,6 +201,8 @@ public class ExcelExporter {
         row = sheet.createRow(rowIndex);
         cell = row.createCell(BEGINNING_INDEX);
         cell.setCellValue(ExporterUtil.getTimeZoneMessage());
+
+        resetValues();
     }
 
     private void writeCell(Row row, int columnIndex, Object givenValue, CellStyle style, Sheet sheet) {
@@ -212,5 +217,9 @@ public class ExcelExporter {
         }
 
         cell.setCellStyle(style);
+    }
+
+    private void resetValues() {
+        rowIndex = 0;
     }
 }
