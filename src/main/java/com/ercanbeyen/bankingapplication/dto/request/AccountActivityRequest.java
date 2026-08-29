@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto.request;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.entity.Account;
 
 import java.util.Map;
@@ -13,6 +13,6 @@ public record AccountActivityRequest(
         Double amount,
         Map<String, Object> summary,
         String explanation,
-        Channel channel) {
+        ChannelType channelType) {
 
 }

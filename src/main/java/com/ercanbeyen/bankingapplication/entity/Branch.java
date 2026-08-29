@@ -1,6 +1,5 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -19,11 +18,7 @@ import java.util.Optional;
                         columnList = "city, district"
                 )
         })
-public non-sealed class Branch extends BaseEntity {
-    @Column(unique = true)
-    private String name;
-    @Embedded
-    private Address address;
+public class Branch extends Channel {
     @OneToMany(mappedBy = "branch")
     private List<Account> accounts;
 

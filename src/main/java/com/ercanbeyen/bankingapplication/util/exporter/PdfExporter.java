@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.util.exporter;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
-import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
 import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
@@ -291,7 +291,7 @@ public class PdfExporter {
                 }
 
                 receiptSummary.put(SummaryField.ACCOUNT_ACTIVITY, AccountActivityType.DEDUCTION.getValue());
-                receiptSummary.put(SummaryField.CHANNEL, accountActivity.getChannel());
+                receiptSummary.put(SummaryField.CHANNEL, accountActivity.getChannelType());
                 receiptSummary.remove(SummaryField.AMOUNT);
             }
         }
@@ -319,7 +319,7 @@ public class PdfExporter {
         } else { // customer's account is recipient
             accountPosition = accountPositions.getLast();
             receiptSummary.remove(SummaryField.TRANSACTION_FEE);
-            receiptSummary.put(SummaryField.CHANNEL, Channel.AUTOMATIC);
+            receiptSummary.put(SummaryField.CHANNEL, ChannelType.SYSTEM);
         }
 
         return accountPosition;

@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 
 @Data
 @MappedSuperclass
-public sealed class BaseDto implements Serializable permits AccountDto, AtmDto, BranchDto, CustomerDto, ExchangeDto, NewsDto, MoneyTransferOrderDto, TermDepositInterestRateDto {
+public sealed class BaseDto implements Serializable permits AccountDto, ChannelDto, CustomerDto, ExchangeDto, NewsDto, MoneyTransferOrderDto, TermDepositInterestRateDto {
     private Integer id;
     @JsonFormat(
             shape = JsonFormat.Shape.STRING,

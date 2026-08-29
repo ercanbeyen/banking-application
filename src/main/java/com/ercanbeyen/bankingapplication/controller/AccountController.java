@@ -24,6 +24,7 @@ import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
@@ -104,8 +105,9 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
-            @RequestHeader("Channel") Channel channel) {
-        accountService.depositMoney(id, amount, channel);
+            HttpServletRequest httpServletRequest) {
+        AccountUtil.checkMoneyDepositAndWithdrawalRequests(httpServletRequest);
+        accountService.depositMoney(id, amount, httpServletRequest);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_DEPOSIT.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -115,8 +117,9 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
-            @RequestHeader("Channel") Channel channel) {
-        accountService.withdrawMoney(id, amount, channel);
+            HttpServletRequest httpServletRequest) {
+        AccountUtil.checkMoneyDepositAndWithdrawalRequests(httpServletRequest);
+        accountService.withdrawMoney(id, amount, httpServletRequest);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.WITHDRAWAL.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -130,18 +133,18 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication) OR hasRole('ADMIN')")
     @PutMapping("/transfer")
-    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request, @RequestHeader("Channel") Channel channel) {
-        AccountUtil.checkMoneyTransferRequest(request);
-        accountService.transferMoney(request, channel);
+    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest moneyTransferRequest, HttpServletRequest httpServletRequest) {
+        AccountUtil.checkMoneyTransferRequest(moneyTransferRequest, httpServletRequest);
+        accountService.transferMoney(moneyTransferRequest, httpServletRequest);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyExchange.sellerAccountId, authentication)")
     @PutMapping("/exchange")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request, @RequestHeader("Channel") Channel channel) {
-        AccountUtil.checkMoneyExchangeRequest(request);
-        accountService.exchangeMoney(request, channel);
+    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest moneyExchangeRequest, HttpServletRequest httpServletRequest) {
+        AccountUtil.checkMoneyExchangeRequest(moneyExchangeRequest, httpServletRequest);
+        accountService.exchangeMoney(moneyExchangeRequest, httpServletRequest);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

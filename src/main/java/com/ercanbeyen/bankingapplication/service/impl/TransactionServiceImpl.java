@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
+import com.ercanbeyen.bankingapplication.dto.TransactionInformation;
 import com.ercanbeyen.bankingapplication.dto.TermDepositInterestRateDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
@@ -20,7 +21,6 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
-import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -48,8 +48,8 @@ public class TransactionServiceImpl implements TransactionService {
     private final TimeZoneService timeZoneService;
 
     @Override
-    public void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType) {
-        Channel channel = Channel.APP;
+    public void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType, TransactionInformation transactionInformation) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Map<String, Object> summary = new HashMap<>();
         summary.put(SummaryField.ACCOUNT_ACTIVITY, activityType.getValue());
@@ -58,20 +58,18 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(SummaryField.NATIONAL_IDENTITY, account.getCustomer().getNationalId());
         summary.put(SummaryField.ACCOUNT_TYPE, account.getCurrency() + " " + account.getType());
         summary.put(SummaryField.BRANCH, account.getBranch().getName());
-        summary.put(SummaryField.CHANNEL, channel);
 
-        Address address = account.getBranch().getAddress();
-        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
-                zoneId -> summary.put(SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
-                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
-        );
+        ChannelType channel = transactionInformation.channel();
+        summary.put(SummaryField.CHANNEL, channel);
+        summary.put(SummaryField.TRANSACTION_PLACE, transactionInformation.placeName());
+        summary.put(SummaryField.TIME, LocalDateTime.now(transactionInformation.zoneId()).toString());
 
         AccountActivityRequest request = new AccountActivityRequest(activityType, null, null, 0D, summary, null, channel);
         accountActivityService.createAccountActivity(request);
     }
 
     @Override
-    public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation, Channel channel) {
+    public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation, TransactionInformation transactionInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account[] accounts = new Account[2]; // first account is sender, second account is recipient
@@ -121,22 +119,20 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(SummaryField.ACCOUNT_IDENTITY, account.getId());
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + account.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee);
-        summary.put(SummaryField.CHANNEL, channel);
 
-        Address address = account.getBranch().getAddress();
-        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
-                zoneId -> summary.put(SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
-                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
-        );
+        ChannelType channelType = transactionInformation.channel();
+        summary.put(SummaryField.CHANNEL, channelType);
+        summary.put(SummaryField.TRANSACTION_PLACE, transactionInformation.placeName());
+        summary.put(SummaryField.TIME, LocalDateTime.now(transactionInformation.zoneId()).toString());
 
-        AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null, channel);
+        AccountActivity accountActivity = createAccountActivity(activityType, amount, summary, accounts, null, channelType);
         createAccountActivityForDeduction(transactionFee, summary, account);
 
         cashFlowCalendarService.createCashFlow(account.getCustomer().getCashFlowCalendar(), accountActivity, cashFlowExplanation);
     }
 
     @Override
-    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount, Channel channel) {
+    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount, TransactionInformation transactionInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
@@ -186,21 +182,18 @@ public class TransactionServiceImpl implements TransactionService {
 
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
-        summary.put(SummaryField.CHANNEL, channel);
 
-        Address address = senderAccount.getBranch().getAddress();
-        timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
-                zoneId -> summary.put(senderWord + SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
-                () -> summary.put(senderWord + SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
-        );
+        summary.put(SummaryField.CHANNEL, transactionInformation.channel());
+        summary.put(senderWord + SummaryField.TRANSACTION_PLACE, transactionInformation.placeName());
+        summary.put(senderWord + SummaryField.TIME, LocalDateTime.now(transactionInformation.zoneId()).toString());
 
-        address = recipientAccount.getBranch().getAddress();
+        Address address = recipientAccount.getBranch().getAddress();
         timeZoneService.getZoneId(address.getCountry(), address.getCity()).ifPresentOrElse(
                 zoneId -> summary.put(recipientWord + SummaryField.TIME, LocalDateTime.now(zoneId).toString()),
                 () -> summary.put(recipientWord + SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
         );
 
-        AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation(), channel);
+        AccountActivity accountActivity = createAccountActivity(activityType, request.amount(), summary, accounts, request.explanation(), transactionInformation.channel());
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
 
         if (!areAccountsOwnedBySameCustomer) {
@@ -213,7 +206,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount, Channel channel) {
+    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount, TransactionInformation transactionInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
@@ -266,26 +259,13 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put("Earned " + SummaryField.AMOUNT, earnedAmountInSummary + " " + buyerAccountCurrency);
         summary.put(SummaryField.RATE, FormatterUtil.convertNumberToFormalExpression(rate));
 
-        ExchangeView exchangeView = exchangeService.getExchangeView(sellerAccountCurrency, buyerAccountCurrency);
-
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
+
+        ChannelType channel = transactionInformation.channel();
         summary.put(SummaryField.CHANNEL, channel);
 
-        Address addressOfTargetCurrency;
-        String timeKey;
-
-        if (exchangeView.getTargetCurrency() == sellerAccountCurrency) {
-            addressOfTargetCurrency = sellerAccount.getBranch().getAddress();
-            timeKey = sellerWord + SummaryField.TIME;
-        } else {
-            addressOfTargetCurrency = buyerAccount.getBranch().getAddress();
-            timeKey = buyerWord + SummaryField.TIME;
-        }
-
-        timeZoneService.getZoneId(addressOfTargetCurrency.getCountry(), addressOfTargetCurrency.getCity()).ifPresentOrElse(
-                zoneId -> summary.put(timeKey, LocalDateTime.now(zoneId).toString()),
-                () -> summary.put(SummaryField.TIME, LocalDateTime.now(ZoneId.systemDefault()).toString())
-        );
+        summary.put(SummaryField.TRANSACTION_PLACE, transactionInformation.placeName());
+        summary.put(SummaryField.TIME, LocalDateTime.now(transactionInformation.zoneId()).toString());
 
         createAccountActivity(activityType, earnedAmount, summary, accounts, null, channel);
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
@@ -382,11 +362,11 @@ public class TransactionServiceImpl implements TransactionService {
         Account[] accounts = new Account[2];
         accounts[0] = deducteeAccount;
 
-        createAccountActivity(AccountActivityType.DEDUCTION, transactionFee, summary, accounts, null, Channel.AUTOMATIC);
+        createAccountActivity(AccountActivityType.DEDUCTION, transactionFee, summary, accounts, null, ChannelType.SYSTEM);
     }
 
-    private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation, Channel channel) {
-        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation, channel);
+    private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation, ChannelType channelType) {
+        AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation, channelType);
         return accountActivityService.createAccountActivity(accountActivityRequest);
     }
 

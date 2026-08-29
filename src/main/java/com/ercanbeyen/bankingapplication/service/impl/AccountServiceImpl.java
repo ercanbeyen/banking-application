@@ -4,11 +4,9 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
+import com.ercanbeyen.bankingapplication.constant.query.HeaderField;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
-import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
-import com.ercanbeyen.bankingapplication.dto.AccountDto;
-import com.ercanbeyen.bankingapplication.dto.DailyAccountActivityLimitDto;
-import com.ercanbeyen.bankingapplication.dto.NotificationDto;
+import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
@@ -17,6 +15,7 @@ import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -30,6 +29,8 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -57,8 +58,10 @@ public class AccountServiceImpl implements AccountService {
     private final NotificationService notificationService;
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
+    private final AtmService atmService;
     private final DailyAccountActivityLimitService dailyAccountActivityLimitService;
     private final AgreementService agreementService;
+    private final ExchangeService exchangeService;
     private final TimeZoneService timeZoneService;
 
     @Override
@@ -83,12 +86,7 @@ public class AccountServiceImpl implements AccountService {
     @Override
     public AccountDto getEntity(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        Account account = findById(id);
-
-
-
-        return accountMapper.entityToDto(account);
+        return accountMapper.entityToDto(findById(id));
     }
 
     @Transactional
@@ -118,7 +116,8 @@ public class AccountServiceImpl implements AccountService {
         Account savedAccount = accountRepository.save(account);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedAccount.getId());
 
-        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING);
+        TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
+        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING, transactionInformation);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -161,7 +160,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void depositMoney(Integer id, Double amount, Channel channel) {
+    public void depositMoney(Integer id, Double amount, HttpServletRequest httpServletRequest) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -170,9 +169,11 @@ public class AccountServiceImpl implements AccountService {
 
         checkDailyAccountActivityLimit(account, amount, activityType);
 
+        TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(httpServletRequest);
+
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channel);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
 
         String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -181,7 +182,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void withdrawMoney(Integer id, Double amount, Channel channel) {
+    public void withdrawMoney(Integer id, Double amount, HttpServletRequest httpServletRequest) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
@@ -190,9 +191,11 @@ public class AccountServiceImpl implements AccountService {
 
         checkDailyAccountActivityLimit(account, amount, activityType);
 
+        TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(httpServletRequest);
+
         String entity = Entity.ACCOUNT.getValue();
         String cashFlowExplanation = entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, channel);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
 
         String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -212,9 +215,19 @@ public class AccountServiceImpl implements AccountService {
         Double amount = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
         AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
 
+        Address address = account.getBranch().getAddress();
+        ZoneId zoneId = timeZoneService.getZoneId(address.getCountry(), address.getCity())
+                .orElse(ZoneId.systemDefault());
+
+        TransactionInformation transactionInformation = new TransactionInformation(
+                ChannelType.getPlaceNameForSystemChannel(),
+                ChannelType.SYSTEM,
+                zoneId
+        );
+
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, Channel.AUTOMATIC);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
         notificationService.sendNotification(notificationDto);
@@ -225,26 +238,28 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void transferMoney(MoneyTransferRequest request, Channel channel) {
+    public void transferMoney(MoneyTransferRequest moneyTransferRequest, HttpServletRequest httpServletRequest) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Account senderAccount = findActiveAccountById(request.senderAccountId());
-        Account recipientAccount = findActiveAccountById(request.recipientAccountId());
+        Account senderAccount = findActiveAccountById(moneyTransferRequest.senderAccountId());
+        Account recipientAccount = findActiveAccountById(moneyTransferRequest.recipientAccountId());
 
         AccountActivityType accountActivityType = AccountActivityType.MONEY_TRANSFER;
-        Double amount = request.amount();
+        Double amount = moneyTransferRequest.amount();
         Currency currency = senderAccount.getCurrency();
 
         checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
-        Account deducteeAccount = getDeducteeAccount(accountActivityType, request.deducteeAccountId(), List.of(senderAccount, recipientAccount));
+        Account deducteeAccount = getDeducteeAccount(accountActivityType, moneyTransferRequest.deducteeAccountId(), List.of(senderAccount, recipientAccount));
         boolean areAccountsOwnedBySameCustomer = Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId());
 
         if (!areAccountsOwnedBySameCustomer) {
             checkDailyAccountActivityLimit(senderAccount, amount, accountActivityType);
         }
 
-        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, channel);
+        TransactionInformation transactionInformation = getTransactionPlaceForMoneyTransfer(httpServletRequest, senderAccount.getBranch().getAddress());
+
+        transactionService.transferMoneyBetweenAccounts(moneyTransferRequest, amount, senderAccount, recipientAccount, deducteeAccount, transactionInformation);
 
         if (!areAccountsOwnedBySameCustomer) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -258,19 +273,20 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void exchangeMoney(MoneyExchangeRequest request, Channel channel) {
+    public void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, HttpServletRequest httpServletRequest) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Account sellerAccount = findActiveAccountById(request.sellerAccountId());
-        Account buyerAccount = findActiveAccountById(request.buyerAccountId());
+        Account sellerAccount = findActiveAccountById(moneyExchangeRequest.sellerAccountId());
+        Account buyerAccount = findActiveAccountById(moneyExchangeRequest.buyerAccountId());
 
         checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
 
-        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
-        checkDailyAccountActivityLimit(sellerAccount, request.amount(), activityType);
+        AccountActivityType accountActivityType = AccountActivityType.MONEY_EXCHANGE;
+        checkDailyAccountActivityLimit(sellerAccount, moneyExchangeRequest.amount(), accountActivityType);
 
-        Account deducteeAccount = getDeducteeAccount(AccountActivityType.MONEY_EXCHANGE, request.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
-        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount, channel);
+        Account deducteeAccount = getDeducteeAccount(accountActivityType, moneyExchangeRequest.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
+        TransactionInformation transactionInformation = getTransactionPlaceForMoneyExchange(httpServletRequest, sellerAccount, buyerAccount);
+        transactionService.exchangeMoneyBetweenAccounts(moneyExchangeRequest, sellerAccount, buyerAccount, deducteeAccount, transactionInformation);
     }
 
     @Transactional
@@ -289,7 +305,8 @@ public class AccountServiceImpl implements AccountService {
             account.setBlocked(status);
             accountRepository.save(account);
 
-            transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_BLOCKING);
+            TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
+            transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_BLOCKING, transactionInformation);
         }
 
         return status ? entity + " is successfully blocked" : entity + " blockage is successfully removed";
@@ -311,7 +328,9 @@ public class AccountServiceImpl implements AccountService {
         account.setClosedAt(Instant.now());
         accountRepository.save(account);
 
-        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_CLOSING);
+        TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
+
+        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_CLOSING, transactionInformation);
     }
 
     @Override
@@ -361,7 +380,7 @@ public class AccountServiceImpl implements AccountService {
                     accountActivityDto.type(),
                     balanceActivity,
                     accountActivityDto.amount(),
-                    accountActivityDto.channel(),
+                    accountActivityDto.channelType(),
                     LocalDateTime.ofInstant(accountActivityDto.createdAt(), zoneId)
             );
 
@@ -485,17 +504,17 @@ public class AccountServiceImpl implements AccountService {
         return switch (balanceActivity) {
             case DECREASE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate(), request.channels());
+                        request.activityTypes(), id, null, request.minimumAmount(), request.fromDate(), request.toDate(), request.channelTypes());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case INCREASE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate(), request.channels());
+                        request.activityTypes(), null, id, request.minimumAmount(), request.fromDate(), request.toDate(), request.channelTypes());
                 yield accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency());
             }
             case STABLE -> {
                 AccountActivityFilteringOption filteringOption = new AccountActivityFilteringOption(
-                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate(), request.channels());
+                        request.activityTypes(), null, null, null, request.fromDate(), request.toDate(), request.channelTypes());
                 yield accountActivityService.getAccountActivities(filteringOption)
                         .stream()
                         .filter(accountActivityDto -> {
@@ -602,6 +621,96 @@ public class AccountServiceImpl implements AccountService {
         log.info("Daily limits of {} are not exceeded", activityType.getValue());
     }
 
+    private TransactionInformation getTransactionPlaceForStatusUpdate(Address address) {
+        ZoneId zoneId = getZoneId(address);
+
+        return new TransactionInformation(
+                ChannelType.getPlaceNameForSystemChannel(),
+                ChannelType.SYSTEM,
+                zoneId
+        );
+    }
+
+    private TransactionInformation getTransactionPlaceMoneyDepositAndWithdrawal(HttpServletRequest request) {
+        ChannelType channelType = ChannelType.valueOf(request.getHeader(HeaderField.CHANNEL_TYPE));
+        Integer channelId = request.getIntHeader(HeaderField.CHANNEL_ID);
+
+        ChannelDto requestedChannel = switch (channelType) {
+            case BRANCH -> branchService.getEntity(channelId);
+            case ATM -> atmService.getEntity(channelId);
+            default -> throw new BadRequestException(ResponseMessage.UNACCEPTABLE_CHANNEL);
+        };
+
+        ZoneId zoneId = getZoneId(requestedChannel.getAddress());
+
+        return new TransactionInformation(
+                requestedChannel.getName(),
+                channelType,
+                zoneId
+        );
+    }
+
+    private TransactionInformation getTransactionPlaceForMoneyTransfer(HttpServletRequest httpServletRequest, Address senderAccountAddress) {
+        ChannelType channelType = ChannelType.valueOf(httpServletRequest.getHeader(HeaderField.CHANNEL_TYPE));
+        Integer channelId = httpServletRequest.getIntHeader(HeaderField.CHANNEL_ID);
+
+        ChannelDto channelDto = switch (channelType) {
+            case ATM -> atmService.getEntity(channelId);
+            case BRANCH -> branchService.getEntity(channelId);
+            case MOBILE_BANKING, INTERNET_BANKING -> {
+                ChannelDto requestedChannel = new ChannelDto();
+                requestedChannel.setName(ChannelType.getPlaceNameForSystemChannel());
+                requestedChannel.setAddress(senderAccountAddress);
+                yield requestedChannel;
+            }
+            default -> throw new BadRequestException(ResponseMessage.UNACCEPTABLE_CHANNEL);
+        };
+
+        Address address = channelDto.getAddress();
+        ZoneId zoneId = getZoneId(address);
+
+        return new TransactionInformation(
+                channelDto.getName(),
+                channelType,
+                zoneId
+        );
+    }
+
+    private TransactionInformation getTransactionPlaceForMoneyExchange(HttpServletRequest httpServletRequest, Account sellerAccount, Account buyerAccount) {
+        ChannelType channelType = ChannelType.valueOf(httpServletRequest.getHeader(HeaderField.CHANNEL_TYPE));
+        Integer channelId = httpServletRequest.getIntHeader(HeaderField.CHANNEL_ID);
+
+        ChannelDto channelDto = switch (channelType) {
+            case ATM -> atmService.getEntity(channelId);
+            case BRANCH -> branchService.getEntity(channelId);
+            case MOBILE_BANKING, INTERNET_BANKING -> {
+                ChannelDto requestedChannel = new ChannelDto();
+                requestedChannel.setName(ChannelType.getPlaceNameForSystemChannel());
+
+                Currency sellerAccountCurrency = sellerAccount.getCurrency();
+                Currency buyerAccountCurrency = sellerAccount.getCurrency();
+
+                ExchangeView exchangeView = exchangeService.getExchangeView(sellerAccountCurrency, buyerAccountCurrency);
+                Address addressOfTargetCurrency = exchangeView.getTargetCurrency() == sellerAccountCurrency
+                        ? sellerAccount.getBranch().getAddress()
+                        : buyerAccount.getBranch().getAddress();
+
+                requestedChannel.setAddress(addressOfTargetCurrency);
+
+                yield requestedChannel;
+            }
+            default -> throw new BadRequestException(ResponseMessage.UNACCEPTABLE_CHANNEL);
+        };
+
+        ZoneId zoneId = getZoneId(channelDto.getAddress());
+
+        return new TransactionInformation(
+                channelDto.getName(),
+                channelType,
+                zoneId
+        );
+    }
+
     private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, AccountActivityType activityType) {
         Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is recipient id
 
@@ -621,7 +730,7 @@ public class AccountServiceImpl implements AccountService {
                 null,
                 today,
                 today,
-                List.of(Channel.APP, Channel.ATM, Channel.BRANCH)
+                List.of(ChannelType.MOBILE_BANKING, ChannelType.INTERNET_BANKING, ChannelType.ATM, ChannelType.BRANCH)
         );
     }
 
@@ -648,5 +757,9 @@ public class AccountServiceImpl implements AccountService {
         }
 
         log.info("{} {} has not been closed", entity, id);
+    }
+
+    private ZoneId getZoneId(Address address) {
+        return timeZoneService.getZoneId(address.getCountry(), address.getCity()).orElseGet(ZoneId::systemDefault);
     }
 }

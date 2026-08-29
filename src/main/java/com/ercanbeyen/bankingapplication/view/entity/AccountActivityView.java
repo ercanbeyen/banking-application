@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.view.entity;
 
-import com.ercanbeyen.bankingapplication.constant.enums.Channel;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import jakarta.persistence.*;
@@ -15,7 +15,7 @@ import java.time.Instant;
 @Entity(name = "account_activity_views")
 @Immutable
 @Subselect("""
-           SELECT t.id, t.type, a.currency, t.amount, t.sender_account_id, t.recipient_account_id, t.channel, t.created_at
+           SELECT t.id, t.type, a.currency, t.amount, t.sender_account_id, t.recipient_account_id, t.channelType, t.created_at
            FROM (account_activities t
                  INNER JOIN accounts a ON (t.sender_account_id = a.id OR t.recipient_account_id = a.id))
            GROUP BY t.id, a.currency
@@ -40,7 +40,7 @@ public class AccountActivityView {
     private Integer recipientAccountId;
     @Column
     @Enumerated(EnumType.STRING)
-    private Channel channel;
+    private ChannelType channelType;
     @Column(name = "created_at")
     private Instant createdAt;
 }

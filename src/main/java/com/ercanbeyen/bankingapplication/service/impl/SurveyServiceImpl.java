@@ -55,7 +55,7 @@ public class SurveyServiceImpl implements SurveyService {
             boolean customerNationalIdFilter = (Optional.ofNullable(filteringOption.customerNationalId()).isEmpty() || filteringOption.customerNationalId().equals(key.getCustomerNationalId()));
             boolean accountActivityTypeFilter = (Optional.ofNullable(filteringOption.accountActivityType()).isEmpty() || filteringOption.accountActivityType() == survey.getAccountActivityType());
             boolean surveyTypeFilter = (Optional.ofNullable(filteringOption.surveyType()).isEmpty() || filteringOption.surveyType() == key.getSurveyType());
-            boolean channelFilter = (Optional.ofNullable(filteringOption.channel())).isEmpty() || filteringOption.channel() == survey.getChannel();
+            boolean channelFilter = (Optional.ofNullable(filteringOption.channelType())).isEmpty() || filteringOption.channelType() == survey.getChannelType();
             boolean createdAtFilter = (Optional.ofNullable(filteringOption.createdAt()).isEmpty() || filteringOption.createdAt().isEqual(LocalDate.ofInstant(survey.getCreatedAt(), ZoneId.systemDefault())));
             boolean validUntilFilter = (Optional.ofNullable(filteringOption.validUntil()).isEmpty() || filteringOption.validUntil().isEqual(LocalDate.ofInstant(survey.getValidUntil(), ZoneId.systemDefault())));
 
@@ -102,7 +102,7 @@ public class SurveyServiceImpl implements SurveyService {
         Survey survey = Survey.builder()
                 .key(key)
                 .title(request.title())
-                .channel(requestedAccountActivity.channel())
+                .channelType(requestedAccountActivity.channelType())
                 .validUntil(request.validUntil())
                 .createdAt(now)
                 .updatedAt(now)
