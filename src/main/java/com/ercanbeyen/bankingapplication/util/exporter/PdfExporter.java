@@ -319,7 +319,7 @@ public class PdfExporter {
         } else { // customer's account is recipient
             accountPosition = accountPositions.getLast();
             receiptSummary.remove(SummaryField.TRANSACTION_FEE);
-            receiptSummary.put(SummaryField.CHANNEL, ChannelType.AUTOMATIC);
+            receiptSummary.put(SummaryField.CHANNEL, ChannelType.SYSTEM);
         }
 
         return accountPosition;

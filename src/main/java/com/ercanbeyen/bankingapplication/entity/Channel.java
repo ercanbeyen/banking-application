@@ -10,7 +10,7 @@ import lombok.EqualsAndHashCode;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @MappedSuperclass
-public abstract sealed class Channel extends BaseEntity permits Atm, Branch {
+public sealed class Channel extends BaseEntity permits Atm, Branch {
     @Column(unique = true)
     protected String name;
     @Embedded

@@ -9,15 +9,16 @@ import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
 public interface AccountService extends BaseService<AccountDto, AccountFilteringOption> {
-    void depositMoney(Integer id, Double amount, ChannelType channelType);
-    void withdrawMoney(Integer id, Double amount, ChannelType channelType);
+    void depositMoney(Integer id, Double amount, HttpServletRequest httpServletRequest);
+    void withdrawMoney(Integer id, Double amount, HttpServletRequest httpServletRequest);
     String payInterestIncome(Integer id);
-    void transferMoney(MoneyTransferRequest request, ChannelType channelType);
-    void exchangeMoney(MoneyExchangeRequest request, ChannelType channelType);
+    void transferMoney(MoneyTransferRequest moneyTransferRequest, HttpServletRequest httpServletRequest);
+    void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, HttpServletRequest httpServletRequest);
     String updateBlockStatus(Integer id, boolean status);
     void closeAccount(Integer id);
     Integer getTotalActiveAccounts(AccountType type, Currency currency, String city);
