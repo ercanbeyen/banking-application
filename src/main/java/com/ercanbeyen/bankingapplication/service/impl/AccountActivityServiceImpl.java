@@ -97,7 +97,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         }
 
         AccountActivity accountActivity = new AccountActivity(
-                request.activityType(),
+                request.accountActivityType(),
                 request.senderAccount(),
                 request.recipientAccount(),
                 request.amount(),
@@ -200,13 +200,15 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         boolean typeCheck = Optional.ofNullable(filteringOption.activityTypes()).isEmpty() || filteringOption.activityTypes()
                 .stream()
                 .anyMatch(activityType -> accountActivity.getType() == activityType);
+
         boolean amountCheck = Optional.ofNullable(filteringOption.minimumAmount()).isEmpty() || filteringOption.minimumAmount() <= accountActivity.getAmount();
+        boolean channelCheck = Optional.ofNullable(filteringOption.channelTypes()).isEmpty() || filteringOption.channelTypes().contains(accountActivity.getChannelType());
 
         LocalDate createdDate = LocalDate.ofInstant(accountActivity.getCreatedAt(), ZoneId.systemDefault());
 
         boolean fromDateCheck = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(createdDate);
         boolean toDateCheck = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(createdDate);
 
-        return typeCheck && amountCheck && fromDateCheck && toDateCheck;
+        return typeCheck && amountCheck && channelCheck && fromDateCheck && toDateCheck;
     }
 }

@@ -55,11 +55,11 @@ public class DeductionServiceImpl implements DeductionService {
 
     @CachePut(value = "deductions", key = "#a0")
     @Override
-    public DeductionDto updateDeduction(AccountActivityType activityType, DeductionDto request) {
+    public DeductionDto updateDeduction(AccountActivityType accountActivityType, DeductionDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Deduction deduction = findByActivityType(activityType);
-        checkUniqueness(request, deduction.getActivityType());
+        Deduction deduction = findByActivityType(accountActivityType);
+        checkUniqueness(request, deduction.getAccountActivityType());
 
         deduction.setAmount(request.amount());
 
@@ -68,34 +68,34 @@ public class DeductionServiceImpl implements DeductionService {
 
     @Cacheable(value = "deductions", key = "#a0")
     @Override
-    public DeductionDto getDeduction(AccountActivityType activityType) {
+    public DeductionDto getDeduction(AccountActivityType accountActivityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        Deduction deduction = findByActivityType(activityType);
+        Deduction deduction = findByActivityType(accountActivityType);
         return deductionMapper.entityToDto(deduction);
     }
 
     @CacheEvict(value = "deductions", key = "#a0")
     @Transactional
     @Override
-    public void deleteDeduction(AccountActivityType activityType) {
+    public void deleteDeduction(AccountActivityType accountActivityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.DEDUCTION.getValue();
 
-        if (!deductionExistsByActivityType(activityType)) {
+        if (!deductionExistsByAccountActivityType(accountActivityType)) {
             throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
         }
 
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
-        deductionRepository.deleteByActivityType(activityType);
+        deductionRepository.deleteByAccountActivityType(accountActivityType);
 
-        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, activityType);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, accountActivityType);
     }
 
-    private Deduction findByActivityType(AccountActivityType activityType) {
+    private Deduction findByActivityType(AccountActivityType accountActivityType) {
         String entity = Entity.DEDUCTION.getValue();
-        Deduction deduction = deductionRepository.findByActivityType(activityType)
+        Deduction deduction = deductionRepository.findByAccountActivityType(accountActivityType)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
         log.info(LogMessage.RESOURCE_FOUND, entity);
@@ -103,15 +103,15 @@ public class DeductionServiceImpl implements DeductionService {
         return deduction;
     }
 
-    private void checkUniqueness(DeductionDto request, AccountActivityType previousActivityType) {
+    private void checkUniqueness(DeductionDto request, AccountActivityType previousAccountActivityType) {
         String entity = Entity.DEDUCTION.getValue();
 
-        if (previousActivityType == request.activityType()) {
+        if (previousAccountActivityType == request.accountActivityType()) {
             log.warn(LogMessage.NO_ACCOUNT_ACTIVITY_CHANGE, entity);
             return;
         }
 
-        boolean entityExists = deductionExistsByActivityType(request.activityType());
+        boolean entityExists = deductionExistsByAccountActivityType(request.accountActivityType());
 
         if (entityExists) {
             throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, entity));
@@ -120,7 +120,7 @@ public class DeductionServiceImpl implements DeductionService {
         log.info(LogMessage.RESOURCE_UNIQUE, entity);
     }
 
-    private boolean deductionExistsByActivityType(AccountActivityType activityType) {
-        return deductionRepository.existsByActivityType(activityType);
+    private boolean deductionExistsByAccountActivityType(AccountActivityType activityType) {
+        return deductionRepository.existsByAccountActivityType(activityType);
     }
 }

@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface DailyAccountActivityLimitRepository extends JpaRepository<DailyAccountActivityLimit, String> {
-    Optional<DailyAccountActivityLimit> findByActivityType(AccountActivityType activityType);
-    boolean existsByActivityType(AccountActivityType activityType);
-    void deleteByActivityType(AccountActivityType activityType);
+    Optional<DailyAccountActivityLimit> findByAccountActivityType(AccountActivityType accountActivityType);
+    boolean existsByAccountActivityType(AccountActivityType accountActivityType);
+    void deleteByAccountActivityType(AccountActivityType accountActivityType);
 }

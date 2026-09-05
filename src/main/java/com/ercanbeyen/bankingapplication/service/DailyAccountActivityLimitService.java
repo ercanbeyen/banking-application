@@ -7,8 +7,8 @@ import java.util.List;
 
 public interface DailyAccountActivityLimitService {
     List<DailyAccountActivityLimitDto> getDailyAccountActivityLimits();
-    DailyAccountActivityLimitDto getDailyAccountActivityLimit(AccountActivityType activityType);
+    DailyAccountActivityLimitDto getDailyAccountActivityLimit(AccountActivityType accountActivityType);
     DailyAccountActivityLimitDto createDailyAccountActivityLimit(DailyAccountActivityLimitDto request);
-    DailyAccountActivityLimitDto updateDailyAccountActivityLimit(AccountActivityType activityType, DailyAccountActivityLimitDto request);
-    void deleteDailyAccountActivityLimit(AccountActivityType activityType);
+    DailyAccountActivityLimitDto updateDailyAccountActivityLimit(AccountActivityType accountActivityType, DailyAccountActivityLimitDto request);
+    void deleteDailyAccountActivityLimit(AccountActivityType accountActivityType);
 }

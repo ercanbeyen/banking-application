@@ -9,7 +9,7 @@ import java.util.Optional;
 
 @Repository
 public interface DeductionRepository extends JpaRepository<Deduction, String> {
-    Optional<Deduction> findByActivityType(AccountActivityType activityType);
-    boolean existsByActivityType(AccountActivityType activityType);
-    void deleteByActivityType(AccountActivityType activityType);
+    Optional<Deduction> findByAccountActivityType(AccountActivityType accountActivityType);
+    boolean existsByAccountActivityType(AccountActivityType accountActivityType);
+    void deleteByAccountActivityType(AccountActivityType accountActivityType);
 }

@@ -540,23 +540,23 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDate paymentDate = moneyTransferOrder.getTransferDate();
             LocalDate counterDate = LocalDate.now(ZoneId.systemDefault());
             PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
-            AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+            AccountActivityType accountActivityType = AccountActivityType.MONEY_TRANSFER;
             Double amount = moneyTransferOrder.getRegularMoneyTransfer().getAmount();
             String entity = Entity.ACCOUNT.getValue();
 
             if (paymentPeriod == PaymentPeriod.ONE_TIME && doesDateMatchesWithYearAndMonth(paymentDate, year, month)) { // One Time Transfer Order Case
                 String explanation = entity + " " + account.getId() + " will send " + amount + " " + account.getCurrency();
-                addCashFlow(cashFlows, paymentDate, activityType, year, month, explanation);
+                addCashFlow(cashFlows, paymentDate, accountActivityType, year, month, explanation);
                 log.info("One Time Transfer Order, so related cash flow was 1 and it has already been added");
                 continue;
             }
 
             while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
                 if (doesDateMatchesWithYearAndMonth(paymentDate, counterDate.getYear(), counterDate.getMonthValue())) {
-                    log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, activityType.getValue());
+                    log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, accountActivityType.getValue());
 
                     String explanation = entity + " " + account.getId() + " will send " + amount + " " + account.getCurrency();
-                    addCashFlow(cashFlows, paymentDate, activityType, year, month, explanation);
+                    addCashFlow(cashFlows, paymentDate, accountActivityType, year, month, explanation);
 
                     paymentDate = switch (paymentPeriod) {
                         case ONE_TIME -> paymentDate;
@@ -580,9 +580,9 @@ public class CustomerServiceImpl implements CustomerService {
         LocalDate counterDate = LocalDate.now(ZoneId.systemDefault());
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
-            AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
+            AccountActivityType accountActivityType = AccountActivityType.INTEREST_INCOME;
             if (doesDateMatchesWithYearAndMonth(paymentDate, counterDate.getYear(), counterDate.getMonthValue())) {
-                log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, activityType.getValue());
+                log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, accountActivityType.getValue());
                 String entity = Entity.ACCOUNT.getValue();
 
                 if (doesDateMatchesWithYearAndMonth(account.getCreatedAt().toLocalDate(), counterDate.getYear(), counterDate.getMonthValue())) {
@@ -597,7 +597,7 @@ public class CustomerServiceImpl implements CustomerService {
 
                     String explanation = interest + " " + account.getCurrency() + " will be transferred to " + entity + " " + account.getId();
 
-                    addCashFlow(cashFlows, paymentDate, activityType, year, month, explanation);
+                    addCashFlow(cashFlows, paymentDate, accountActivityType, year, month, explanation);
                 }
 
                 paymentDate = paymentDate.plusMonths(account.getDepositMaturity());
@@ -607,9 +607,9 @@ public class CustomerServiceImpl implements CustomerService {
         }
     }
 
-    private static void addCashFlow(List<CashFlow> cashFlows, LocalDate date, AccountActivityType activityType, Integer year, Integer month, String explanation) {
+    private static void addCashFlow(List<CashFlow> cashFlows, LocalDate date, AccountActivityType accountActivityType, Integer year, Integer month, String explanation) {
         if (doesDateMatchesWithYearAndMonth(date, year, month)) {
-            log.info("{} matches with a cash flow", activityType.getValue());
+            log.info("{} matches with a cash flow", accountActivityType.getValue());
             CashFlow cashFlow = new CashFlow();
             cashFlow.setDate(date);
             cashFlow.setExplanation(explanation);

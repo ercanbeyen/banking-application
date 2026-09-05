@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.dto.DailyAccountActivityLimitDto;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
@@ -13,5 +14,9 @@ public class DailyAccountActivityLimitUtil {
             log.error("Lower limit should be less than equal to upper limit");
             throw new BadRequestException("Invalid daily activity request!");
         }
+    }
+
+    public ChannelType getChannelTypeWithNoDailyAccountActivityLimit() {
+        return ChannelType.BRANCH;
     }
 }

@@ -2,13 +2,17 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
+import com.ercanbeyen.bankingapplication.constant.query.HeaderField;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.ChannelInformation;
+import com.ercanbeyen.bankingapplication.dto.DailyAccountActivityLimitDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
 import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
@@ -16,15 +20,17 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
+import com.ercanbeyen.bankingapplication.service.DailyAccountActivityLimitService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
 import com.ercanbeyen.bankingapplication.service.TimeZoneService;
+import com.ercanbeyen.bankingapplication.util.DailyAccountActivityLimitUtil;
+import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.itextpdf.text.DocumentException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
@@ -51,13 +57,15 @@ import java.util.function.UnaryOperator;
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;
     private final AccountSecurityService accountSecurityService;
+    private final DailyAccountActivityLimitService dailyAccountActivityLimitService;
     private final EmailService emailService;
     private final TimeZoneService timeZoneService;
 
-    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, EmailService emailService, TimeZoneService timeZoneService) {
+    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, DailyAccountActivityLimitService dailyAccountActivityLimitService, EmailService emailService, TimeZoneService timeZoneService) {
         super(accountService);
         this.accountService = accountService;
         this.accountSecurityService = accountSecurityService;
+        this.dailyAccountActivityLimitService = dailyAccountActivityLimitService;
         this.emailService = emailService;
         this.timeZoneService = timeZoneService;
     }
@@ -105,10 +113,17 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
-            HttpServletRequest httpServletRequest) {
-        AccountUtil.checkMoneyDepositAndWithdrawalRequests(httpServletRequest);
-        accountService.depositMoney(id, amount, httpServletRequest);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_DEPOSIT.getValue()));
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountActivityType accountActivityType = AccountActivityType.MONEY_DEPOSIT;
+
+        AccountUtil.checkAccountActivityWithChannelType(channelInformation, accountActivityType);
+        checkDailyAccountActivityLimit(accountActivityType, channelType, amount);
+
+        accountService.depositMoney(id, amount, channelInformation);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, accountActivityType.getValue()));
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -117,10 +132,17 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
             @PathVariable("id") @P("accountId") Integer id,
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
-            HttpServletRequest httpServletRequest) {
-        AccountUtil.checkMoneyDepositAndWithdrawalRequests(httpServletRequest);
-        accountService.withdrawMoney(id, amount, httpServletRequest);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.WITHDRAWAL.getValue()));
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountActivityType accountActivityType = AccountActivityType.WITHDRAWAL;
+
+        AccountUtil.checkAccountActivityWithChannelType(channelInformation, accountActivityType);
+        checkDailyAccountActivityLimit(accountActivityType, channelType, amount);
+
+        accountService.withdrawMoney(id, amount, channelInformation);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, accountActivityType.getValue()));
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -133,19 +155,35 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication) OR hasRole('ADMIN')")
     @PutMapping("/transfer")
-    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest moneyTransferRequest, HttpServletRequest httpServletRequest) {
-        AccountUtil.checkMoneyTransferRequest(moneyTransferRequest, httpServletRequest);
-        accountService.transferMoney(moneyTransferRequest, httpServletRequest);
+    public ResponseEntity<MessageResponse<String>> transferMoney(
+            @RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest moneyTransferRequest,
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountUtil.checkMoneyTransferRequest(moneyTransferRequest, channelInformation);
+
+        checkDailyAccountActivityLimit(AccountActivityType.MONEY_EXCHANGE, channelType, moneyTransferRequest.amount());
+
+        accountService.transferMoney(moneyTransferRequest, channelInformation);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue()));
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyExchange.sellerAccountId, authentication)")
     @PutMapping("/exchange")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest moneyExchangeRequest, HttpServletRequest httpServletRequest) {
-        AccountUtil.checkMoneyExchangeRequest(moneyExchangeRequest, httpServletRequest);
-        accountService.exchangeMoney(moneyExchangeRequest, httpServletRequest);
+    public ResponseEntity<MessageResponse<String>> exchangeMoney(
+            @RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest moneyExchangeRequest,
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountUtil.checkMoneyExchangeRequest(moneyExchangeRequest, channelInformation);
+
+        checkDailyAccountActivityLimit(AccountActivityType.MONEY_TRANSFER, channelType, moneyExchangeRequest.amount());
+
+        accountService.exchangeMoney(moneyExchangeRequest, channelInformation);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue()));
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -294,6 +332,24 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         } catch (IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }
+    }
+
+    private void checkDailyAccountActivityLimit(AccountActivityType accountActivityType, ChannelType channelType, Double amount) {
+        if (channelType == DailyAccountActivityLimitUtil.getChannelTypeWithNoDailyAccountActivityLimit()) {
+            return;
+        }
+
+        DailyAccountActivityLimitDto dailyAccountActivityLimitDto = dailyAccountActivityLimitService.getDailyAccountActivityLimit(accountActivityType);
+        Double lowerLimit = dailyAccountActivityLimitDto.lowerLimit();
+        Double upperLimit = dailyAccountActivityLimitDto.upperLimit();
+
+        if (amount < lowerLimit || amount > upperLimit) {
+            String formattedLowerLimit = FormatterUtil.convertNumberToFormalExpression(lowerLimit);
+            String formattedUpperLimit = FormatterUtil.convertNumberToFormalExpression(upperLimit);
+            throw new BadRequestException(String.format("Amount is not in daily account activity limits. Limits for %s are between %s and %s", accountActivityType.getValue(), formattedLowerLimit, formattedUpperLimit));
+        }
+
+        log.info("Upper and lower limits of {} are not exceeded", accountActivityType.getValue());
     }
 
     private ZoneId getTimeZoneOfBranch(Address address) {

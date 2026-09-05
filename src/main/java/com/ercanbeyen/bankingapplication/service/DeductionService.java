@@ -7,8 +7,8 @@ import java.util.List;
 
 public interface DeductionService {
     DeductionDto createDeduction(DeductionDto request);
-    DeductionDto updateDeduction(AccountActivityType activityType, DeductionDto request);
+    DeductionDto updateDeduction(AccountActivityType accountActivityType, DeductionDto request);
     List<DeductionDto> getDeductions();
-    DeductionDto getDeduction(AccountActivityType activityType);
-    void deleteDeduction(AccountActivityType activityType);
+    DeductionDto getDeduction(AccountActivityType accountActivityType);
+    void deleteDeduction(AccountActivityType accountActivityType);
 }

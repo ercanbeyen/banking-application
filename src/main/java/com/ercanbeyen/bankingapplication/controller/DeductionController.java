@@ -26,9 +26,9 @@ public class DeductionController {
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @PutMapping("/{activityType}")
-    public ResponseEntity<DeductionDto> updateDeduction(@PathVariable("activityType") AccountActivityType activityType, @RequestBody @Valid DeductionDto request) {
-        return ResponseEntity.ok(deductionService.updateDeduction(activityType, request));
+    @PutMapping("/{account-activity-type}")
+    public ResponseEntity<DeductionDto> updateDeduction(@PathVariable("account-activity-type") AccountActivityType accountActivityType, @RequestBody @Valid DeductionDto request) {
+        return ResponseEntity.ok(deductionService.updateDeduction(accountActivityType, request));
     }
 
     @GetMapping
@@ -36,15 +36,15 @@ public class DeductionController {
         return ResponseEntity.ok(deductionService.getDeductions());
     }
 
-    @GetMapping("/{activityType}")
-    public ResponseEntity<DeductionDto> getDeduction(@PathVariable("activityType") AccountActivityType activityType) {
-        return ResponseEntity.ok(deductionService.getDeduction(activityType));
+    @GetMapping("/{account-activity-type}")
+    public ResponseEntity<DeductionDto> getDeduction(@PathVariable("account-activity-type") AccountActivityType accountActivityType) {
+        return ResponseEntity.ok(deductionService.getDeduction(accountActivityType));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @DeleteMapping("/{activityType}")
-    public ResponseEntity<Void> deleteDeduction(@PathVariable("activityType") AccountActivityType activityType) {
-        deductionService.deleteDeduction(activityType);
+    @DeleteMapping("/{account-activity-type}")
+    public ResponseEntity<Void> deleteDeduction(@PathVariable("account-activity-type") AccountActivityType accountActivityType) {
+        deductionService.deleteDeduction(accountActivityType);
         return ResponseEntity.noContent().build();
     }
 }

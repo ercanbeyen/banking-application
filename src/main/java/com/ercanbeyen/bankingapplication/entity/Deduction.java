@@ -16,7 +16,7 @@ public class Deduction {
     private String id;
     @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false)
-    private AccountActivityType activityType;
+    private AccountActivityType accountActivityType;
     @Column(nullable = false)
     private Double amount;
     @UpdateTimestamp
