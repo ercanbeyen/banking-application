@@ -4,7 +4,6 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
-import com.ercanbeyen.bankingapplication.constant.query.HeaderField;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.*;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
@@ -26,11 +25,8 @@ import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.*;
-import com.ercanbeyen.bankingapplication.util.AccountUtil;
-import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
-import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.*;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
@@ -160,20 +156,20 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void depositMoney(Integer id, Double amount, HttpServletRequest httpServletRequest) {
+    public void depositMoney(Integer id, Double amount, ChannelInformation channelInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
-        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
+        AccountActivityType accountActivityType = AccountActivityType.MONEY_DEPOSIT;
+        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, accountActivityType);
 
-        checkDailyAccountActivityLimit(account, amount, activityType);
+        checkDailyAccountActivityLimit(account, amount, accountActivityType, channelInformation.channelType());
 
-        TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(httpServletRequest);
+        TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(channelInformation);
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
+        transactionService.applyAccountActivityForSingleAccount(accountActivityType, amount, account, cashFlowExplanation, transactionInformation);
 
         String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -182,20 +178,20 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void withdrawMoney(Integer id, Double amount, HttpServletRequest httpServletRequest) {
+    public void withdrawMoney(Integer id, Double amount, ChannelInformation channelInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
-        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
+        AccountActivityType accountActivityType = AccountActivityType.WITHDRAWAL;
+        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, accountActivityType);
 
-        checkDailyAccountActivityLimit(account, amount, activityType);
+        checkDailyAccountActivityLimit(account, amount, accountActivityType, channelInformation.channelType());
 
-        TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(httpServletRequest);
+        TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(channelInformation);
 
         String entity = Entity.ACCOUNT.getValue();
         String cashFlowExplanation = entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
+        transactionService.applyAccountActivityForSingleAccount(accountActivityType, amount, account, cashFlowExplanation, transactionInformation);
 
         String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -213,7 +209,7 @@ public class AccountServiceImpl implements AccountService {
         }
 
         Double amount = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
-        AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
+        AccountActivityType accountActivityType = AccountActivityType.INTEREST_INCOME;
 
         Address address = account.getBranch().getAddress();
         ZoneId zoneId = timeZoneService.getZoneId(address.getCountry(), address.getCity())
@@ -227,18 +223,18 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
+        transactionService.applyAccountActivityForSingleAccount(accountActivityType, amount, account, cashFlowExplanation, transactionInformation);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
         notificationService.sendNotification(notificationDto);
 
-        String response = activityType.getValue() + " transfer";
+        String response = accountActivityType.getValue() + " transfer";
 
         return String.format(ResponseMessage.SUCCESS, response);
     }
 
     @Override
-    public void transferMoney(MoneyTransferRequest moneyTransferRequest, HttpServletRequest httpServletRequest) {
+    public void transferMoney(MoneyTransferRequest moneyTransferRequest, ChannelInformation channelInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account senderAccount = findActiveAccountById(moneyTransferRequest.senderAccountId());
@@ -254,10 +250,10 @@ public class AccountServiceImpl implements AccountService {
         boolean areAccountsOwnedBySameCustomer = Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId());
 
         if (!areAccountsOwnedBySameCustomer) {
-            checkDailyAccountActivityLimit(senderAccount, amount, accountActivityType);
+            checkDailyAccountActivityLimit(senderAccount, amount, accountActivityType, channelInformation.channelType());
         }
 
-        TransactionInformation transactionInformation = getTransactionPlaceForMoneyTransfer(httpServletRequest, senderAccount.getBranch().getAddress());
+        TransactionInformation transactionInformation = getTransactionPlaceForMoneyTransfer(channelInformation, senderAccount.getBranch().getAddress());
 
         transactionService.transferMoneyBetweenAccounts(moneyTransferRequest, amount, senderAccount, recipientAccount, deducteeAccount, transactionInformation);
 
@@ -273,7 +269,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, HttpServletRequest httpServletRequest) {
+    public void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, ChannelInformation channelInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account sellerAccount = findActiveAccountById(moneyExchangeRequest.sellerAccountId());
@@ -282,10 +278,10 @@ public class AccountServiceImpl implements AccountService {
         checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
 
         AccountActivityType accountActivityType = AccountActivityType.MONEY_EXCHANGE;
-        checkDailyAccountActivityLimit(sellerAccount, moneyExchangeRequest.amount(), accountActivityType);
+        checkDailyAccountActivityLimit(sellerAccount, moneyExchangeRequest.amount(), accountActivityType, channelInformation.channelType());
 
         Account deducteeAccount = getDeducteeAccount(accountActivityType, moneyExchangeRequest.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
-        TransactionInformation transactionInformation = getTransactionPlaceForMoneyExchange(httpServletRequest, sellerAccount, buyerAccount);
+        TransactionInformation transactionInformation = getTransactionPlaceForMoneyExchange(channelInformation, sellerAccount, buyerAccount);
         transactionService.exchangeMoneyBetweenAccounts(moneyExchangeRequest, sellerAccount, buyerAccount, deducteeAccount, transactionInformation);
     }
 
@@ -593,11 +589,20 @@ public class AccountServiceImpl implements AccountService {
         return deducteeAccount;
     }
 
-    private void checkDailyAccountActivityLimit(Account account, Double amount, AccountActivityType activityType) {
+    private void checkDailyAccountActivityLimit(Account account, Double amount, AccountActivityType accountActivityType, ChannelType channelType) {
+        ChannelType channelTypeWithNoDailyAccountActivityLimit = AccountActivityType.getChannelTypeWithNoDailyAccountActivityLimit();
+
+        if (channelType == channelTypeWithNoDailyAccountActivityLimit) {
+            log.info("There is no daily transaction limit for transactions made at the {}", channelType.getValue());
+            return;
+        }
+
+        List<ChannelType> channelTypes = new ArrayList<>(accountActivityType.getAvailableChannelTypes());
+        channelTypes.remove(channelTypeWithNoDailyAccountActivityLimit);
         Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
         for (Account currentAccount : account.getCustomer().getAccounts()) {
-            AccountActivityFilteringOption filteringOption = constructAccountActivityFilteringOptionForDailyAccountActivityCheck(currentAccount.getId(), activityType);
+            AccountActivityFilteringOption filteringOption = constructAccountActivityFilteringOptionForDailyAccountActivityCheck(currentAccount.getId(), accountActivityType, channelTypes);
             accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency()));
         }
 
@@ -609,16 +614,16 @@ public class AccountServiceImpl implements AccountService {
         dailyAccountActivityAmount += amount;
         log.info("Updated daily account activity amount: {}", dailyAccountActivityAmount);
 
-        DailyAccountActivityLimitDto dailyAccountActivityLimit = dailyAccountActivityLimitService.getDailyAccountActivityLimit(activityType);
+        DailyAccountActivityLimitDto dailyAccountActivityLimit = dailyAccountActivityLimitService.getDailyAccountActivityLimit(accountActivityType);
         Double lowerLimit = dailyAccountActivityLimit.lowerLimit();
         Double upperLimit = dailyAccountActivityLimit.upperLimit();
         log.info("Remaining daily account activity limit: {}", upperLimit - dailyAccountActivityAmount);
 
         if (dailyAccountActivityAmount < lowerLimit || dailyAccountActivityAmount > upperLimit) {
-            throw new ResourceConflictException(String.format("Daily limits of %s are going to be exceeded. Daily limits are %s - %s", activityType.getValue(), lowerLimit, upperLimit));
+            throw new ResourceConflictException(String.format("Daily limits of %s are going to be exceeded. Daily limits are %s - %s", accountActivityType.getValue(), lowerLimit, upperLimit));
         }
 
-        log.info("Daily limits of {} are not exceeded", activityType.getValue());
+        log.info("Daily limits of {} are not exceeded", accountActivityType.getValue());
     }
 
     private TransactionInformation getTransactionPlaceForStatusUpdate(Address address) {
@@ -631,9 +636,9 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    private TransactionInformation getTransactionPlaceMoneyDepositAndWithdrawal(HttpServletRequest request) {
-        ChannelType channelType = ChannelType.valueOf(request.getHeader(HeaderField.CHANNEL_TYPE));
-        Integer channelId = request.getIntHeader(HeaderField.CHANNEL_ID);
+    private TransactionInformation getTransactionPlaceMoneyDepositAndWithdrawal(ChannelInformation channelInformation) {
+        ChannelType channelType = channelInformation.channelType();
+        Integer channelId = channelInformation.channelId();
 
         ChannelDto requestedChannel = switch (channelType) {
             case BRANCH -> branchService.getEntity(channelId);
@@ -650,9 +655,9 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    private TransactionInformation getTransactionPlaceForMoneyTransfer(HttpServletRequest httpServletRequest, Address senderAccountAddress) {
-        ChannelType channelType = ChannelType.valueOf(httpServletRequest.getHeader(HeaderField.CHANNEL_TYPE));
-        Integer channelId = httpServletRequest.getIntHeader(HeaderField.CHANNEL_ID);
+    private TransactionInformation getTransactionPlaceForMoneyTransfer(ChannelInformation channelInformation, Address senderAccountAddress) {
+        ChannelType channelType = channelInformation.channelType();
+        Integer channelId = channelInformation.channelId();
 
         ChannelDto channelDto = switch (channelType) {
             case ATM -> atmService.getEntity(channelId);
@@ -676,9 +681,9 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    private TransactionInformation getTransactionPlaceForMoneyExchange(HttpServletRequest httpServletRequest, Account sellerAccount, Account buyerAccount) {
-        ChannelType channelType = ChannelType.valueOf(httpServletRequest.getHeader(HeaderField.CHANNEL_TYPE));
-        Integer channelId = httpServletRequest.getIntHeader(HeaderField.CHANNEL_ID);
+    private TransactionInformation getTransactionPlaceForMoneyExchange(ChannelInformation channelInformation, Account sellerAccount, Account buyerAccount) {
+        ChannelType channelType = channelInformation.channelType();
+        Integer channelId = channelInformation.channelId();
 
         ChannelDto channelDto = switch (channelType) {
             case ATM -> atmService.getEntity(channelId);
@@ -711,10 +716,10 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, AccountActivityType activityType) {
-        Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is recipient id
+    private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, AccountActivityType accountActivityType, List<ChannelType> channelTypes) {
+        Integer[] accountIds = new Integer[2]; // first integer is sender channelId, second integer is recipient channelId
 
-        switch (activityType) {
+        switch (accountActivityType) {
             case AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER,
                  AccountActivityType.MONEY_EXCHANGE -> accountIds[0] = accountId;
             case AccountActivityType.MONEY_DEPOSIT -> accountIds[1] = accountId;
@@ -724,13 +729,13 @@ public class AccountServiceImpl implements AccountService {
         LocalDate today = LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
 
         return new AccountActivityFilteringOption(
-                List.of(activityType),
+                List.of(accountActivityType),
                 accountIds[0],
                 accountIds[1],
                 null,
                 today,
                 today,
-                List.of(ChannelType.MOBILE_BANKING, ChannelType.INTERNET_BANKING, ChannelType.ATM, ChannelType.BRANCH)
+                channelTypes
         );
     }
 

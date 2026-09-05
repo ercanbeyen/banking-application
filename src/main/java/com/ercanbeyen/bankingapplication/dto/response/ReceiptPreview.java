@@ -4,6 +4,6 @@ import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 
 import java.time.LocalDateTime;
 
-public record ReceiptPreview(String id, AccountActivityType activityType, LocalDateTime time, Double amount) {
+public record ReceiptPreview(String id, AccountActivityType accountActivityType, LocalDateTime time, Double amount) {
 
 }

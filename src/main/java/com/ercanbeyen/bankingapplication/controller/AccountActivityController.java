@@ -45,8 +45,8 @@ public class AccountActivityController {
     @PreAuthorize("hasAuthority('READ_DATA')")
     @GetMapping("/views")
     public ResponseEntity<List<AccountActivityView>> getAccountActivityViews(
-            @RequestParam(name = "senderAccountId") Integer senderAccountId,
-            @RequestParam(name = "recipientAccountId") Integer recipientAccountId) {
+            @RequestParam(name = "sender-account-id") Integer senderAccountId,
+            @RequestParam(name = "recipient-account-id") Integer recipientAccountId) {
         return ResponseEntity.ok(accountActivityService.getAccountActivityViews(senderAccountId, recipientAccountId));
     }
 

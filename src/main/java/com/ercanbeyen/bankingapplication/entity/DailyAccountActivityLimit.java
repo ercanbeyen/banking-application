@@ -16,7 +16,7 @@ public class DailyAccountActivityLimit {
     private String id;
     @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false)
-    private AccountActivityType activityType;
+    private AccountActivityType accountActivityType;
     @Column(nullable = false)
     private Double lowerLimit;
     @Column(nullable = false)

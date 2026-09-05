@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.ChannelInformation;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
@@ -9,16 +10,15 @@ import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
-import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
 
 public interface AccountService extends BaseService<AccountDto, AccountFilteringOption> {
-    void depositMoney(Integer id, Double amount, HttpServletRequest httpServletRequest);
-    void withdrawMoney(Integer id, Double amount, HttpServletRequest httpServletRequest);
+    void depositMoney(Integer id, Double amount, ChannelInformation channelInformation);
+    void withdrawMoney(Integer id, Double amount, ChannelInformation channelInformation);
     String payInterestIncome(Integer id);
-    void transferMoney(MoneyTransferRequest moneyTransferRequest, HttpServletRequest httpServletRequest);
-    void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, HttpServletRequest httpServletRequest);
+    void transferMoney(MoneyTransferRequest moneyTransferRequest, ChannelInformation channelInformation);
+    void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, ChannelInformation channelInformation);
     String updateBlockStatus(Integer id, boolean status);
     void closeAccount(Integer id);
     Integer getTotalActiveAccounts(AccountType type, Currency currency, String city);

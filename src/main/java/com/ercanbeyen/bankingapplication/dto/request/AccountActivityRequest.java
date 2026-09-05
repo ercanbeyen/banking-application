@@ -7,7 +7,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import java.util.Map;
 
 public record AccountActivityRequest(
-        AccountActivityType activityType,
+        AccountActivityType accountActivityType,
         Account senderAccount,
         Account recipientAccount,
         Double amount,

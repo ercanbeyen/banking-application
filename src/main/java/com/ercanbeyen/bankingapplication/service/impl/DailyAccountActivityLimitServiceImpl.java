@@ -32,7 +32,6 @@ public class DailyAccountActivityLimitServiceImpl implements DailyAccountActivit
     @Override
     public List<DailyAccountActivityLimitDto> getDailyAccountActivityLimits() {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
         return dailyAccountActivityLimitRepository.findAll()
                 .stream()
                 .map(dailyAccountActivityLimitMapper::entityToDto)
@@ -41,10 +40,9 @@ public class DailyAccountActivityLimitServiceImpl implements DailyAccountActivit
 
     @Cacheable(value = "dailyAccountActivityLimits", key = "#a0")
     @Override
-    public DailyAccountActivityLimitDto getDailyAccountActivityLimit(AccountActivityType activityType) {
+    public DailyAccountActivityLimitDto getDailyAccountActivityLimit(AccountActivityType accountActivityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-
-        return dailyAccountActivityLimitMapper.entityToDto(findByActivityType(activityType));
+        return dailyAccountActivityLimitMapper.entityToDto(findByActivityType(accountActivityType));
     }
 
     @Override
@@ -62,11 +60,11 @@ public class DailyAccountActivityLimitServiceImpl implements DailyAccountActivit
 
     @CachePut(value = "dailyAccountActivityLimits", key = "#a0")
     @Override
-    public DailyAccountActivityLimitDto updateDailyAccountActivityLimit(AccountActivityType activityType, DailyAccountActivityLimitDto request) {
+    public DailyAccountActivityLimitDto updateDailyAccountActivityLimit(AccountActivityType accountActivityType, DailyAccountActivityLimitDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        DailyAccountActivityLimit dailyAccountActivityLimit = findByActivityType(activityType);
-        checkUniqueness(request, dailyAccountActivityLimit.getActivityType());
+        DailyAccountActivityLimit dailyAccountActivityLimit = findByActivityType(accountActivityType);
+        checkUniqueness(request, dailyAccountActivityLimit.getAccountActivityType());
 
         dailyAccountActivityLimit.setLowerLimit(request.lowerLimit());
         dailyAccountActivityLimit.setUpperLimit(request.upperLimit());
@@ -76,26 +74,26 @@ public class DailyAccountActivityLimitServiceImpl implements DailyAccountActivit
 
     @CacheEvict(value = "dailyAccountActivityLimits", key = "#a0")
     @Override
-    public void deleteDailyAccountActivityLimit(AccountActivityType activityType) {
+    public void deleteDailyAccountActivityLimit(AccountActivityType accountActivityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.DAILY_ACCOUNT_ACTIVITY_LIMIT.getValue();
 
-        if (!dailyAccountActivityLimitExistsByActivityType(activityType)) {
+        if (!dailyAccountActivityLimitExistsByActivityType(accountActivityType)) {
             throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity));
         }
 
         log.info(LogMessage.RESOURCE_FOUND, entity);
 
-        dailyAccountActivityLimitRepository.deleteByActivityType(activityType);
+        dailyAccountActivityLimitRepository.deleteByAccountActivityType(accountActivityType);
 
-        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, activityType);
+        log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, accountActivityType);
     }
 
 
     private DailyAccountActivityLimit findByActivityType(AccountActivityType activityType) {
         String entity = Entity.DAILY_ACCOUNT_ACTIVITY_LIMIT.getValue();
-        DailyAccountActivityLimit dailyAccountActivityLimit = dailyAccountActivityLimitRepository.findByActivityType(activityType)
+        DailyAccountActivityLimit dailyAccountActivityLimit = dailyAccountActivityLimitRepository.findByAccountActivityType(activityType)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
 
         log.info(LogMessage.RESOURCE_FOUND, entity);
@@ -106,12 +104,12 @@ public class DailyAccountActivityLimitServiceImpl implements DailyAccountActivit
     private void checkUniqueness(DailyAccountActivityLimitDto request, AccountActivityType previousActivityType) {
         String entity = Entity.DAILY_ACCOUNT_ACTIVITY_LIMIT.getValue();
 
-        if (previousActivityType == request.activityType()) {
+        if (previousActivityType == request.accountActivityType()) {
             log.warn(LogMessage.NO_ACCOUNT_ACTIVITY_CHANGE, entity);
             return;
         }
 
-        boolean entityExists = dailyAccountActivityLimitExistsByActivityType(request.activityType());
+        boolean entityExists = dailyAccountActivityLimitExistsByActivityType(request.accountActivityType());
 
         if (entityExists) {
             throw new ResourceConflictException(String.format(ResponseMessage.ALREADY_EXISTS, entity));
@@ -121,6 +119,6 @@ public class DailyAccountActivityLimitServiceImpl implements DailyAccountActivit
     }
 
     private boolean dailyAccountActivityLimitExistsByActivityType(AccountActivityType activityType) {
-        return dailyAccountActivityLimitRepository.existsByActivityType(activityType);
+        return dailyAccountActivityLimitRepository.existsByAccountActivityType(activityType);
     }
 }

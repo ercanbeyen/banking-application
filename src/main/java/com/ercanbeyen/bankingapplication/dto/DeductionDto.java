@@ -11,8 +11,8 @@ import java.time.Instant;
 
 public record DeductionDto(
         String id,
-        @NotNull(message = "Activity type should not be null")
-        AccountActivityType activityType,
+        @NotNull(message = "Account activity type should not be null")
+        AccountActivityType accountActivityType,
         @NotNull(message = "Minimum amount should not be null")
         @Min(value = 0, message = "Amount should be at least {value}")
         Double amount,

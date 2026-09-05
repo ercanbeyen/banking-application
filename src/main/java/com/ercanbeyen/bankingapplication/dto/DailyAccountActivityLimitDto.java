@@ -10,8 +10,8 @@ import java.time.Instant;
 
 public record DailyAccountActivityLimitDto(
         String id,
-        @NotNull(message = "Activity type should not be null")
-        AccountActivityType activityType,
+        @NotNull(message = "Account activity type should not be null")
+        AccountActivityType accountActivityType,
         @NotNull(message = "Upper limit should not be null")
         @Min(value = 0, message = "Upper limit should be at least {value}")
         Double lowerLimit,

@@ -15,6 +15,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingPathVariableException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -43,21 +45,26 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(MissingServletRequestParameterException.class)
-    public ResponseEntity<ErrorResponse> handleMissingServletRequestParameterException(Exception exception) {
+    @ExceptionHandler({MissingServletRequestParameterException.class, MissingPathVariableException.class, MissingRequestHeaderException.class})
+    public ResponseEntity<ErrorResponse> handleMissingRequestExceptions(Exception exception) {
         String message = exception.getMessage();
         int beginIndex = message.indexOf("'") + 1;
         String remainingMessage = message.substring(beginIndex);
         int endIndex = beginIndex + remainingMessage.indexOf("'");
         String missingRequestParameter = message.substring(beginIndex, endIndex);
 
-        Exception modifiedException = new Exception(missingRequestParameter + " is missing");
-        return generateErrorResponse(modifiedException, HttpStatus.BAD_REQUEST);
-    }
+        String[] words = missingRequestParameter.split("-");
+        StringBuilder stringBuilder = new StringBuilder();
 
-    @ExceptionHandler(HttpMessageNotReadableException.class)
-    public ResponseEntity<ErrorResponse> handleHttpMessageNotReadableException(HttpMessageNotReadableException exception) {
-        return generateErrorResponse(exception, HttpStatus.BAD_REQUEST);
+        for (String word : words) {
+            stringBuilder.append(word);
+            stringBuilder.append(" ");
+        }
+
+        stringBuilder.append("is missing");
+
+        Exception modifiedException = new Exception(stringBuilder.toString());
+        return generateErrorResponse(modifiedException, HttpStatus.BAD_REQUEST);
     }
 
     @ExceptionHandler(HandlerMethodValidationException.class)
@@ -76,8 +83,8 @@ public class GlobalExceptionHandler {
         return new ResponseEntity<>(errors, HttpStatus.BAD_REQUEST);
     }
 
-    @ExceptionHandler(BadRequestException.class)
-    public ResponseEntity<ErrorResponse> handleBadRequestException(Exception exception) {
+    @ExceptionHandler({BadRequestException.class, HttpMessageNotReadableException.class})
+    public ResponseEntity<ErrorResponse> handleBadRequestExceptions(Exception exception) {
         return generateErrorResponse(exception, HttpStatus.BAD_REQUEST);
     }
 

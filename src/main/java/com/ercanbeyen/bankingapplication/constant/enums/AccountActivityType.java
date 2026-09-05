@@ -30,7 +30,21 @@ public enum AccountActivityType {
         maximumAmountsPerRequest.put(MONEY_EXCHANGE, 100_000D);
     }
 
-    public static Double getMaximumAmountPerRequestOfActivity(AccountActivityType activityType) {
-        return maximumAmountsPerRequest.get(activityType);
+    public static Double getMaximumAmountPerRequestOfActivity(AccountActivityType accountActivityType) {
+        return maximumAmountsPerRequest.get(accountActivityType);
+    }
+
+    public static ChannelType getChannelTypeWithNoDailyAccountActivityLimit() {
+        return ChannelType.BRANCH;
+    }
+
+    public List<ChannelType> getAvailableChannelTypes() {
+        return switch (this) {
+            case MONEY_DEPOSIT, WITHDRAWAL -> List.of(ChannelType.BRANCH, ChannelType.ATM);
+            case MONEY_TRANSFER, MONEY_EXCHANGE ->
+                    List.of(ChannelType.BRANCH, ChannelType.ATM, ChannelType.INTERNET_BANKING, ChannelType.MOBILE_BANKING);
+            case ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING, INTEREST_INCOME, DEDUCTION ->
+                    List.of(ChannelType.SYSTEM);
+        };
     }
 }
