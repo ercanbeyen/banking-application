@@ -23,8 +23,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
 @Service
@@ -45,7 +46,7 @@ public class AgreementServiceImpl implements AgreementService {
         }
 
         CompletableFuture<List<File>> futureResult = fileService.saveFiles(fileUploadRequests);
-        List<File> savedFiles = new ArrayList<>();
+        Set<File> savedFiles = new HashSet<>();
 
         futureResult.thenAccept(uploadedFiles -> {
             List<String> fileNames = uploadedFiles.stream()
@@ -80,7 +81,7 @@ public class AgreementServiceImpl implements AgreementService {
         }
 
         CompletableFuture<List<File>> futureResult = fileService.saveFiles(fileUploadRequests);
-        List<File> files = new ArrayList<>();
+        Set<File> files = new HashSet<>();
 
         futureResult.thenAccept(savedFiles -> {
             List<String> fileNames = savedFiles.stream()

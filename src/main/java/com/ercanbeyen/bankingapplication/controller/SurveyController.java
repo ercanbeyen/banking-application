@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.SurveyType;
 import com.ercanbeyen.bankingapplication.dto.SurveyDto;
+import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.SurveyStatisticsResponse;
 import com.ercanbeyen.bankingapplication.dto.option.SurveyFilteringOption;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
@@ -16,7 +17,7 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -37,9 +38,8 @@ public class SurveyController {
     public ResponseEntity<SurveyDto> getSurvey(
             @PathVariable("customer-national-id") @P("customerNationalId") String customerNationalId,
             @RequestParam("account-activity-id") String accountActivityId,
-            @RequestParam("type") SurveyType surveyType,
-            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt) {
-        return ResponseEntity.ok(surveyService.getSurvey(customerNationalId, accountActivityId, createdAt, surveyType));
+            @RequestParam("type") SurveyType surveyType) {
+        return ResponseEntity.ok(surveyService.getSurvey(customerNationalId, accountActivityId, surveyType));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
@@ -55,10 +55,9 @@ public class SurveyController {
             @PathVariable("customer-national-id") String customerNationalId,
             @PathVariable("account-activity-id") String accountActivityId,
             @RequestParam("type") SurveyType surveyType,
-            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
             @RequestBody @Valid SurveyDto request) {
         SurveyUtil.checkRequestBeforeSave(request);
-        return ResponseEntity.ok(surveyService.updateSurvey(customerNationalId, accountActivityId, createdAt, surveyType, request));
+        return ResponseEntity.ok(surveyService.updateSurvey(customerNationalId, accountActivityId, surveyType, request));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
@@ -66,33 +65,33 @@ public class SurveyController {
     public ResponseEntity<Void> deleteSurvey(
             @PathVariable("customer-national-id") String customerNationalId,
             @PathVariable("account-activity-id") String accountActivityId,
-            @RequestParam("type") SurveyType surveyType,
-            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt) {
-        surveyService.deleteSurvey(customerNationalId, accountActivityId, createdAt, surveyType);
+            @RequestParam("type") SurveyType surveyType) {
+        surveyService.deleteSurvey(customerNationalId, accountActivityId, surveyType);
         return ResponseEntity.noContent().build();
     }
 
     @PreAuthorize("#customerNationalId == authentication.principal.username")
     @PatchMapping("/customers/{customer-national-id}/account-activities/{account-activity-id}/evaluation")
-    public ResponseEntity<String> fillOutSurvey(
+    public ResponseEntity<MessageResponse<String>> fillOutSurvey(
             @PathVariable("customer-national-id") @P("customerNationalId") String customerNationalId,
             @PathVariable("account-activity-id") String accountActivityId,
             @RequestParam("type") SurveyType surveyType,
-            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
             @RequestBody @Valid SurveyDto request) {
         SurveyUtil.checkEvaluation(request);
-        return ResponseEntity.ok(surveyService.fillOutSurvey(customerNationalId, accountActivityId, createdAt, surveyType, request));
+        String message = surveyService.fillOutSurvey(customerNationalId, accountActivityId, surveyType, request);
+        MessageResponse<String> response = new MessageResponse<>(message);
+        return ResponseEntity.ok(response);
     }
 
-    @PreAuthorize("hasAuthority('READ-DATA')")
+    @PreAuthorize("hasAuthority('READ_DATA')")
     @GetMapping("/customers/{customer-national-id}/statistics")
     public ResponseEntity<SurveyStatisticsResponse<Integer, Integer>> getSurveyStatistics(
             @PathVariable("customer-national-id") String customerNationalId,
             @RequestParam("account-activity-id") String accountActivityId,
             @RequestParam("type") SurveyType surveyType,
-            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd HH:mm:ss.SSSSSS") LocalDateTime createdAt,
+            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate createdDate,
             @RequestParam(value = "minimum-frequency", required = false, defaultValue = "0") Integer minimumFrequency) {
-        SurveyUtil.checkStatisticsParameters(createdAt, minimumFrequency);
-        return ResponseEntity.ok(surveyService.getSurveyStatistics(customerNationalId, accountActivityId, createdAt, surveyType, minimumFrequency));
+        SurveyUtil.checkStatisticsParameters(createdDate, minimumFrequency);
+        return ResponseEntity.ok(surveyService.getSurveyStatistics(customerNationalId, accountActivityId, createdDate, surveyType, minimumFrequency));
     }
 }

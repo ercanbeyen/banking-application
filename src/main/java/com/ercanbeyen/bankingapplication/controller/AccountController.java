@@ -2,20 +2,24 @@ package com.ercanbeyen.bankingapplication.controller;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
-import com.ercanbeyen.bankingapplication.dto.AccountActivityDto;
+import com.ercanbeyen.bankingapplication.constant.query.HeaderField;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.ChannelInformation;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityFilteringRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
+import com.ercanbeyen.bankingapplication.dto.response.AccountActivityPreview;
+import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
+import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
+import com.ercanbeyen.bankingapplication.service.TimeZoneService;
 import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
@@ -34,7 +38,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.function.UnaryOperator;
@@ -47,12 +53,14 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     private final AccountService accountService;
     private final AccountSecurityService accountSecurityService;
     private final EmailService emailService;
+    private final TimeZoneService timeZoneService;
 
-    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, EmailService emailService) {
+    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, EmailService emailService, TimeZoneService timeZoneService) {
         super(accountService);
         this.accountService = accountService;
         this.accountSecurityService = accountSecurityService;
         this.emailService = emailService;
+        this.timeZoneService = timeZoneService;
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
@@ -97,9 +105,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PutMapping("{id}/deposit")
     public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") @P("accountId") Integer id,
-            @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        accountService.depositMoney(id, amount);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_DEPOSIT.getValue()));
+            @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
+        AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
+
+        accountService.depositMoney(id, amount, channelInformation);
+
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS,  activityType.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -107,9 +122,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PutMapping("{id}/withdrawal")
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
             @PathVariable("id") @P("accountId") Integer id,
-            @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        accountService.withdrawMoney(id, amount);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.WITHDRAWAL.getValue()));
+            @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
+
+        AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
+
+        accountService.withdrawMoney(id, amount, channelInformation);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, activityType.getValue()));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -122,19 +144,31 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication) OR hasRole('ADMIN')")
     @PutMapping("/transfer")
-    public ResponseEntity<MessageResponse<String>> transferMoney(@RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request) {
-        AccountUtil.checkMoneyTransferRequest(request);
-        accountService.transferMoney(request);
+    public ResponseEntity<MessageResponse<String>> transferMoney(
+            @RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request,
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountUtil.checkMoneyTransferRequest(request, channelInformation);
+
+        accountService.transferMoney(request, channelInformation);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue()));
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("@accountSecurityService.isOwner(#moneyExchange.sellerAccountId, authentication)")
     @PutMapping("/exchange")
-    public ResponseEntity<MessageResponse<String>> exchangeMoney(@RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request) {
-        AccountUtil.checkMoneyExchangeRequest(request);
-        accountService.exchangeMoney(request);
+    public ResponseEntity<MessageResponse<String>> exchangeMoney(
+            @RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request,
+            @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
+            @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
+        ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+        AccountUtil.checkMoneyExchangeRequest(request, channelInformation);
+
+        accountService.exchangeMoney(request, channelInformation);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue()));
+
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
@@ -158,7 +192,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<MessageResponse<String>> getTotalAccounts(
             @RequestParam("type") AccountType type,
             @RequestParam("currency") Currency currency,
-            @RequestParam(name = "city", required = false) City city) {
+            @RequestParam(name = "city", required = false) String city) {
         Integer count = accountService.getTotalActiveAccounts(type, currency, city);
         MessageResponse<String> response = new MessageResponse<>(String.format("Total %s %s accounts is %d", type.getValue(), currency, count));
         return new ResponseEntity<>(response, HttpStatus.OK);
@@ -174,10 +208,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     }
 
     @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
-    @GetMapping("/{id}/account-activities")
-    public ResponseEntity<List<AccountActivityDto>> getAccountActivities(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
+    @GetMapping("/{id}/account-activity-previews")
+    public ResponseEntity<List<AccountActivityPreview>> getAccountActivityPreviews(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
-        return ResponseEntity.ok(accountService.getAccountActivities(id, request));
+        return ResponseEntity.ok(accountService.getAccountActivityPreviews(id, request));
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
@@ -251,14 +285,16 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     private ByteArrayOutputStream generateAccountStatementPdf(Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
-        Account account = accountService.findActiveAccountById(id);
-        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
+        List<AccountActivityPreview> accountActivityPreviews = accountService.getAccountActivityPreviews(id, request);
+        Account account = accountService.findById(id);
+
+        ZoneId zoneId = getTimeZoneOfBranch(account.getBranch().getAddress());
 
         LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
         LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
 
         try {
-            return PdfExporter.generateAccountStatementPdf(account, fromDate, toDate, accountActivityDtos);
+            return PdfExporter.generateAccountStatementPdf(account, zoneId, fromDate, toDate, accountActivityPreviews);
         } catch (DocumentException | IOException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }
@@ -267,13 +303,15 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     private ByteArrayOutputStream generateAccountStatementExcel(Integer id, AccountActivityFilteringRequest request) {
         AccountActivityUtil.checkFilteringRequest(request);
 
-        Account account = accountService.findActiveAccountById(id);
-        List<AccountActivityDto> accountActivityDtos = accountService.getAccountActivities(id, request);
+        List<AccountActivityPreview> accountActivityPreviews = accountService.getAccountActivityPreviews(id, request);
+        Account account = accountService.findById(id);
+
+        ZoneId zoneId = getTimeZoneOfBranch(account.getBranch().getAddress());
 
         LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
         LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
 
-        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, accountActivityDtos, fromDate, toDate); ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+        try (Workbook workbook = ExcelExporter.generateAccountStatementWorkbook(account, zoneId, accountActivityPreviews, fromDate, toDate); ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
             workbook.write(byteArrayOutputStream);
             return byteArrayOutputStream;
         } catch (IOException exception) {
@@ -281,5 +319,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         }
     }
 
-    private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : TimeUtil.getTurkeyDate();
+    private ZoneId getTimeZoneOfBranch(Address address) {
+        return timeZoneService.getZoneId(address.getCountry(), address.getCity())
+                .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Time Zone of branch")));
+    }
+
+    private final UnaryOperator<LocalDate> fillDateInFilteringRequest = request -> Optional.ofNullable(request).isPresent() ? request : LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
 }

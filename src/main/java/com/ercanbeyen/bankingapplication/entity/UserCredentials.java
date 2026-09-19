@@ -6,6 +6,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -52,7 +53,7 @@ public class UserCredentials {
     private Integer passwordRenewalPeriod;
     @Getter
     @Setter
-    private LocalDateTime passwordUpdatedAt;
+    private Instant passwordUpdatedAt;
     @ElementCollection
     @CollectionTable(
             name = "user_passwords",
@@ -67,7 +68,6 @@ public class UserCredentials {
 
     public void setPasswordHistory(Queue<String> passwordHistoryQueue) {
         List<String> passwords = new ArrayList<>(passwordHistoryQueue);
-
         this.passwordHistory.clear();
 
         if (!passwords.isEmpty()) {

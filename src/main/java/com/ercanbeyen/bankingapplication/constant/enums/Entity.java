@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.constant.enums;
 
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -15,6 +16,7 @@ public enum Entity {
     MONEY_TRANSFER_ORDER("Money Transfer Order"),
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
+    ATM("ATM"),
     BRANCH("Branch"),
     TERM_DEPOSIT_INTEREST_RATE("Term Deposit Interest Rate"),
     DEDUCTION("Deduction"),
@@ -23,6 +25,7 @@ public enum Entity {
     CASH_FLOW_CALENDAR("Cash Flow Calendar"),
     USER_CREDENTIALS("User Credentials"),
     ROLE("Role"),
+    PERMISSION("Permission"),
     REFRESH_TOKEN("Refresh Token"),
     INCORRECT_LOGIN_ATTEMPT("Incorrect Login Attempt");
 
@@ -39,7 +42,7 @@ public enum Entity {
             case ACCOUNT_ACTIVITY -> "account-activitie";
             case BRANCH -> "branche";
             case TERM_DEPOSIT_INTEREST_RATE -> "term-deposit-interest-rate";
-            case USER_CREDENTIALS, ROLE, REFRESH_TOKEN, INCORRECT_LOGIN_ATTEMPT -> throw new ResourceNotFoundException("Resource is not found");
+            case USER_CREDENTIALS, ROLE, PERMISSION, REFRESH_TOKEN, INCORRECT_LOGIN_ATTEMPT -> throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Resource"));
             default -> value.toLowerCase();
         };
     }

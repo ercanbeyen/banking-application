@@ -1,11 +1,10 @@
 package com.ercanbeyen.bankingapplication.util;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
+import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
+import com.ercanbeyen.bankingapplication.dto.ChannelInformation;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
@@ -14,54 +13,57 @@ import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedExce
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
+import java.time.Instant;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Objects;
-import java.util.Optional;
+import java.time.ZoneId;
+import java.util.*;
 import java.util.function.BiPredicate;
 import java.util.function.Predicate;
 
 @Slf4j
 @UtilityClass
 public class AccountUtil {
-    public void checkRequest(AccountDto accountDto) {
-        if (Optional.ofNullable(accountDto.getIsBlocked()).isPresent() || Optional.ofNullable(accountDto.getClosedAt()).isPresent()) {
+
+    public void checkRequest(AccountDto request) {
+        if (Optional.ofNullable(request.getIsBlocked()).isPresent() || Optional.ofNullable(request.getClosedAt()).isPresent()) {
             throw new BadRequestException("Request should not contain block and closed at statuses");
         }
 
-        checkAccountType(accountDto);
-        Double balance = accountDto.getBalance();
+        checkAccountType(request);
+        Double balance = request.getBalance();
 
         if (Optional.ofNullable(balance).isPresent() && balance != 0) {
             throw new BadRequestException("Not any balance value should be assigned directly from request");
         }
     }
 
-    public void checkMoneyTransferRequest(MoneyTransferRequest request) {
+    public void checkMoneyTransferRequest(MoneyTransferRequest request, ChannelInformation channelInformation) {
+        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+        checkAccountActivityWithChannelType(channelInformation, activityType);
+        checkHeaderParametersForMoneyTransferAndMoneyExchange(channelInformation);
+
         if (Objects.equals(request.senderAccountId(), request.recipientAccountId())) {
             throw new BadRequestException("Identity of sender and recipient accounts should not be equal");
         }
-
-        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
-        Double maximumMoneyTransferAmountPerRequest = AccountActivityType.getMaximumAmountPerRequestOfActivity(activityType);
-
-        if (request.amount() >= maximumMoneyTransferAmountPerRequest) {
-            String formattedValue = FormatterUtil.convertNumberToFormalExpression(maximumMoneyTransferAmountPerRequest);
-            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", activityType.getValue(), formattedValue));
-        }
     }
 
-    public void checkMoneyExchangeRequest(MoneyExchangeRequest request) {
+    public void checkMoneyExchangeRequest(MoneyExchangeRequest request, ChannelInformation channelInformation) {
+        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+
+        checkAccountActivityWithChannelType(channelInformation, activityType);
+        checkHeaderParametersForMoneyTransferAndMoneyExchange(channelInformation);
+
         if (Objects.equals(request.sellerAccountId(), request.buyerAccountId())) {
             throw new BadRequestException("Identity of seller and buyer accounts should not be equal");
         }
+    }
 
-        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
-        Double maximumMoneyExchangeAmountPerRequest = AccountActivityType.getMaximumAmountPerRequestOfActivity(activityType);
+    public void checkAccountActivityWithChannelType(ChannelInformation channelInformation, AccountActivityType activityType) {
+        ChannelType channelType = channelInformation.channelType();
+        List<ChannelType> channelTypes = activityType.getAvailableChannelTypes();
 
-        if (request.amount() >= maximumMoneyExchangeAmountPerRequest) {
-            String formattedValue = FormatterUtil.convertNumberToFormalExpression(maximumMoneyExchangeAmountPerRequest);
-            throw new ResourceExpectationFailedException(String.format("Maximum %s limit per request (%s) is exceeded", activityType.getValue(), formattedValue));
+        if (!channelTypes.contains(channelType)) {
+            throw new BadRequestException("Invalid channel type!");
         }
     }
 
@@ -87,10 +89,10 @@ public class AccountUtil {
         return balanceAfterNextInterestIncome;
     }
 
-    public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, LocalDateTime updatedAt, Integer depositMaturity) {
+    public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, Instant updatedAt, Integer depositMaturity) {
         checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(accountType, depositMaturity);
-        LocalDate isGoingToBeUpdatedAt = updatedAt.toLocalDate().plusMonths(depositMaturity);
-        return isGoingToBeUpdatedAt.isEqual(LocalDate.now());
+        LocalDate isGoingToBeUpdatedAt = LocalDate.ofInstant(updatedAt, ZoneId.systemDefault()).plusMonths(depositMaturity);
+        return isGoingToBeUpdatedAt.isEqual(LocalDate.now(ZoneId.systemDefault()));
     }
 
     public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {
@@ -109,6 +111,23 @@ public class AccountUtil {
     }
 
     public final BiPredicate<AccountType, AccountType> checkAccountTypeMatch = (givenAccountType, expectedAccountType) -> givenAccountType == expectedAccountType;
+
+    private void checkHeaderParametersForMoneyTransferAndMoneyExchange(ChannelInformation channelInformation) {
+        ChannelType channelType = channelInformation.channelType();
+        Integer channelId = channelInformation.channelId();
+
+        List<ChannelType> channelsRequiredChannelId = new ArrayList<>(ChannelType.channelsRequiredChannelId());
+        List<ChannelType> channelsNotRequiredChannelId = new ArrayList<>(Arrays.asList(ChannelType.values()));
+        channelsNotRequiredChannelId.removeAll(channelsRequiredChannelId);
+
+        if (channelsRequiredChannelId.contains(channelType) && Optional.ofNullable(channelId).isEmpty()) {
+            throw new BadRequestException("Channel Id is required for " + channelsRequiredChannelId);
+        }
+
+        if (channelsNotRequiredChannelId.contains(channelType) && Optional.ofNullable(channelId).isPresent()) {
+            throw new BadRequestException("Channel Id should not be there for " + channelsNotRequiredChannelId);
+        }
+    }
 
     private void checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(AccountType accountType, Integer depositMaturity) {
         checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, AccountActivityType.INTEREST_INCOME);

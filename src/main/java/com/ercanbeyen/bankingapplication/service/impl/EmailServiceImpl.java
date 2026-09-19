@@ -13,6 +13,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 @RequiredArgsConstructor
 @Service
@@ -47,7 +48,7 @@ public class EmailServiceImpl implements EmailService {
 
     private void executeMailSender(String to, String subject, String content, File file) {
         MimeMessagePreparator preparator = mimeMessage -> {
-            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, StandardCharsets.UTF_8.displayName());
             helper.setFrom(from);
             helper.setTo(to);
             helper.setSubject(subject);

@@ -21,16 +21,18 @@ public enum AccountActivityType {
     private final String value;
     @Getter
     private static final Set<AccountActivityType> accountStatusUpdatingActivities;
-    private static final Map<AccountActivityType, Double> maximumAmountsPerRequest;
 
     static {
         accountStatusUpdatingActivities = EnumSet.of(ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING);
-        maximumAmountsPerRequest = new EnumMap<>(AccountActivityType.class);
-        maximumAmountsPerRequest.put(MONEY_TRANSFER, 1_000_000D);
-        maximumAmountsPerRequest.put(MONEY_EXCHANGE, 100_000D);
     }
 
-    public static Double getMaximumAmountPerRequestOfActivity(AccountActivityType activityType) {
-        return maximumAmountsPerRequest.get(activityType);
+    public List<ChannelType> getAvailableChannelTypes() {
+        return switch (this) {
+            case MONEY_DEPOSIT, WITHDRAWAL -> List.of(ChannelType.BRANCH, ChannelType.ATM);
+            case MONEY_TRANSFER, MONEY_EXCHANGE ->
+                    List.of(ChannelType.BRANCH, ChannelType.ATM, ChannelType.INTERNET_BANKING, ChannelType.MOBILE_BANKING);
+            case ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING, INTEREST_INCOME, DEDUCTION ->
+                    List.of(ChannelType.SYSTEM);
+        };
     }
 }

@@ -19,7 +19,7 @@ public class AccountStatementUtil {
     }
 
     public static String writeDocumentIssueDate(LocalDateTime localDateTime) {
-        return localDateTime.toLocalDate() + " " + TimeUtil.getTimeStatement(localDateTime.toLocalTime());
+        return localDateTime.toLocalDate().toString() + " " + TimeUtil.getTimeStatement(localDateTime.toLocalTime());
     }
 
     public static String writeInquiryCriteria(LocalDate fromDate, LocalDate toDate) {

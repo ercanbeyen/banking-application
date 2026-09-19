@@ -1,13 +1,11 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
-import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
 import lombok.Data;
-import org.hibernate.annotations.SourceType;
 import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Entity
@@ -21,8 +19,6 @@ public class Deduction {
     private AccountActivityType activityType;
     @Column(nullable = false)
     private Double amount;
-    @UpdateTimestamp(source = SourceType.DB)
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "modified_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
-    private LocalDateTime modifiedAt;
+    @UpdateTimestamp
+    private Instant modifiedAt;
 }

@@ -1,14 +1,13 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AgreementSubject;
-import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
+import org.hibernate.annotations.UpdateTimestamp;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 
@@ -25,14 +24,19 @@ public class Agreement {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private AgreementSubject subject;
-    @ManyToMany
-    private List<File> files;
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+            name = "agreements_files",
+            joinColumns = @JoinColumn(name = "agreement_id"),
+            inverseJoinColumns = @JoinColumn(name = "file_id")
+    )
+    private Set<File> files;
     @OneToMany(mappedBy = "agreement", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     private Set<CustomerAgreement> customers;
-    @CreationTimestamp(source = SourceType.DB)
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "created_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
-    LocalDateTime createdAt;
+    @CreationTimestamp
+    private Instant createdAt;
+    @UpdateTimestamp
+    private Instant updatedAt;
 
     @Override
     public String toString() {
@@ -51,6 +55,7 @@ public class Agreement {
                 ", files=" + fileNames +
                 ", customers=" + customerNationalIds +
                 ", createdAt=" + createdAt +
+                ", updatedAt=" + updatedAt +
                 '}';
     }
 }

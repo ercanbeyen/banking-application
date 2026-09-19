@@ -16,14 +16,15 @@ import com.ercanbeyen.bankingapplication.service.UserRevocationService;
 import com.ercanbeyen.bankingapplication.service.UserCredentialsService;
 import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Queue;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -46,7 +47,7 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
 
         String password = passwordEncoder.encode(request.password());
         userCredentials.setPassword(password);
-        userCredentials.setPasswordUpdatedAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordUpdatedAt(Instant.now());
         userCredentials.setPasswordRenewalPeriod(request.passwordRenewalPeriod());
 
         addPasswordToHistory(userCredentials, password);
@@ -83,7 +84,7 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
 
                     if (newAttempts >= AuthUtil.getMaxFailedAttempts()) {
                         userCredentials.setAccountNonLocked(false);
-                        userCredentials.setLockAt(LocalDateTime.now());
+                        userCredentials.setLockAt(LocalDateTime.now(ZoneId.systemDefault()));
                     }
 
                     userCredentialsRepository.save(userCredentials);
@@ -102,7 +103,7 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
         if (userCredentials.getLockAt() != null) { // Account has been locked before
             LocalDateTime lockExpiryTime = userCredentials.getLockAt().plusMinutes(UserRevocationService.LOCK_TIME_DURATION_MINUTES);
 
-            if (LocalDateTime.now().isAfter(lockExpiryTime)) { // The lock period has expired, open the account
+            if (LocalDateTime.now(ZoneId.systemDefault()).isAfter(lockExpiryTime)) { // The lock period has expired, open the account
                 userCredentials.setAccountNonLocked(true);
                 userCredentials.setFailedAttempt(0);
                 userCredentials.setLockAt(null);
@@ -136,7 +137,7 @@ public class UserCredentialsServiceImpl implements UserCredentialsService {
 
         String updatedPassword = passwordEncoder.encode(request.newPassword());
         userCredentials.setPassword(updatedPassword);
-        userCredentials.setPasswordUpdatedAt(TimeUtil.getTurkeyDateTime());
+        userCredentials.setPasswordUpdatedAt(Instant.now());
         userCredentials.setPasswordRenewalPeriod(request.passwordRenewalPeriod());
 
         addPasswordToHistory(userCredentials, updatedPassword);

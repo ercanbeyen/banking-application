@@ -2,6 +2,7 @@ package com.ercanbeyen.bankingapplication.dto;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -9,7 +10,7 @@ import lombok.Data;
 import lombok.EqualsAndHashCode;
 import org.hibernate.validator.constraints.Range;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -23,7 +24,12 @@ public non-sealed class AccountDto extends BaseDto {
     @NotNull(message = "Account type should not be null")
     private AccountType type;
     private Boolean isBlocked;
-    private LocalDateTime closedAt;
+    @JsonFormat(
+            shape = JsonFormat.Shape.STRING,
+            pattern = "yyyy-MM-dd HH:mm:ss",
+            timezone = "UTC"
+    )
+    private Instant closedAt;
     @NotNull(message = "Branch name should not be null")
     @NotBlank(message = "Branch name should not be blank")
     private String branchName;

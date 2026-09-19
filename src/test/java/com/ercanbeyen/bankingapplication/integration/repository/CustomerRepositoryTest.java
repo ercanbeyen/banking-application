@@ -6,14 +6,13 @@ import com.ercanbeyen.bankingapplication.repository.CustomerRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jdbc.test.autoconfigure.AutoConfigureTestDatabase;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.utility.DockerImageName;
 
 import java.time.LocalDate;
 import java.time.Month;
@@ -28,7 +27,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class CustomerRepositoryTest {
     @Container
     @ServiceConnection
-    private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>(DockerImageName.parse("mysql:latest"));
+    private static final MySQLContainer<?> mySQLContainer = new MySQLContainer<>("mysql:latest");
     @Autowired
     private CustomerRepository customerRepository;
 
@@ -44,19 +43,19 @@ class CustomerRepositoryTest {
     @Test
     @DisplayName("Happy path test: Save customer case")
     void givenCustomerEntity_whenSaveCustomer_thenCustomerIsPersisted() {
-        Customer customer = new Customer();
-        customer.setName("Test-Name1");
-        customer.setSurname("Test-Surname1");
-        customer.setNationalId("12345678911");
-        customer.setEmail("test1@email.com");
-        customer.setPhoneNumber("+905328465701");
-        customer.setGender(Gender.MALE);
-        customer.setBirthDate(LocalDate.of(1994, Month.JUNE, 28));
+        Customer expected = new Customer();
+        expected.setName("Test-Name1");
+        expected.setSurname("Test-Surname1");
+        expected.setNationalId("12345678911");
+        expected.setEmail("test1@email.com");
+        expected.setPhoneNumber("+905328465701");
+        expected.setGender(Gender.MALE);
+        expected.setBirthDate(LocalDate.of(1994, Month.JUNE, 28));
 
-        customerRepository.save(customer);
+        customerRepository.save(expected);
 
-        Optional<Customer> retrievedCustomer = customerRepository.findById(1);
-        assertTrue(retrievedCustomer.isPresent());
-        assertEquals(customer.getName(), retrievedCustomer.get().getName());
+        Optional<Customer> actual = customerRepository.findById(1);
+        assertTrue(actual.isPresent());
+        assertEquals(expected.getName(), actual.get().getName());
     }
 }

@@ -1,17 +1,15 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.data.cassandra.core.mapping.Column;
-import org.springframework.data.cassandra.core.mapping.Frozen;
-import org.springframework.data.cassandra.core.mapping.PrimaryKey;
-import org.springframework.data.cassandra.core.mapping.Table;
+import org.springframework.data.cassandra.core.mapping.*;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Data
@@ -26,10 +24,14 @@ public class Survey {
     private String title;
     @Column(value = "account_activity_type")
     private AccountActivityType accountActivityType;
+    @Column(value = "channel_type")
+    private ChannelType channelType;
     @Column(value = "valid_until")
-    private LocalDateTime validUntil;
+    private Instant validUntil;
+    @Column(value = "created_at")
+    private Instant createdAt;
     @Column(value = "updated_at")
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
     @Column(value = "customer_suggestion")
     private String customerSuggestion;
     @Frozen

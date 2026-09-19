@@ -26,8 +26,8 @@ public class DailyActivityLimitController {
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @PutMapping("/{activityType}")
-    public ResponseEntity<DailyActivityLimitDto> updateDailyActivityLimit(@PathVariable("activityType") AccountActivityType activityType, @RequestBody @Valid DailyActivityLimitDto request) {
+    @PutMapping("/{activity-type}")
+    public ResponseEntity<DailyActivityLimitDto> updateDailyActivityLimit(@PathVariable("activity-type") AccountActivityType activityType, @RequestBody @Valid DailyActivityLimitDto request) {
         return ResponseEntity.ok(dailyActivityLimitService.updateDailyActivityLimit(activityType, request));
     }
 
@@ -36,14 +36,14 @@ public class DailyActivityLimitController {
         return ResponseEntity.ok(dailyActivityLimitService.getDailyActivityLimits());
     }
 
-    @GetMapping("/{activityType}")
-    public ResponseEntity<DailyActivityLimitDto> getDailyActivityLimit(@PathVariable("activityType") AccountActivityType activityType) {
+    @GetMapping("/{activity-type}")
+    public ResponseEntity<DailyActivityLimitDto> getDailyActivityLimit(@PathVariable("activity-type") AccountActivityType activityType) {
         return ResponseEntity.ok(dailyActivityLimitService.getDailyActivityLimit(activityType));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
-    @DeleteMapping("/{activityType}")
-    public ResponseEntity<Void> deleteDailyActivityLimit(@PathVariable("activityType") AccountActivityType activityType) {
+    @DeleteMapping("/{activity-type}")
+    public ResponseEntity<Void> deleteDailyActivityLimit(@PathVariable("activity-type") AccountActivityType activityType) {
         dailyActivityLimitService.deleteDailyActivityLimit(activityType);
         return ResponseEntity.noContent().build();
     }

@@ -1,13 +1,12 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.constant.query.Query;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.SourceType;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Getter
 @Setter
@@ -24,9 +23,7 @@ public class CustomerAgreement {
     @JoinColumn(name = "agreement_title", referencedColumnName = "title")
     private Agreement agreement;
     @CreationTimestamp(source = SourceType.DB)
-    @Temporal(TemporalType.TIMESTAMP)
-    @Column(name = "approved_at", columnDefinition = Query.TIMESTAMP_DEFAULT_NOW)
-    private LocalDateTime approvedAt;
+    private Instant approvedAt;
 
     @Override
     public String toString() {

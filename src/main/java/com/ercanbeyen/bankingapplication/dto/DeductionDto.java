@@ -7,7 +7,7 @@ import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
 
 import java.io.Serializable;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record DeductionDto(
         String id,
@@ -16,7 +16,11 @@ public record DeductionDto(
         @NotNull(message = "Minimum amount should not be null")
         @Min(value = 0, message = "Amount should be at least {value}")
         Double amount,
-        @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
-        LocalDateTime modifiedAt) implements Serializable {
+        @JsonFormat(
+                shape = JsonFormat.Shape.STRING,
+                pattern = "yyyy-MM-dd HH:mm:ss",
+                timezone = "UTC"
+        )
+        Instant modifiedAt) implements Serializable {
 
 }

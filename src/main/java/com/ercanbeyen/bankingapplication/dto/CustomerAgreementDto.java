@@ -1,8 +1,19 @@
 package com.ercanbeyen.bankingapplication.dto;
 
 
-import java.time.LocalDateTime;
+import com.fasterxml.jackson.annotation.JsonFormat;
 
-public record CustomerAgreementDto(String id, String customerNationalId, String agreementTitle, LocalDateTime approvedAt) {
+import java.time.Instant;
+
+public record CustomerAgreementDto(
+        String id,
+        String customerNationalId,
+        String agreementTitle,
+        @JsonFormat(
+                shape = JsonFormat.Shape.STRING,
+                pattern = "yyyy-MM-dd HH:mm:ss",
+                timezone = "UTC"
+        )
+        Instant approvedAt) {
 
 }

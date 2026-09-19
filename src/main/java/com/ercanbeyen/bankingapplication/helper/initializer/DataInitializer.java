@@ -31,12 +31,23 @@ public class DataInitializer {
     public void initialize() {
         /* Avoid repeated creation processes */
         if (roleService.existsByName(ERole.ADMIN)) {
-            log.warn("Roles and permissions have already been created!");
+            log.warn("{}s and {}s have already been created!", Entity.ROLE.getValue(), Entity.PERMISSION.getValue());
             return;
         }
 
         createRolesAndPermissions();
         createSystemAdmin();
+    }
+
+    public void createRolesAndPermissions() {
+        Permission manageEntityPermission = permissionService.createPermission(EPermission.MANAGE_ENTITY.toString());
+        Permission readUserPermission = permissionService.createPermission(EPermission.READ_DATA.toString());
+
+        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntityPermission, readUserPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUserPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.USER, Set.of()));
+
+        log.warn("{}s and {}s are created!", Entity.ROLE.getValue(), Entity.PERMISSION.getValue());
     }
 
     private void createSystemAdmin() {
@@ -58,16 +69,5 @@ public class DataInitializer {
 
         authService.registerUser(request);
         log.warn(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.CUSTOMER.getValue(), customerDto.getName());
-    }
-
-    public void createRolesAndPermissions() {
-        Permission manageEntityPermission = permissionService.createPermission(EPermission.MANAGE_ENTITY.toString());
-        Permission readUserPermission = permissionService.createPermission(EPermission.READ_DATA.toString());
-
-        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntityPermission, readUserPermission)));
-        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUserPermission)));
-        roleService.createRole(new CreateRoleRequest(ERole.USER, Set.of()));
-
-        log.warn("Roles and permissions are created!");
     }
 }

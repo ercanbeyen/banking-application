@@ -1,6 +1,5 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.embeddable.Address;
 import jakarta.persistence.*;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -11,14 +10,8 @@ import java.util.Optional;
 @EqualsAndHashCode(callSuper = true)
 @Data
 @Entity
-@Table(name = "branches", indexes = {
-        @Index(name = "city_and_district_index", columnList = "city, district")
-})
-public final class Branch extends BaseEntity {
-    @Column(unique = true)
-    private String name;
-    @Embedded
-    private Address address;
+@Table(name = "branches")
+public non-sealed class Branch extends Channel {
     @OneToMany(mappedBy = "branch")
     private List<Account> accounts;
 

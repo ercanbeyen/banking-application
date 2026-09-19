@@ -21,7 +21,9 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.Instant;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +44,7 @@ public class CustomerScheduledTask {
         final String task = "celebrate customers' birthday";
         log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
-        LocalDate birthday = LocalDate.now();
+        LocalDate birthday = LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault());
         UriComponents uriComponents = UriComponentsBuilder.fromUriString(Entity.CUSTOMER.getCollectionUrl())
                 .queryParam("birthDate", birthday.toString())
                 .build();

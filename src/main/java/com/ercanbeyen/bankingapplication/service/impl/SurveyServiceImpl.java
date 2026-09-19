@@ -24,12 +24,13 @@ import com.ercanbeyen.bankingapplication.service.NotificationService;
 import com.ercanbeyen.bankingapplication.service.SurveyService;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.StatisticsUtil;
-import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -53,13 +54,14 @@ public class SurveyServiceImpl implements SurveyService {
             boolean customerNationalIdFilter = (Optional.ofNullable(filteringOption.customerNationalId()).isEmpty() || filteringOption.customerNationalId().equals(key.getCustomerNationalId()));
             boolean accountActivityTypeFilter = (Optional.ofNullable(filteringOption.accountActivityType()).isEmpty() || filteringOption.accountActivityType() == survey.getAccountActivityType());
             boolean surveyTypeFilter = (Optional.ofNullable(filteringOption.surveyType()).isEmpty() || filteringOption.surveyType() == key.getSurveyType());
-            boolean createdAtFilter = (Optional.ofNullable(filteringOption.createdAt()).isEmpty() || filteringOption.createdAt().isEqual(key.getCreatedAt().toLocalDate()));
-            boolean validUntilFilter = (Optional.ofNullable(filteringOption.validUntil()).isEmpty() || filteringOption.validUntil().isEqual(survey.getValidUntil().toLocalDate()));
+            boolean channelFilter = (Optional.ofNullable(filteringOption.channelType())).isEmpty() || filteringOption.channelType() == survey.getChannelType();
+            boolean createdAtFilter = (Optional.ofNullable(filteringOption.createdAt()).isEmpty() || filteringOption.createdAt().isEqual(LocalDate.ofInstant(survey.getCreatedAt(), ZoneId.systemDefault())));
+            boolean validUntilFilter = (Optional.ofNullable(filteringOption.validUntil()).isEmpty() || filteringOption.validUntil().isEqual(LocalDate.ofInstant(survey.getValidUntil(), ZoneId.systemDefault())));
 
-            return customerNationalIdFilter && accountActivityTypeFilter && surveyTypeFilter && createdAtFilter && validUntilFilter;
+            return customerNationalIdFilter && accountActivityTypeFilter && surveyTypeFilter && channelFilter && createdAtFilter && validUntilFilter;
         };
 
-        Comparator<Survey> surveyComparator = Comparator.comparing(survey -> survey.getKey().getCreatedAt());
+        Comparator<Survey> surveyComparator = Comparator.comparing(Survey::getCreatedAt);
         surveyComparator = surveyComparator.reversed();
 
         return surveyRepository.findAll()
@@ -71,9 +73,10 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public SurveyDto getSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType) {
+    public SurveyDto getSurvey(String customerNationalId, String accountActivityId, SurveyType surveyType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        SurveyCompositeKey surveyCompositeKey = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
+
+        SurveyCompositeKey surveyCompositeKey = new SurveyCompositeKey(customerNationalId, accountActivityId, surveyType);
         return surveyMapper.entityToDto(findByKey(surveyCompositeKey));
     }
 
@@ -82,25 +85,25 @@ public class SurveyServiceImpl implements SurveyService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         SurveyCompositeKey requestedKey = request.key();
-
         checkCustomerAndAccountActivity(requestedKey.getCustomerNationalId(), requestedKey.getAccountActivityId());
-
         AccountActivityDto requestedAccountActivity = accountActivityService.getAccountActivity(requestedKey.getAccountActivityId());
-        LocalDateTime now = TimeUtil.getTurkeyDateTime();
 
         SurveyCompositeKey key = new SurveyCompositeKey(
                 requestedKey.getCustomerNationalId(),
                 requestedAccountActivity.id(),
-                now,
                 requestedKey.getSurveyType()
         );
+
+        Instant now = Instant.now();
 
         request.ratings().forEach(rating -> rating.setRate(null)); // Reset the rates
 
         Survey survey = Survey.builder()
                 .key(key)
                 .title(request.title())
+                .channelType(requestedAccountActivity.channelType())
                 .validUntil(request.validUntil())
+                .createdAt(now)
                 .updatedAt(now)
                 .accountActivityType(requestedAccountActivity.type())
                 .ratings(request.ratings())
@@ -112,7 +115,7 @@ public class SurveyServiceImpl implements SurveyService {
 
         NotificationDto notificationDto = new NotificationDto(
                 survey.getKey().getCustomerNationalId(),
-                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt().toLocalDate(), Entity.SURVEY.getValue(), survey.getValidUntil())
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), LocalDate.ofInstant(requestedAccountActivity.createdAt(), ZoneId.systemDefault()), Entity.SURVEY.getValue(), survey.getValidUntil())
         );
 
         notificationService.sendNotification(notificationDto);
@@ -121,10 +124,10 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public SurveyDto updateSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, SurveyDto request) {
+    public SurveyDto updateSurvey(String customerNationalId, String accountActivityId, SurveyType surveyType, SurveyDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
+        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, surveyType);
         Survey survey = findByKey(key);
 
         AccountActivityDto requestedAccountActivity = accountActivityService.getAccountActivity(request.key().getAccountActivityId());
@@ -134,11 +137,11 @@ public class SurveyServiceImpl implements SurveyService {
         survey.setTitle(request.title());
         survey.setRatings(request.ratings());
         survey.setValidUntil(request.validUntil());
-        survey.setUpdatedAt(TimeUtil.getTurkeyDateTime());
+        survey.setUpdatedAt(Instant.now());
 
         NotificationDto notificationDto = new NotificationDto(
                 survey.getKey().getCustomerNationalId(),
-                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), requestedAccountActivity.createdAt().toLocalDate(), Entity.SURVEY.getValue(), survey.getValidUntil())
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), LocalDate.ofInstant(requestedAccountActivity.createdAt(), ZoneId.systemDefault()), Entity.SURVEY.getValue(), survey.getValidUntil())
         );
 
         notificationService.sendNotification(notificationDto);
@@ -147,10 +150,10 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public void deleteSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType) {
+    public void deleteSurvey(String customerNationalId, String accountActivityId, SurveyType surveyType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
+        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, surveyType);
         String entity = Entity.SURVEY.getValue();
 
         surveyRepository.findById(key)
@@ -166,13 +169,13 @@ public class SurveyServiceImpl implements SurveyService {
     }
 
     @Override
-    public String fillOutSurvey(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, SurveyDto request) {
+    public String fillOutSurvey(String customerNationalId, String accountActivityId, SurveyType surveyType, SurveyDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
+        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, surveyType);
         Survey survey = findByKey(key);
 
-        if (survey.getValidUntil().isBefore(TimeUtil.getTurkeyDateTime())) {
+        if (survey.getValidUntil().isBefore(Instant.now())) {
             throw new ResourceConflictException(Entity.SURVEY.getValue() + " has expired");
         }
 
@@ -185,17 +188,19 @@ public class SurveyServiceImpl implements SurveyService {
 
         survey.setCustomerSuggestion(request.customerSuggestion());
 
+        surveyRepository.save(survey);
+
         return "Thank you for participating in the survey";
     }
 
     @Override
-    public SurveyStatisticsResponse<Integer, Integer> getSurveyStatistics(String customerNationalId, String accountActivityId, LocalDateTime createdAt, SurveyType surveyType, Integer minimumFrequency) {
+    public SurveyStatisticsResponse<Integer, Integer> getSurveyStatistics(String customerNationalId, String accountActivityId, LocalDate createdDate, SurveyType surveyType, Integer minimumFrequency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, createdAt, surveyType);
+        SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, surveyType);
         Survey survey = findByKey(key);
 
-        if (!survey.getUpdatedAt().isAfter(survey.getKey().getCreatedAt())) {
+        if (!survey.getUpdatedAt().isAfter(survey.getCreatedAt())) {
             throw new ResourceConflictException(String.format("%s must be filled to get the statistics", Entity.SURVEY.getValue()));
         }
 

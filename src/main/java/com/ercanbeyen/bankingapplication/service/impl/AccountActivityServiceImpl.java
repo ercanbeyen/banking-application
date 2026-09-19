@@ -27,6 +27,8 @@ import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 import java.util.function.Predicate;
 
@@ -49,8 +51,9 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             boolean recipientAccountIdFilter = filteringOption.recipientAccountId() == null
                     || (accountActivity.getRecipientAccount() != null && filteringOption.recipientAccountId().equals(accountActivity.getRecipientAccount().getId()));
             boolean minimumAmountFilter = (filteringOption.minimumAmount() == null || filteringOption.minimumAmount() <= accountActivity.getAmount());
+            boolean channelsFilter = (filteringOption.channelTypes() == null || filteringOption.channelTypes().contains(accountActivity.getChannelType()));
 
-            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter;
+            return accountActivityCheck && senderAccountIdFilter && recipientAccountIdFilter && minimumAmountFilter && channelsFilter;
         };
 
         Comparator<AccountActivity> activityComparator = Comparator.comparing(AccountActivity::getCreatedAt).reversed();
@@ -82,8 +85,7 @@ public class AccountActivityServiceImpl implements AccountActivityService {
     @Override
     public AccountActivityDto getAccountActivity(String id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
-        AccountActivity accountActivity = findById(id);
-        return accountActivityMapper.entityToDto(accountActivity);
+        return accountActivityMapper.entityToDto(findById(id));
     }
 
     @Override
@@ -94,7 +96,16 @@ public class AccountActivityServiceImpl implements AccountActivityService {
             throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.ACCOUNT_ACTIVITY.getValue() + " request"));
         }
 
-        AccountActivity accountActivity = new AccountActivity(request.activityType(), request.senderAccount(), request.recipientAccount(), request.amount(), request.summary(), request.explanation());
+        AccountActivity accountActivity = new AccountActivity(
+                request.activityType(),
+                request.senderAccount(),
+                request.recipientAccount(),
+                request.amount(),
+                request.summary(),
+                request.explanation(),
+                request.channelType()
+        );
+
         AccountActivity savedAccountActivity = accountActivityRepository.save(accountActivity);
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.ACCOUNT_ACTIVITY.getValue(), savedAccountActivity.getId());
 
@@ -112,12 +123,6 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         AccountActivity accountActivity = findById(id);
-
-        if (AccountActivityType.getAccountStatusUpdatingActivities().contains(accountActivity.getType())) {
-            throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY + ". Receipt cannot be generated for " + AccountActivityType.getAccountStatusUpdatingActivities());
-        }
-
-        log.info("{} is a proper account activity for receipt generation", accountActivity);
         ByteArrayOutputStream outputStream;
 
         try {
@@ -196,8 +201,11 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .stream()
                 .anyMatch(activityType -> accountActivity.getType() == activityType);
         boolean amountCheck = Optional.ofNullable(filteringOption.minimumAmount()).isEmpty() || filteringOption.minimumAmount() <= accountActivity.getAmount();
-        boolean fromDateCheck = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(accountActivity.getCreatedAt().toLocalDate());
-        boolean toDateCheck = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(accountActivity.getCreatedAt().toLocalDate());
+
+        LocalDate createdDate = LocalDate.ofInstant(accountActivity.getCreatedAt(), ZoneId.systemDefault());
+
+        boolean fromDateCheck = Optional.ofNullable(filteringOption.fromDate()).isEmpty() || !filteringOption.fromDate().isAfter(createdDate);
+        boolean toDateCheck = Optional.ofNullable(filteringOption.toDate()).isEmpty() || !filteringOption.toDate().isBefore(createdDate);
 
         return typeCheck && amountCheck && fromDateCheck && toDateCheck;
     }

@@ -47,9 +47,9 @@ public class AuthController {
     private final EmailService emailService;
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> loginUser(@RequestBody @Valid LoginRequest loginRequest) {
-        authService.loginUser(loginRequest);
-        CustomerDto customerDto = customerService.getCustomerByNationalId(loginRequest.username());
+    public ResponseEntity<LoginResponse> loginUser(@RequestBody @Valid LoginRequest request) {
+        authService.loginUser(request);
+        CustomerDto customerDto = customerService.getCustomerByNationalId(request.username());
 
         String email = customerDto.getEmail();
         String otp = otpService.generateOtp(email);
