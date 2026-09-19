@@ -3,6 +3,8 @@ package com.ercanbeyen.bankingapplication.constant.enums;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 @Getter
 @RequiredArgsConstructor
 public enum ChannelType {
@@ -17,5 +19,9 @@ public enum ChannelType {
 
     public static String getPlaceNameForSystemChannel() {
         return SYSTEM_CHANNEL_PLACE_NAME;
+    }
+
+    public static List<ChannelType> channelsRequiredChannelId() {
+        return List.of(BRANCH, ATM);
     }
 }

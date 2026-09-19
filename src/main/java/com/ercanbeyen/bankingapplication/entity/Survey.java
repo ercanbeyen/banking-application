@@ -24,7 +24,7 @@ public class Survey {
     private String title;
     @Column(value = "account_activity_type")
     private AccountActivityType accountActivityType;
-    @Column(value = "channelType")
+    @Column(value = "channel_type")
     private ChannelType channelType;
     @Column(value = "valid_until")
     private Instant validUntil;

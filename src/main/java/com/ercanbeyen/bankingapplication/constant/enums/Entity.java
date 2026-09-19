@@ -16,7 +16,7 @@ public enum Entity {
     MONEY_TRANSFER_ORDER("Money Transfer Order"),
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
-    ATM("Atm"),
+    ATM("ATM"),
     BRANCH("Branch"),
     TERM_DEPOSIT_INTEREST_RATE("Term Deposit Interest Rate"),
     DEDUCTION("Deduction"),
