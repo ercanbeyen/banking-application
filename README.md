@@ -12,6 +12,7 @@ It is a banking application includes basic banking services. Abstract CRUD appro
 - Customers can attempt to log in a maximum of 5 times consecutively in Step 1. If they fail to log in 5 times consecutively, their account will be locked for 30 minutes.
 - Customers can attempt to log in a maximum of 3 times consecutively within 5 minutes using the OTP code sent to their email address in Step 2. If they fail to log in, the OTP code will be considered invalid.
 - Customers cannot use their last 3 passwords during password renewal.
+- Customers can carry out their transactions through various channels such as branches, ATMs, and digital banking.
 - Customers can transfer money to their deposit accounts using their current accounts.
 - Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
 - Customers can trade within daily transaction limits and may incur transaction fees for some transactions.
@@ -23,8 +24,9 @@ It is a banking application includes basic banking services. Abstract CRUD appro
 
 ### Details
 - Scheduled tasks run while application is running.
-- News are automatically added in chunks of size 40 at the start of the application's execution.
-- Roles and permissions are added at the start of the application's execution.
+- News are automatically added in batches of 40 when the application starts running.
+- Roles and permissions are added when the application is launched.
+- Time zones applicable to branches and ATMs are added when the application is launched.
 - Scripts inside resources/db.stored_procedure must be written into related database containers to call procedures.
 
 ### Tech Stack
