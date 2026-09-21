@@ -12,9 +12,12 @@ public record DailyActivityLimitDto(
         String id,
         @NotNull(message = "Activity type should not be null")
         AccountActivityType activityType,
-        @NotNull(message = "Amount should not be null")
-        @Min(value = 0, message = "Amount should be at least {value}")
-        Double amount,
+        @NotNull(message = "Upper limit should not be null")
+        @Min(value = 0, message = "Upper limit should be at least {value}")
+        Double lowerLimit,
+        @NotNull(message = "Upper limit should not be null")
+        @Min(value = 0, message = "Upper limit should be at least {value}")
+        Double upperLimit,
         @JsonFormat(
                 shape = JsonFormat.Shape.STRING,
                 pattern = "yyyy-MM-dd HH:mm:ss",

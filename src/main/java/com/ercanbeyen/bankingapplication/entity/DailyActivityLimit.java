@@ -18,7 +18,9 @@ public class DailyActivityLimit {
     @Column(unique = true, nullable = false)
     private AccountActivityType activityType;
     @Column(nullable = false)
-    private Double amount;
+    private Double lowerLimit;
+    @Column(nullable = false)
+    private Double upperLimit;
     @UpdateTimestamp
     private Instant modifiedAt;
 }

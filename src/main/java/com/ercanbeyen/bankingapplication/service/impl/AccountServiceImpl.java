@@ -598,22 +598,24 @@ public class AccountServiceImpl implements AccountService {
             accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency()));
         }
 
-        double dailyActivityAmount = accountActivityDtos.stream()
+        double dailyActivityAmountOfCustomer = accountActivityDtos.stream()
                 .map(AccountActivityDto::amount)
                 .reduce(0D, Double::sum);
 
-        log.info("Daily activity amount: {}", dailyActivityAmount);
-        dailyActivityAmount += amount;
-        log.info("Updated daily activity amount: {}", dailyActivityAmount);
+        log.info("Daily activity amount of customer: {}", dailyActivityAmountOfCustomer);
+        dailyActivityAmountOfCustomer += amount;
+        log.info("Updated daily activity amount of customer: {}", dailyActivityAmountOfCustomer);
 
-        Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
-        log.info("Remaining daily activity limit: {}", activityLimit - dailyActivityAmount);
+        DailyActivityLimitDto dailyActivityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType);
+        Double lowerLimit = dailyActivityLimit.lowerLimit();
+        Double upperLimit = dailyActivityLimit.upperLimit();
+        log.info("Remaining daily activity limit customer: {}", upperLimit - dailyActivityAmountOfCustomer);
 
-        if (dailyActivityAmount > activityLimit) {
-            throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType.getValue(), activityLimit));
+        if (dailyActivityAmountOfCustomer < lowerLimit || dailyActivityAmountOfCustomer > upperLimit) {
+            throw new ResourceConflictException(String.format("Daily limits of %s are going to be exceeded. Daily limits are %s - %s", activityType.getValue(), lowerLimit, upperLimit));
         }
 
-        log.info("Daily limit of {} is not exceeded", activityType.getValue());
+        log.info("Daily limits of {} are not exceeded", activityType.getValue());
     }
 
     private TransactionInformation getTransactionPlaceForStatusUpdate(Address address) {

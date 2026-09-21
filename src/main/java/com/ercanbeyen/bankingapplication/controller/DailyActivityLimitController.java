@@ -3,6 +3,7 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
 import com.ercanbeyen.bankingapplication.dto.DailyActivityLimitDto;
 import com.ercanbeyen.bankingapplication.service.DailyActivityLimitService;
+import com.ercanbeyen.bankingapplication.util.DailyActivityLimitUtil;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,14 @@ public class DailyActivityLimitController {
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PostMapping
     public ResponseEntity<DailyActivityLimitDto> createDailyActivityLimit(@RequestBody @Valid DailyActivityLimitDto request) {
+        DailyActivityLimitUtil.checkRequest(request);
         return ResponseEntity.ok(dailyActivityLimitService.createDailyActivityLimit(request));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PutMapping("/{activity-type}")
     public ResponseEntity<DailyActivityLimitDto> updateDailyActivityLimit(@PathVariable("activity-type") AccountActivityType activityType, @RequestBody @Valid DailyActivityLimitDto request) {
+        DailyActivityLimitUtil.checkRequest(request);
         return ResponseEntity.ok(dailyActivityLimitService.updateDailyActivityLimit(activityType, request));
     }
 
