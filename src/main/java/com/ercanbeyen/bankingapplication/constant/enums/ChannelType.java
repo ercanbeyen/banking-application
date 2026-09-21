@@ -24,4 +24,8 @@ public enum ChannelType {
     public static List<ChannelType> channelsRequiredChannelId() {
         return List.of(BRANCH, ATM);
     }
+
+    public static ChannelType getChannelTypeWithNoDailyAccountActivityLimit() {
+        return BRANCH;
+    }
 }

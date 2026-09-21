@@ -17,8 +17,8 @@ public interface AccountService extends BaseService<AccountDto, AccountFiltering
     void depositMoney(Integer id, Double amount, ChannelInformation channelInformation);
     void withdrawMoney(Integer id, Double amount, ChannelInformation channelInformation);
     String payInterestIncome(Integer id);
-    void transferMoney(MoneyTransferRequest moneyTransferRequest, ChannelInformation channelInformation);
-    void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, ChannelInformation channelInformation);
+    void transferMoney(MoneyTransferRequest request, ChannelInformation channelInformation);
+    void exchangeMoney(MoneyExchangeRequest request, ChannelInformation channelInformation);
     String updateBlockStatus(Integer id, boolean status);
     void closeAccount(Integer id);
     Integer getTotalActiveAccounts(AccountType type, Currency currency, String city);
