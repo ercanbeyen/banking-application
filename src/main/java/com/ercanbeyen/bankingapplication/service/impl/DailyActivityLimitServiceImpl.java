@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
@@ -41,7 +41,7 @@ public class DailyActivityLimitServiceImpl implements DailyActivityLimitService 
 
     @Cacheable(value = "daily-activity-limits", key = "#a0")
     @Override
-    public DailyActivityLimitDto getDailyActivityLimit(AccountActivityType activityType) {
+    public DailyActivityLimitDto getDailyActivityLimit(ActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return dailyActivityLimitMapper.entityToDto(findByActivityType(activityType));
     }
@@ -60,7 +60,7 @@ public class DailyActivityLimitServiceImpl implements DailyActivityLimitService 
 
     @CachePut(value = "daily-activity-limits", key = "#a0")
     @Override
-    public DailyActivityLimitDto updateDailyActivityLimit(AccountActivityType activityType, DailyActivityLimitDto request) {
+    public DailyActivityLimitDto updateDailyActivityLimit(ActivityType activityType, DailyActivityLimitDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         DailyActivityLimit dailyActivityLimit = findByActivityType(activityType);
@@ -75,7 +75,7 @@ public class DailyActivityLimitServiceImpl implements DailyActivityLimitService 
     @CacheEvict(value = "daily-activity-limits", key = "#a0")
     @Transactional
     @Override
-    public void deleteDailyActivityLimit(AccountActivityType activityType) {
+    public void deleteDailyActivityLimit(ActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
@@ -92,7 +92,7 @@ public class DailyActivityLimitServiceImpl implements DailyActivityLimitService 
     }
 
 
-    private DailyActivityLimit findByActivityType(AccountActivityType activityType) {
+    private DailyActivityLimit findByActivityType(ActivityType activityType) {
         String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
         DailyActivityLimit dailyActivityLimit = dailyActivityLimitRepository.findByActivityType(activityType)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
@@ -102,7 +102,7 @@ public class DailyActivityLimitServiceImpl implements DailyActivityLimitService 
         return dailyActivityLimit;
     }
 
-    private void checkUniqueness(DailyActivityLimitDto request, AccountActivityType previousActivityType) {
+    private void checkUniqueness(DailyActivityLimitDto request, ActivityType previousActivityType) {
         String entity = Entity.DAILY_ACTIVITY_LIMIT.getValue();
 
         if (previousActivityType == request.activityType()) {
@@ -119,7 +119,7 @@ public class DailyActivityLimitServiceImpl implements DailyActivityLimitService 
         log.info(LogMessage.RESOURCE_UNIQUE, entity);
     }
 
-    private boolean dailyActivityLimitExistsByActivityType(AccountActivityType activityType) {
+    private boolean dailyActivityLimitExistsByActivityType(ActivityType activityType) {
         return dailyActivityLimitRepository.existsByActivityType(activityType);
     }
 }

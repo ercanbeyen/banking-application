@@ -48,7 +48,7 @@ public class TransactionServiceImpl implements TransactionService {
     private final TimeZoneService timeZoneService;
 
     @Override
-    public void createAccountActivityForAccountStatusUpdate(Account account, AccountActivityType activityType, TransactionInformation transactionInformation) {
+    public void createAccountActivityForAccountStatusUpdate(Account account, ActivityType activityType, TransactionInformation transactionInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Map<String, Object> summary = new HashMap<>();
@@ -69,7 +69,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void applyAccountActivityForSingleAccount(AccountActivityType activityType, Double amount, Account account, String cashFlowExplanation, TransactionInformation transactionInformation) {
+    public void applyAccountActivityForSingleAccount(ActivityType activityType, Double amount, Account account, String cashFlowExplanation, TransactionInformation transactionInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account[] accounts = new Account[2]; // first account is sender, second account is recipient
@@ -135,7 +135,7 @@ public class TransactionServiceImpl implements TransactionService {
     public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount, TransactionInformation transactionInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+        ActivityType activityType = ActivityType.MONEY_TRANSFER;
         List<Account> accountsInMoneyTransfer = List.of(senderAccount, recipientAccount);
         double transactionFee = getTransactionFee(activityType, accountsInMoneyTransfer);
         checkBalanceBeforeMoneyTransferAndExchange(deducteeAccount, accountsInMoneyTransfer, amount, transactionFee, activityType);
@@ -209,7 +209,7 @@ public class TransactionServiceImpl implements TransactionService {
     public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount, TransactionInformation transactionInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+        ActivityType activityType = ActivityType.MONEY_EXCHANGE;
 
         List<Account> accountsInMoneyExchange = List.of(sellerAccount, buyerAccount);
         double transactionFee = getTransactionFee(activityType, accountsInMoneyExchange);
@@ -341,8 +341,8 @@ public class TransactionServiceImpl implements TransactionService {
         return interestRate;
     }
 
-    private double getTransactionFee(AccountActivityType activityType, List<Account> accounts) {
-        boolean sameCustomerTransferMoneyBetweenAccounts = activityType == AccountActivityType.MONEY_TRANSFER
+    private double getTransactionFee(ActivityType activityType, List<Account> accounts) {
+        boolean sameCustomerTransferMoneyBetweenAccounts = activityType == ActivityType.MONEY_TRANSFER
                 && accounts.getFirst().getCustomer().getNationalId().equals(accounts.getLast().getCustomer().getNationalId());
 
         if (sameCustomerTransferMoneyBetweenAccounts) {
@@ -362,15 +362,15 @@ public class TransactionServiceImpl implements TransactionService {
         Account[] accounts = new Account[2];
         accounts[0] = deducteeAccount;
 
-        createAccountActivity(AccountActivityType.DEDUCTION, transactionFee, summary, accounts, null, ChannelType.SYSTEM);
+        createAccountActivity(ActivityType.DEDUCTION, transactionFee, summary, accounts, null, ChannelType.SYSTEM);
     }
 
-    private AccountActivity createAccountActivity(AccountActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation, ChannelType channelType) {
+    private AccountActivity createAccountActivity(ActivityType activityType, Double amount, Map<String, Object> summary, Account[] accounts, String explanation, ChannelType channelType) {
         AccountActivityRequest accountActivityRequest = new AccountActivityRequest(activityType, accounts[0], accounts[1], amount, summary, explanation, channelType);
         return accountActivityService.createAccountActivity(accountActivityRequest);
     }
 
-    private void checkBalanceBeforeMoneyTransferAndExchange(Account deducteeAccount, List<Account> relatedAccounts, Double amount, Double transactionFee, AccountActivityType activityType) {
+    private void checkBalanceBeforeMoneyTransferAndExchange(Account deducteeAccount, List<Account> relatedAccounts, Double amount, Double transactionFee, ActivityType activityType) {
         log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType.getValue(), amount, transactionFee);
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
 

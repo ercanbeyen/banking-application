@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
@@ -55,7 +55,7 @@ public class DeductionServiceImpl implements DeductionService {
 
     @CachePut(value = "deductions", key = "#a0")
     @Override
-    public DeductionDto updateDeduction(AccountActivityType activityType, DeductionDto request) {
+    public DeductionDto updateDeduction(ActivityType activityType, DeductionDto request) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Deduction deduction = findByActivityType(activityType);
@@ -68,7 +68,7 @@ public class DeductionServiceImpl implements DeductionService {
 
     @Cacheable(value = "deductions", key = "#a0")
     @Override
-    public DeductionDto getDeduction(AccountActivityType activityType) {
+    public DeductionDto getDeduction(ActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         Deduction deduction = findByActivityType(activityType);
         return deductionMapper.entityToDto(deduction);
@@ -77,7 +77,7 @@ public class DeductionServiceImpl implements DeductionService {
     @CacheEvict(value = "deductions", key = "#a0")
     @Transactional
     @Override
-    public void deleteDeduction(AccountActivityType activityType) {
+    public void deleteDeduction(ActivityType activityType) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         String entity = Entity.DEDUCTION.getValue();
@@ -93,7 +93,7 @@ public class DeductionServiceImpl implements DeductionService {
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, entity, activityType);
     }
 
-    private Deduction findByActivityType(AccountActivityType activityType) {
+    private Deduction findByActivityType(ActivityType activityType) {
         String entity = Entity.DEDUCTION.getValue();
         Deduction deduction = deductionRepository.findByActivityType(activityType)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));
@@ -103,7 +103,7 @@ public class DeductionServiceImpl implements DeductionService {
         return deduction;
     }
 
-    private void checkUniqueness(DeductionDto request, AccountActivityType previousActivityType) {
+    private void checkUniqueness(DeductionDto request, ActivityType previousActivityType) {
         String entity = Entity.DEDUCTION.getValue();
 
         if (previousActivityType == request.activityType()) {
@@ -120,7 +120,7 @@ public class DeductionServiceImpl implements DeductionService {
         log.info(LogMessage.RESOURCE_UNIQUE, entity);
     }
 
-    private boolean deductionExistsByActivityType(AccountActivityType activityType) {
+    private boolean deductionExistsByActivityType(ActivityType activityType) {
         return deductionRepository.existsByActivityType(activityType);
     }
 }

@@ -1,7 +1,7 @@
 package com.ercanbeyen.bankingapplication.helper;
 
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.dto.DailyActivityLimitDto;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
@@ -17,7 +17,7 @@ import org.springframework.stereotype.Component;
 public class DailyActivityLimitHelper {
     private final DailyActivityLimitService dailyActivityLimitService;
 
-    public void checkActivityLimits(AccountActivityType activityType, Double amount, ChannelType channelType) {
+    public void checkActivityLimits(ActivityType activityType, Double amount, ChannelType channelType) {
         if (channelExemptFromDailyActivityLimit(channelType)) {
             return;
         }

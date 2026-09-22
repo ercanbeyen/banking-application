@@ -116,7 +116,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
-        AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
+        ActivityType activityType = ActivityType.MONEY_DEPOSIT;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
 
         AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
@@ -135,7 +135,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
-        AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
+        ActivityType activityType = ActivityType.WITHDRAWAL;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
 
         AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
@@ -159,7 +159,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
-        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+        ActivityType activityType = ActivityType.MONEY_TRANSFER;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
 
         AccountUtil.checkMoneyTransferRequest(request, channelInformation);
@@ -177,7 +177,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
-        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+        ActivityType activityType = ActivityType.MONEY_EXCHANGE;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
 
         AccountUtil.checkMoneyExchangeRequest(request, channelInformation);
@@ -200,7 +200,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PatchMapping("/{id}/close")
     public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") @P("accountId") Integer id) {
         accountService.closeAccount(id);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.ACCOUNT_CLOSING.getValue()));
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, ActivityType.ACCOUNT_CLOSING.getValue()));
         return ResponseEntity.ok(response);
     }
 

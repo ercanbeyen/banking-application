@@ -24,7 +24,7 @@ public interface AccountService extends BaseService<AccountDto, AccountFiltering
     Integer getTotalActiveAccounts(AccountType type, Currency currency, String city);
     List<CustomerStatisticsResponse> getCustomersHaveMaximumBalance(AccountType type, Currency currency);
     List<AccountActivityPreview> getAccountActivityPreviews(Integer id, AccountActivityFilteringRequest request);
-    Account getDeducteeAccount(AccountActivityType accountActivityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts);
+    Account getDeducteeAccount(ActivityType activityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts);
     Account findDeducteeAccountById(Integer id);
     Account findActiveAccountById(Integer id);
     Account findById(Integer id);
