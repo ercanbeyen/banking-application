@@ -2,7 +2,7 @@ package com.ercanbeyen.bankingapplication.view.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import jakarta.persistence.*;
 import lombok.Getter;
 import org.hibernate.annotations.Immutable;
@@ -28,7 +28,7 @@ public class AccountActivityView {
     private String id;
     @Column
     @Enumerated(EnumType.STRING)
-    private AccountActivityType type;
+    private ActivityType type;
     @Column
     @Enumerated(EnumType.STRING)
     private Currency currency;

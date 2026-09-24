@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import jakarta.persistence.*;
 import lombok.Data;
 import org.hibernate.annotations.UpdateTimestamp;
@@ -16,7 +16,7 @@ public class Deduction {
     private String id;
     @Enumerated(EnumType.STRING)
     @Column(unique = true, nullable = false)
-    private AccountActivityType activityType;
+    private ActivityType activityType;
     @Column(nullable = false)
     private Double amount;
     @UpdateTimestamp

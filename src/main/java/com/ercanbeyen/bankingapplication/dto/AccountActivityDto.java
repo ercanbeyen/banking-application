@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.dto;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 
@@ -9,7 +9,7 @@ import java.util.Map;
 
 public record AccountActivityDto(
         String id,
-        AccountActivityType type,
+        ActivityType type,
         Integer senderAccountId,
         Integer recipientAccountId,
         Double amount,

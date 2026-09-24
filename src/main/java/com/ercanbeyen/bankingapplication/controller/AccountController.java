@@ -16,6 +16,7 @@ import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.helper.DailyActivityLimitHelper;
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
@@ -52,13 +53,20 @@ import java.util.function.UnaryOperator;
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;
     private final AccountSecurityService accountSecurityService;
+    private final DailyActivityLimitHelper dailyActivityLimitHelper;
     private final EmailService emailService;
     private final TimeZoneService timeZoneService;
 
-    public AccountController(AccountService accountService, AccountSecurityService accountSecurityService, EmailService emailService, TimeZoneService timeZoneService) {
+    public AccountController(
+            AccountService accountService,
+            AccountSecurityService accountSecurityService,
+            DailyActivityLimitHelper dailyActivityLimitHelper,
+            EmailService emailService,
+            TimeZoneService timeZoneService) {
         super(accountService);
         this.accountService = accountService;
         this.accountSecurityService = accountSecurityService;
+        this.dailyActivityLimitHelper = dailyActivityLimitHelper;
         this.emailService = emailService;
         this.timeZoneService = timeZoneService;
     }
@@ -108,9 +116,11 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
+        ActivityType activityType = ActivityType.MONEY_DEPOSIT;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
-        AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
+
         AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
+        dailyActivityLimitHelper.checkActivityLimits(activityType, amount, channelType);
 
         accountService.depositMoney(id, amount, channelInformation);
 
@@ -125,10 +135,11 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestParam("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(HeaderField.CHANNEL_ID) Integer channelId) {
+        ActivityType activityType = ActivityType.WITHDRAWAL;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
-        AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
 
         AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
+        dailyActivityLimitHelper.checkActivityLimits(activityType, amount, channelType);
 
         accountService.withdrawMoney(id, amount, channelInformation);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, activityType.getValue()));
@@ -148,11 +159,14 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
+        ActivityType activityType = ActivityType.MONEY_TRANSFER;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+
         AccountUtil.checkMoneyTransferRequest(request, channelInformation);
+        dailyActivityLimitHelper.checkActivityLimits(activityType, request.amount(), channelType);
 
         accountService.transferMoney(request, channelInformation);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_TRANSFER.getValue()));
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, activityType.getValue()));
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -163,11 +177,14 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             @RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request,
             @RequestHeader(HeaderField.CHANNEL_TYPE) ChannelType channelType,
             @RequestHeader(value = HeaderField.CHANNEL_ID, required = false) Integer channelId) {
+        ActivityType activityType = ActivityType.MONEY_EXCHANGE;
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
+
         AccountUtil.checkMoneyExchangeRequest(request, channelInformation);
+        dailyActivityLimitHelper.checkActivityLimits(activityType, request.amount(), channelType);
 
         accountService.exchangeMoney(request, channelInformation);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.MONEY_EXCHANGE.getValue()));
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, activityType.getValue()));
 
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -183,7 +200,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PatchMapping("/{id}/close")
     public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") @P("accountId") Integer id) {
         accountService.closeAccount(id);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, AccountActivityType.ACCOUNT_CLOSING.getValue()));
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, ActivityType.ACCOUNT_CLOSING.getValue()));
         return ResponseEntity.ok(response);
     }
 

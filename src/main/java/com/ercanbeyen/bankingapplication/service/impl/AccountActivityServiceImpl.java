@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
@@ -146,11 +146,11 @@ public class AccountActivityServiceImpl implements AccountActivityService {
                 .getNationalId()
                 .equals(customerNationalId);
 
-        if (accountActivity.getType() == AccountActivityType.MONEY_DEPOSIT || accountActivity.getType() == AccountActivityType.INTEREST_INCOME) {
+        if (accountActivity.getType() == ActivityType.MONEY_DEPOSIT || accountActivity.getType() == ActivityType.INTEREST_INCOME) {
             accountActivityExists = accountPredicate.test(accountActivity.getRecipientAccount());
-        } else if (accountActivity.getType() == AccountActivityType.WITHDRAWAL || accountActivity.getType() == AccountActivityType.DEDUCTION) {
+        } else if (accountActivity.getType() == ActivityType.WITHDRAWAL || accountActivity.getType() == ActivityType.DEDUCTION) {
             accountActivityExists = accountPredicate.test(accountActivity.getSenderAccount());
-        } else if (accountActivity.getType() == AccountActivityType.MONEY_TRANSFER || accountActivity.getType() == AccountActivityType.MONEY_EXCHANGE) {
+        } else if (accountActivity.getType() == ActivityType.MONEY_TRANSFER || accountActivity.getType() == ActivityType.MONEY_EXCHANGE) {
             boolean recipientAccountIsCustomer = accountPredicate.test(accountActivity.getRecipientAccount());
             boolean senderAccountIsCustomer = accountPredicate.test(accountActivity.getSenderAccount());
             accountActivityExists = recipientAccountIsCustomer || senderAccountIsCustomer;

@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -20,7 +20,7 @@ public class AccountActivity {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     @Enumerated(EnumType.STRING)
-    private AccountActivityType type;
+    private ActivityType type;
     @ManyToOne
     @JoinColumn(name = "sender_account_id", referencedColumnName = "id")
     private Account senderAccount;
@@ -35,7 +35,7 @@ public class AccountActivity {
     private ChannelType channelType;
     private Instant createdAt;
 
-    public AccountActivity(AccountActivityType type, Account senderAccount, Account recipientAccount, Double amount, Map<String, Object> summary, String explanation, ChannelType channelType) {
+    public AccountActivity(ActivityType type, Account senderAccount, Account recipientAccount, Double amount, Map<String, Object> summary, String explanation, ChannelType channelType) {
         this.type = type;
         this.senderAccount = senderAccount;
         this.recipientAccount = recipientAccount;

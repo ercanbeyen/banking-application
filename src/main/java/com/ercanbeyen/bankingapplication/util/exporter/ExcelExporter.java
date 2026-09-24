@@ -86,7 +86,7 @@ public class ExcelExporter {
             Row row = sheet.createRow(rowIndex++);
             int columnIndex = BEGINNING_INDEX;
             writeCell(row, columnIndex++, accountActivityPreview.createdAt().toString(), style, sheet);
-            writeCell(row, columnIndex++, accountActivityPreview.accountActivityType().getValue(), style, sheet);
+            writeCell(row, columnIndex++, accountActivityPreview.activityType().getValue(), style, sheet);
             writeCell(row, columnIndex, FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)), style, sheet);
         }
     }

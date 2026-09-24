@@ -171,7 +171,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
                 .forEach(account -> accountActivityPreviews.addAll(accountService.getAccountActivityPreviews(account.getId(), request)));
 
         List<ReceiptPreview> receiptPreviews = accountActivityPreviews.stream()
-                .map(accountActivityPreview -> new ReceiptPreview(accountActivityPreview.accountActivityId(), accountActivityPreview.accountActivityType(), accountActivityPreview.createdAt(), accountActivityPreview.amount()))
+                .map(accountActivityPreview -> new ReceiptPreview(accountActivityPreview.accountActivityId(), accountActivityPreview.activityType(), accountActivityPreview.createdAt(), accountActivityPreview.amount()))
                 .toList();
 
         return ResponseEntity.ok(receiptPreviews);

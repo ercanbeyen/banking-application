@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.entity;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import lombok.AllArgsConstructor;
@@ -22,8 +22,8 @@ public class Survey {
     private SurveyCompositeKey key;
     @Column(value = "title")
     private String title;
-    @Column(value = "account_activity_type")
-    private AccountActivityType accountActivityType;
+    @Column(value = "activity_type")
+    private ActivityType activityType;
     @Column(value = "channel_type")
     private ChannelType channelType;
     @Column(value = "valid_until")

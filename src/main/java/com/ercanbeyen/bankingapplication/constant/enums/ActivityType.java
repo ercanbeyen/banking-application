@@ -6,7 +6,7 @@ import lombok.RequiredArgsConstructor;
 import java.util.*;
 
 @RequiredArgsConstructor
-public enum AccountActivityType {
+public enum ActivityType {
     MONEY_DEPOSIT("Money Deposit"),
     WITHDRAWAL("Withdrawal"),
     MONEY_TRANSFER("Money Transfer"),
@@ -20,7 +20,7 @@ public enum AccountActivityType {
     @Getter
     private final String value;
     @Getter
-    private static final Set<AccountActivityType> accountStatusUpdatingActivities;
+    private static final Set<ActivityType> accountStatusUpdatingActivities;
 
     static {
         accountStatusUpdatingActivities = EnumSet.of(ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING);

@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.dto;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
@@ -18,7 +18,7 @@ public record SurveyDto(
         @NotBlank(message = "Title should not be blank")
         @NotNull(message = "Title should not be null")
         String title,
-        AccountActivityType accountActivityType,
+        ActivityType activityType,
         @JsonFormat(
                 shape = JsonFormat.Shape.STRING,
                 pattern = "yyyy-MM-dd HH:mm:ss",

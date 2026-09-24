@@ -1,8 +1,9 @@
 package com.ercanbeyen.bankingapplication.controller;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.dto.DailyActivityLimitDto;
 import com.ercanbeyen.bankingapplication.service.DailyActivityLimitService;
+import com.ercanbeyen.bankingapplication.util.DailyActivityLimitUtil;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,12 +23,14 @@ public class DailyActivityLimitController {
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PostMapping
     public ResponseEntity<DailyActivityLimitDto> createDailyActivityLimit(@RequestBody @Valid DailyActivityLimitDto request) {
+        DailyActivityLimitUtil.checkRequest(request);
         return ResponseEntity.ok(dailyActivityLimitService.createDailyActivityLimit(request));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PutMapping("/{activity-type}")
-    public ResponseEntity<DailyActivityLimitDto> updateDailyActivityLimit(@PathVariable("activity-type") AccountActivityType activityType, @RequestBody @Valid DailyActivityLimitDto request) {
+    public ResponseEntity<DailyActivityLimitDto> updateDailyActivityLimit(@PathVariable("activity-type") ActivityType activityType, @RequestBody @Valid DailyActivityLimitDto request) {
+        DailyActivityLimitUtil.checkRequest(request);
         return ResponseEntity.ok(dailyActivityLimitService.updateDailyActivityLimit(activityType, request));
     }
 
@@ -37,13 +40,13 @@ public class DailyActivityLimitController {
     }
 
     @GetMapping("/{activity-type}")
-    public ResponseEntity<DailyActivityLimitDto> getDailyActivityLimit(@PathVariable("activity-type") AccountActivityType activityType) {
+    public ResponseEntity<DailyActivityLimitDto> getDailyActivityLimit(@PathVariable("activity-type") ActivityType activityType) {
         return ResponseEntity.ok(dailyActivityLimitService.getDailyActivityLimit(activityType));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @DeleteMapping("/{activity-type}")
-    public ResponseEntity<Void> deleteDailyActivityLimit(@PathVariable("activity-type") AccountActivityType activityType) {
+    public ResponseEntity<Void> deleteDailyActivityLimit(@PathVariable("activity-type") ActivityType activityType) {
         dailyActivityLimitService.deleteDailyActivityLimit(activityType);
         return ResponseEntity.noContent().build();
     }

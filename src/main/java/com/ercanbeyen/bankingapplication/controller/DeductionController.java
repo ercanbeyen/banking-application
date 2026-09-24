@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.controller;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.dto.DeductionDto;
 import com.ercanbeyen.bankingapplication.service.DeductionService;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -27,7 +27,7 @@ public class DeductionController {
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PutMapping("/{activity-type}")
-    public ResponseEntity<DeductionDto> updateDeduction(@PathVariable("activity-type") AccountActivityType activityType, @RequestBody @Valid DeductionDto request) {
+    public ResponseEntity<DeductionDto> updateDeduction(@PathVariable("activity-type") ActivityType activityType, @RequestBody @Valid DeductionDto request) {
         return ResponseEntity.ok(deductionService.updateDeduction(activityType, request));
     }
 
@@ -37,13 +37,13 @@ public class DeductionController {
     }
 
     @GetMapping("/{activity-type}")
-    public ResponseEntity<DeductionDto> getDeduction(@PathVariable("activity-type") AccountActivityType activityType) {
+    public ResponseEntity<DeductionDto> getDeduction(@PathVariable("activity-type") ActivityType activityType) {
         return ResponseEntity.ok(deductionService.getDeduction(activityType));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @DeleteMapping("/{activity-type}")
-    public ResponseEntity<Void> deleteDeduction(@PathVariable("activity-type") AccountActivityType activityType) {
+    public ResponseEntity<Void> deleteDeduction(@PathVariable("activity-type") ActivityType activityType) {
         deductionService.deleteDeduction(activityType);
         return ResponseEntity.noContent().build();
     }

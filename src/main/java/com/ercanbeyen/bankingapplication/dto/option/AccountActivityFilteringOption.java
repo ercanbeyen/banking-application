@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.dto.option;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -9,7 +9,7 @@ import java.time.LocalDate;
 import java.util.List;
 
 public record AccountActivityFilteringOption(
-        List<AccountActivityType> activityTypes,
+        List<ActivityType> activityTypes,
         Integer senderAccountId,
         Integer recipientAccountId,
         @NotNull(message = "Minimum amount should not be null")

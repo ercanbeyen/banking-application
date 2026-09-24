@@ -38,7 +38,7 @@ public class AccountUtil {
     }
 
     public void checkMoneyTransferRequest(MoneyTransferRequest request, ChannelInformation channelInformation) {
-        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+        ActivityType activityType = ActivityType.MONEY_TRANSFER;
         checkAccountActivityWithChannelType(channelInformation, activityType);
         checkHeaderParametersForMoneyTransferAndMoneyExchange(channelInformation);
 
@@ -48,7 +48,7 @@ public class AccountUtil {
     }
 
     public void checkMoneyExchangeRequest(MoneyExchangeRequest request, ChannelInformation channelInformation) {
-        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
+        ActivityType activityType = ActivityType.MONEY_EXCHANGE;
 
         checkAccountActivityWithChannelType(channelInformation, activityType);
         checkHeaderParametersForMoneyTransferAndMoneyExchange(channelInformation);
@@ -58,7 +58,7 @@ public class AccountUtil {
         }
     }
 
-    public void checkAccountActivityWithChannelType(ChannelInformation channelInformation, AccountActivityType activityType) {
+    public void checkAccountActivityWithChannelType(ChannelInformation channelInformation, ActivityType activityType) {
         ChannelType channelType = channelInformation.channelType();
         List<ChannelType> channelTypes = activityType.getAvailableChannelTypes();
 
@@ -67,7 +67,7 @@ public class AccountUtil {
         }
     }
 
-    public void checkAccountActivityAndAccountTypeMatch(AccountType givenAccountType, AccountType expectedAccountType, AccountActivityType activityType) {
+    public void checkAccountActivityAndAccountTypeMatch(AccountType givenAccountType, AccountType expectedAccountType, ActivityType activityType) {
         if (!checkAccountTypeMatch.test(givenAccountType, expectedAccountType)) {
             throw new ResourceConflictException(activityType.getValue() + " can only be done from " + expectedAccountType.getValue() + " Accounts");
         }
@@ -101,7 +101,7 @@ public class AccountUtil {
         }
     }
 
-    public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to, AccountActivityType activityType) {
+    public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to, ActivityType activityType) {
         AccountType expectedAccountType = AccountType.CURRENT;
 
         checkAccountActivityAndAccountTypeMatch(from, expectedAccountType, activityType);
@@ -130,7 +130,7 @@ public class AccountUtil {
     }
 
     private void checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(AccountType accountType, Integer depositMaturity) {
-        checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, AccountActivityType.INTEREST_INCOME);
+        checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, ActivityType.INTEREST_INCOME);
         TermDepositInterestRateUtil.checkValidityOfDepositMaturity(depositMaturity);
     }
 

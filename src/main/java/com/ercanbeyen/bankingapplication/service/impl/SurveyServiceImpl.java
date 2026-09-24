@@ -52,13 +52,13 @@ public class SurveyServiceImpl implements SurveyService {
             SurveyCompositeKey key = survey.getKey();
 
             boolean customerNationalIdFilter = (Optional.ofNullable(filteringOption.customerNationalId()).isEmpty() || filteringOption.customerNationalId().equals(key.getCustomerNationalId()));
-            boolean accountActivityTypeFilter = (Optional.ofNullable(filteringOption.accountActivityType()).isEmpty() || filteringOption.accountActivityType() == survey.getAccountActivityType());
+            boolean activityTypeFilter = (Optional.ofNullable(filteringOption.activityType()).isEmpty() || filteringOption.activityType() == survey.getActivityType());
             boolean surveyTypeFilter = (Optional.ofNullable(filteringOption.surveyType()).isEmpty() || filteringOption.surveyType() == key.getSurveyType());
             boolean channelFilter = (Optional.ofNullable(filteringOption.channelType())).isEmpty() || filteringOption.channelType() == survey.getChannelType();
             boolean createdAtFilter = (Optional.ofNullable(filteringOption.createdAt()).isEmpty() || filteringOption.createdAt().isEqual(LocalDate.ofInstant(survey.getCreatedAt(), ZoneId.systemDefault())));
             boolean validUntilFilter = (Optional.ofNullable(filteringOption.validUntil()).isEmpty() || filteringOption.validUntil().isEqual(LocalDate.ofInstant(survey.getValidUntil(), ZoneId.systemDefault())));
 
-            return customerNationalIdFilter && accountActivityTypeFilter && surveyTypeFilter && channelFilter && createdAtFilter && validUntilFilter;
+            return customerNationalIdFilter && activityTypeFilter && surveyTypeFilter && channelFilter && createdAtFilter && validUntilFilter;
         };
 
         Comparator<Survey> surveyComparator = Comparator.comparing(Survey::getCreatedAt);
@@ -105,7 +105,7 @@ public class SurveyServiceImpl implements SurveyService {
                 .validUntil(request.validUntil())
                 .createdAt(now)
                 .updatedAt(now)
-                .accountActivityType(requestedAccountActivity.type())
+                .activityType(requestedAccountActivity.type())
                 .ratings(request.ratings())
                 .build();
 
@@ -115,7 +115,7 @@ public class SurveyServiceImpl implements SurveyService {
 
         NotificationDto notificationDto = new NotificationDto(
                 survey.getKey().getCustomerNationalId(),
-                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), LocalDate.ofInstant(requestedAccountActivity.createdAt(), ZoneId.systemDefault()), Entity.SURVEY.getValue(), survey.getValidUntil())
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getActivityType().getValue(), LocalDate.ofInstant(requestedAccountActivity.createdAt(), ZoneId.systemDefault()), Entity.SURVEY.getValue(), survey.getValidUntil())
         );
 
         notificationService.sendNotification(notificationDto);
@@ -141,7 +141,7 @@ public class SurveyServiceImpl implements SurveyService {
 
         NotificationDto notificationDto = new NotificationDto(
                 survey.getKey().getCustomerNationalId(),
-                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getAccountActivityType().getValue(), LocalDate.ofInstant(requestedAccountActivity.createdAt(), ZoneId.systemDefault()), Entity.SURVEY.getValue(), survey.getValidUntil())
+                String.format(ResponseMessage.EVALUATION_MESSAGE, survey.getActivityType().getValue(), LocalDate.ofInstant(requestedAccountActivity.createdAt(), ZoneId.systemDefault()), Entity.SURVEY.getValue(), survey.getValidUntil())
         );
 
         notificationService.sendNotification(notificationDto);

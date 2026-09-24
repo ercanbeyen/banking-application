@@ -18,6 +18,7 @@ import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.helper.DailyActivityLimitHelper;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import com.ercanbeyen.bankingapplication.dto.option.AccountFilteringOption;
@@ -57,7 +58,7 @@ public class AccountServiceImpl implements AccountService {
     private final AccountActivityService accountActivityService;
     private final BranchService branchService;
     private final AtmService atmService;
-    private final DailyActivityLimitService dailyActivityLimitService;
+    private final DailyActivityLimitHelper dailyActivityLimitHelper;
     private final AgreementService agreementService;
     private final ExchangeService exchangeService;
     private final TimeZoneService timeZoneService;
@@ -115,7 +116,7 @@ public class AccountServiceImpl implements AccountService {
         log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedAccount.getId());
 
         TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
-        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_OPENING, transactionInformation);
+        transactionService.createAccountActivityForAccountStatusUpdate(account, ActivityType.ACCOUNT_OPENING, transactionInformation);
 
         return accountMapper.entityToDto(savedAccount);
     }
@@ -158,14 +159,14 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void depositMoney(Integer id, Double amount,ChannelInformation channelInformation) {
+    public void depositMoney(Integer id, Double amount, ChannelInformation channelInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        AccountActivityType activityType = AccountActivityType.MONEY_DEPOSIT;
+        ActivityType activityType = ActivityType.MONEY_DEPOSIT;
         AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
 
-        checkDailyAccountActivityLimit(account, amount, activityType);
+        checkActivityAmountsOfCustomer(account, amount, activityType, channelInformation.channelType());
 
         TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(channelInformation);
 
@@ -184,10 +185,10 @@ public class AccountServiceImpl implements AccountService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        AccountActivityType activityType = AccountActivityType.WITHDRAWAL;
+        ActivityType activityType = ActivityType.WITHDRAWAL;
         AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
 
-        checkDailyAccountActivityLimit(account, amount, activityType);
+        checkActivityAmountsOfCustomer(account, amount, activityType, channelInformation.channelType());
 
         TransactionInformation transactionInformation = getTransactionPlaceMoneyDepositAndWithdrawal(channelInformation);
 
@@ -211,7 +212,7 @@ public class AccountServiceImpl implements AccountService {
         }
 
         Double amount = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
-        AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
+        ActivityType activityType = ActivityType.INTEREST_INCOME;
 
         Address address = account.getBranch().getAddress();
         ZoneId zoneId = timeZoneService.getZoneId(address.getCountry(), address.getCity())
@@ -236,28 +237,28 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void transferMoney(MoneyTransferRequest moneyTransferRequest,ChannelInformation channelInformation) {
+    public void transferMoney(MoneyTransferRequest request, ChannelInformation channelInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Account senderAccount = findActiveAccountById(moneyTransferRequest.senderAccountId());
-        Account recipientAccount = findActiveAccountById(moneyTransferRequest.recipientAccountId());
+        Account senderAccount = findActiveAccountById(request.senderAccountId());
+        Account recipientAccount = findActiveAccountById(request.recipientAccountId());
 
-        AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
-        Double amount = moneyTransferRequest.amount();
+        ActivityType activityType = ActivityType.MONEY_TRANSFER;
+        Double amount = request.amount();
         Currency currency = senderAccount.getCurrency();
 
         checkAccountsBeforeMoneyTransfer(senderAccount, recipientAccount);
 
-        Account deducteeAccount = getDeducteeAccount(activityType, moneyTransferRequest.deducteeAccountId(), List.of(senderAccount, recipientAccount));
+        Account deducteeAccount = getDeducteeAccount(activityType, request.deducteeAccountId(), List.of(senderAccount, recipientAccount));
         boolean areAccountsOwnedBySameCustomer = Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId());
 
         if (!areAccountsOwnedBySameCustomer) {
-            checkDailyAccountActivityLimit(senderAccount, amount, activityType);
+            checkActivityAmountsOfCustomer(senderAccount, amount, activityType, channelInformation.channelType());
         }
 
         TransactionInformation transactionInformation = getTransactionPlaceForMoneyTransfer(channelInformation, senderAccount.getBranch().getAddress());
 
-        transactionService.transferMoneyBetweenAccounts(moneyTransferRequest, amount, senderAccount, recipientAccount, deducteeAccount, transactionInformation);
+        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, transactionInformation);
 
         if (!areAccountsOwnedBySameCustomer) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -271,20 +272,20 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void exchangeMoney(MoneyExchangeRequest moneyExchangeRequest, ChannelInformation channelInformation) {
+    public void exchangeMoney(MoneyExchangeRequest request, ChannelInformation channelInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Account sellerAccount = findActiveAccountById(moneyExchangeRequest.sellerAccountId());
-        Account buyerAccount = findActiveAccountById(moneyExchangeRequest.buyerAccountId());
+        Account sellerAccount = findActiveAccountById(request.sellerAccountId());
+        Account buyerAccount = findActiveAccountById(request.buyerAccountId());
 
         checkAccountsBeforeMoneyExchange(sellerAccount, buyerAccount);
 
-        AccountActivityType activityType = AccountActivityType.MONEY_EXCHANGE;
-        checkDailyAccountActivityLimit(sellerAccount, moneyExchangeRequest.amount(), activityType);
+        ActivityType activityType = ActivityType.MONEY_EXCHANGE;
+        checkActivityAmountsOfCustomer(sellerAccount, request.amount(), activityType, channelInformation.channelType());
 
-        Account deducteeAccount = getDeducteeAccount(activityType, moneyExchangeRequest.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
+        Account deducteeAccount = getDeducteeAccount(activityType, request.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
         TransactionInformation transactionInformation = getTransactionPlaceForMoneyExchange(channelInformation, sellerAccount, buyerAccount);
-        transactionService.exchangeMoneyBetweenAccounts(moneyExchangeRequest, sellerAccount, buyerAccount, deducteeAccount, transactionInformation);
+        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount, transactionInformation);
     }
 
     @Transactional
@@ -304,7 +305,7 @@ public class AccountServiceImpl implements AccountService {
             accountRepository.save(account);
 
             TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
-            transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_BLOCKING, transactionInformation);
+            transactionService.createAccountActivityForAccountStatusUpdate(account, ActivityType.ACCOUNT_BLOCKING, transactionInformation);
         }
 
         return status ? entity + " is successfully blocked" : entity + " blockage is successfully removed";
@@ -327,7 +328,7 @@ public class AccountServiceImpl implements AccountService {
         accountRepository.save(account);
 
         TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
-        transactionService.createAccountActivityForAccountStatusUpdate(account, AccountActivityType.ACCOUNT_CLOSING, transactionInformation);
+        transactionService.createAccountActivityForAccountStatusUpdate(account, ActivityType.ACCOUNT_CLOSING, transactionInformation);
     }
 
     @Override
@@ -388,11 +389,11 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account getDeducteeAccount(AccountActivityType accountActivityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts) {
+    public Account getDeducteeAccount(ActivityType activityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        return switch (accountActivityType) {
-            case AccountActivityType.MONEY_TRANSFER -> {
+        return switch (activityType) {
+            case ActivityType.MONEY_TRANSFER -> {
                 Account senderAccount = relatedAccounts.getFirst();
                 Account recipientAccount = relatedAccounts.getLast();
 
@@ -402,7 +403,7 @@ public class AccountServiceImpl implements AccountService {
 
                 yield getDeducteeAccountInMoneyTransfer(extraDeducteeAccountId, senderAccount);
             }
-            case AccountActivityType.MONEY_EXCHANGE ->
+            case ActivityType.MONEY_EXCHANGE ->
                     getDeducteeAccountInMoneyExchange(extraDeducteeAccountId, relatedAccounts);
             default ->
                     throw new InternalServerErrorException("Unknown account activity type for getting deductee account");
@@ -475,7 +476,7 @@ public class AccountServiceImpl implements AccountService {
             return;
         }
 
-        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), recipientAccount.getType(), AccountActivityType.MONEY_TRANSFER);
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(senderAccount.getType(), recipientAccount.getType(), ActivityType.MONEY_TRANSFER);
     }
 
     private List<AccountActivityDto> getAccountActivitiesOfAccount(Account account, AccountActivityFilteringRequest request) {
@@ -521,10 +522,10 @@ public class AccountServiceImpl implements AccountService {
                             boolean accountIdExists = summary.containsKey(SummaryField.ACCOUNT_IDENTITY)
                                     && summary.get(SummaryField.ACCOUNT_IDENTITY) == id;
 
-                            boolean accountActivityMatches = AccountActivityType.getAccountStatusUpdatingActivities()
+                            boolean accountActivityMatches = ActivityType.getAccountStatusUpdatingActivities()
                                     .stream()
-                                    .map(AccountActivityType::getValue)
-                                    .anyMatch(accountActivityType -> accountActivityType.equals(accountActivity));
+                                    .map(ActivityType::getValue)
+                                    .anyMatch(activityType -> activityType.equals(accountActivity));
 
                             return accountIdExists && accountActivityMatches;
                         })
@@ -540,7 +541,7 @@ public class AccountServiceImpl implements AccountService {
             throw new ResourceConflictException(String.format("Money %s between different customers is disallowed", Entity.EXCHANGE.getValue()));
         }
 
-        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType(), AccountActivityType.MONEY_EXCHANGE);
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType(), ActivityType.MONEY_EXCHANGE);
     }
 
     private Account getDeducteeAccountInMoneyExchange(Integer id, List<Account> accounts) {
@@ -590,30 +591,36 @@ public class AccountServiceImpl implements AccountService {
         return deducteeAccount;
     }
 
-    private void checkDailyAccountActivityLimit(Account account, Double amount, AccountActivityType activityType) {
+    private void checkActivityAmountsOfCustomer(Account account, Double amount, ActivityType activityType, ChannelType channelType) {
+        if (DailyActivityLimitHelper.channelExemptFromDailyActivityLimit(channelType)) {
+            return;
+        }
+
+        List<ChannelType> channelTypes = new ArrayList<>(activityType.getAvailableChannelTypes());
+        channelTypes.remove(ChannelType.getChannelTypeWithNoDailyAccountActivityLimit());
+
+        List<Account> accountsUnderReview = account.getCustomer()
+                .getAccounts()
+                .stream()
+                .filter(accountOfCustomer -> accountOfCustomer.getType() == AccountType.CURRENT)
+                .toList();
+
         Set<AccountActivityDto> accountActivityDtos = new HashSet<>();
 
-        for (Account currentAccount : account.getCustomer().getAccounts()) {
-            AccountActivityFilteringOption filteringOption = constructAccountActivityFilteringOptionForDailyAccountActivityCheck(currentAccount.getId(), activityType);
+        for (Account accountUnderReview : accountsUnderReview) {
+            AccountActivityFilteringOption filteringOption = constructAccountActivityFilteringOptionForDailyAccountActivityCheck(accountUnderReview.getId(), activityType, channelTypes);
             accountActivityDtos.addAll(accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency()));
         }
 
-        double dailyActivityAmount = accountActivityDtos.stream()
+        double dailyActivityAmountOfCustomer = accountActivityDtos.stream()
                 .map(AccountActivityDto::amount)
                 .reduce(0D, Double::sum);
 
-        log.info("Daily activity amount: {}", dailyActivityAmount);
-        dailyActivityAmount += amount;
-        log.info("Updated daily activity amount: {}", dailyActivityAmount);
+        log.info("Daily activity amount of customer: {}", dailyActivityAmountOfCustomer);
+        dailyActivityAmountOfCustomer += amount;
+        log.info("Updated daily activity amount of customer: {}", dailyActivityAmountOfCustomer);
 
-        Double activityLimit = dailyActivityLimitService.getDailyActivityLimit(activityType).amount();
-        log.info("Remaining daily activity limit: {}", activityLimit - dailyActivityAmount);
-
-        if (dailyActivityAmount > activityLimit) {
-            throw new ResourceConflictException(String.format("Daily limit of %s is going to be exceeded. Daily limit is %s", activityType.getValue(), activityLimit));
-        }
-
-        log.info("Daily limit of {} is not exceeded", activityType.getValue());
+        dailyActivityLimitHelper.checkActivityLimits(activityType, amount, channelType);
     }
 
     private TransactionInformation getTransactionPlaceForStatusUpdate(Address address) {
@@ -706,13 +713,13 @@ public class AccountServiceImpl implements AccountService {
         );
     }
 
-    private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, AccountActivityType activityType) {
+    private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, ActivityType activityType, List<ChannelType> channelTypes) {
         Integer[] accountIds = new Integer[2]; // first integer is sender id, second integer is recipient id
 
         switch (activityType) {
-            case AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER,
-                 AccountActivityType.MONEY_EXCHANGE -> accountIds[0] = accountId;
-            case AccountActivityType.MONEY_DEPOSIT -> accountIds[1] = accountId;
+            case ActivityType.WITHDRAWAL, ActivityType.MONEY_TRANSFER,
+                 ActivityType.MONEY_EXCHANGE -> accountIds[0] = accountId;
+            case ActivityType.MONEY_DEPOSIT -> accountIds[1] = accountId;
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         }
 
@@ -725,7 +732,7 @@ public class AccountServiceImpl implements AccountService {
                 null,
                 today,
                 today,
-                List.of(ChannelType.MOBILE_BANKING, ChannelType.INTERNET_BANKING, ChannelType.ATM, ChannelType.BRANCH)
+                channelTypes
         );
     }
 

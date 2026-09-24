@@ -361,7 +361,7 @@ public class CustomerServiceImpl implements CustomerService {
                 LocalDate nextPaymentDate = LocalDate.ofInstant(account.getUpdatedAt(), ZoneId.systemDefault()).plusMonths(account.getDepositMaturity());
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
-                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.INTEREST_INCOME, account.getInterestRate(), nextPaymentDate);
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(ActivityType.INTEREST_INCOME, account.getInterestRate(), nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
                     nextPaymentDate = nextPaymentDate.plusMonths(account.getDepositMaturity());
                 }
@@ -374,7 +374,7 @@ public class CustomerServiceImpl implements CustomerService {
                 LocalDate nextPaymentDate = moneyTransferOrder.getTransferDate();
 
                 while (!nextPaymentDate.isAfter(finalDate)) {
-                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(AccountActivityType.MONEY_TRANSFER, moneyTransferOrder.getRegularMoneyTransfer().getAmount(), nextPaymentDate);
+                    ExpectedTransaction expectedTransaction = new ExpectedTransaction(ActivityType.MONEY_TRANSFER, moneyTransferOrder.getRegularMoneyTransfer().getAmount(), nextPaymentDate);
                     expectedTransactions.add(expectedTransaction);
 
                     PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
@@ -542,7 +542,7 @@ public class CustomerServiceImpl implements CustomerService {
             LocalDate paymentDate = moneyTransferOrder.getTransferDate();
             LocalDate counterDate = LocalDate.now(ZoneId.systemDefault());
             PaymentPeriod paymentPeriod = moneyTransferOrder.getRegularMoneyTransfer().getPaymentPeriod();
-            AccountActivityType activityType = AccountActivityType.MONEY_TRANSFER;
+            ActivityType activityType = ActivityType.MONEY_TRANSFER;
             Double amount = moneyTransferOrder.getRegularMoneyTransfer().getAmount();
             String entity = Entity.ACCOUNT.getValue();
 
@@ -582,7 +582,7 @@ public class CustomerServiceImpl implements CustomerService {
         LocalDate counterDate = LocalDate.now(ZoneId.systemDefault());
 
         while (!CashFlowCalendarUtil.isDateFuture(counterDate, year, month)) {
-            AccountActivityType activityType = AccountActivityType.INTEREST_INCOME;
+            ActivityType activityType = ActivityType.INTEREST_INCOME;
             if (doesDateMatchesWithYearAndMonth(paymentDate, counterDate.getYear(), counterDate.getMonthValue())) {
                 log.info(LogMessage.PAYMENT_DATE_HAS_ARRIVED, activityType.getValue());
                 String entity = Entity.ACCOUNT.getValue();
@@ -609,7 +609,7 @@ public class CustomerServiceImpl implements CustomerService {
         }
     }
 
-    private static void addCashFlow(List<CashFlow> cashFlows, LocalDate date, AccountActivityType activityType, Integer year, Integer month, String explanation) {
+    private static void addCashFlow(List<CashFlow> cashFlows, LocalDate date, ActivityType activityType, Integer year, Integer month, String explanation) {
         if (doesDateMatchesWithYearAndMonth(date, year, month)) {
             log.info("{} matches with a cash flow", activityType.getValue());
             CashFlow cashFlow = new CashFlow();
@@ -634,8 +634,8 @@ public class CustomerServiceImpl implements CustomerService {
         List<ChannelType> channels = Arrays.asList(ChannelType.values());
 
         AccountActivityFilteringOption filteringOption = balanceActivity == BalanceActivity.INCREASE
-                ? new AccountActivityFilteringOption(List.of(AccountActivityType.MONEY_DEPOSIT, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.INTEREST_INCOME), null, account.getId(), null, null, null, channels)
-                : new AccountActivityFilteringOption(List.of(AccountActivityType.WITHDRAWAL, AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.DEDUCTION), account.getId(), null, null, null, null, channels);
+                ? new AccountActivityFilteringOption(List.of(ActivityType.MONEY_DEPOSIT, ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE, ActivityType.INTEREST_INCOME), null, account.getId(), null, null, null, channels)
+                : new AccountActivityFilteringOption(List.of(ActivityType.WITHDRAWAL, ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE, ActivityType.DEDUCTION), account.getId(), null, null, null, null, channels);
 
         return accountActivityService.getAccountActivitiesOfParticularAccounts(filteringOption, account.getCurrency())
                 .stream()

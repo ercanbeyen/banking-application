@@ -1,6 +1,6 @@
 package com.ercanbeyen.bankingapplication.util.exporter;
 
-import com.ercanbeyen.bankingapplication.constant.enums.AccountActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
 import com.ercanbeyen.bankingapplication.constant.enums.ChannelType;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
@@ -224,18 +224,18 @@ public class PdfExporter {
         String customerNationalId = UserDetailsUtil.getUserDetailsOfLoggedInUser().getUsername();
 
         Map<String, Object> summary = accountActivity.getSummary();
-        AccountActivityType accountActivityType = accountActivity.getType();
-        List<AccountActivityType> filteredAccountActivityTypes = List.of(AccountActivityType.MONEY_TRANSFER, AccountActivityType.MONEY_EXCHANGE, AccountActivityType.DEDUCTION);
+        ActivityType activityType = accountActivity.getType();
+        List<ActivityType> filteredActivityTypes = List.of(ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE, ActivityType.DEDUCTION);
 
-        if (!filteredAccountActivityTypes.contains(accountActivityType)) {
+        if (!filteredActivityTypes.contains(activityType)) {
             return summary;
         }
 
         Map<String, Object> receiptSummary = new HashMap<>(summary);
         List<String> accountPositions = new ArrayList<>(List.of("Sender", "Recipient"));
 
-        switch (accountActivityType) {
-            case AccountActivityType.MONEY_TRANSFER -> {
+        switch (activityType) {
+            case ActivityType.MONEY_TRANSFER -> {
                 String accountPosition = getAccountPositionFromMoneyTransfer(accountActivity, accountPositions, customerNationalId, receiptSummary);
                 accountPositions.remove(accountPosition);
                 String accountPositionRemoved = accountPositions.getFirst();
@@ -255,11 +255,11 @@ public class PdfExporter {
                     }
                 }
             }
-            case AccountActivityType.MONEY_EXCHANGE -> removeDeducteeInformation(receiptSummary);
+            case ActivityType.MONEY_EXCHANGE -> removeDeducteeInformation(receiptSummary);
             default -> { // Deduction case
                 String accountActivityInSummary = summary.get(SummaryField.ACCOUNT_ACTIVITY).toString();
 
-                if (accountActivityInSummary.equals(AccountActivityType.MONEY_TRANSFER.getValue())) {
+                if (accountActivityInSummary.equals(ActivityType.MONEY_TRANSFER.getValue())) {
                     for (Map.Entry<String, Object> entry : summary.entrySet()) {
                         String key = entry.getKey();
 
@@ -276,7 +276,7 @@ public class PdfExporter {
 
                     receiptSummary.put(SummaryField.FULL_NAME, fullName);
                     receiptSummary.remove(SummaryField.PAYMENT_TYPE);
-                } else if (accountActivityInSummary.equals(AccountActivityType.MONEY_EXCHANGE.getValue())) {
+                } else if (accountActivityInSummary.equals(ActivityType.MONEY_EXCHANGE.getValue())) {
                     receiptSummary.remove("Spent " + SummaryField.AMOUNT);
                     receiptSummary.remove("Earned " + SummaryField.AMOUNT);
                     receiptSummary.remove(SummaryField.RATE);
@@ -290,7 +290,7 @@ public class PdfExporter {
                     receiptSummary.remove(buyerWord + SummaryField.TIME);
                 }
 
-                receiptSummary.put(SummaryField.ACCOUNT_ACTIVITY, AccountActivityType.DEDUCTION.getValue());
+                receiptSummary.put(SummaryField.ACCOUNT_ACTIVITY, ActivityType.DEDUCTION.getValue());
                 receiptSummary.put(SummaryField.CHANNEL, accountActivity.getChannelType());
                 receiptSummary.remove(SummaryField.AMOUNT);
             }
@@ -381,7 +381,7 @@ public class PdfExporter {
         /* Data rows */
         for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
             table.addCell(new PdfPCell(new Phrase(accountActivityPreview.createdAt().toString())));
-            table.addCell(new PdfPCell(new Phrase(accountActivityPreview.accountActivityType().getValue())));
+            table.addCell(new PdfPCell(new Phrase(accountActivityPreview.activityType().getValue())));
             table.addCell(new PdfPCell(new Phrase(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)))));
         }
 
