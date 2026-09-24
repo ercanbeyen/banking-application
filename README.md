@@ -15,7 +15,7 @@ It is a banking application includes basic banking services. Abstract CRUD appro
 - Customers can carry out their transactions through various channels such as branches, ATMs, and digital banking.
 - Customers can transfer money to their deposit accounts using their current accounts.
 - Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
-- Customers can trade within daily transaction limits and may incur transaction fees for some transactions.
+- Customers can trade within daily activity limits and may incur transaction fees for some transactions.
 - Customers can create money transfer orders for future dates.
 - Customers are obliged to comply with the agreements they have approved.
 - Customers will receive notifications once the transactions are successfully completed.
@@ -49,32 +49,36 @@ It is a banking application includes basic banking services. Abstract CRUD appro
 - Maven
 - Docker
 
-### Build & Run & Debug
+### Build & Run
 ---
-In order to pull images from Dockerhub, you should run the below commands
-```
-$ docker pull mysql
-$ docker pull cassandra
-$ docker pull redis
-$ docker pull axllent/mailpit
-```
 
-Then, you should run the below commands in order to run the application (Default port is 8080)
+You should run the below commands in order to run the application (Default port is 8080)
 
 1) Create jar file
 2) Create the image of the application via building
 3) Run the containers
 
 ```
-$ mvn clean install
+$ mvn clean install -D skipTests
 $ docker-compose build
 $ docker-compose up
 ```
 
-If you want to skip the tests while creating the jar file, you should replace the first command above with the following command
+If you are working on Linux, you can also run the application via script
 
-`$ mvn clean install -D skipTests`
+1) Create jar file
+2) Navigate to project directory
+3) Run the script
 
+```
+$ mvn clean install -D skipTests
+$ cd ${PROJECT_DIRECTORY}
+$ ./start.sh
+```
+
+
+### Debug
+---
 In order to debug the application, you should follow the below steps
 
 1) Add Remote JVM Debug Configuration (You can use the default values that come in the debug configuration)
