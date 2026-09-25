@@ -201,6 +201,8 @@ public class ExcelExporter {
         row = sheet.createRow(rowIndex);
         cell = row.createCell(BEGINNING_INDEX);
         cell.setCellValue(ExporterUtil.getTimeZoneMessage());
+
+        resetValues();
     }
 
     private void writeCell(Row row, int columnIndex, Object givenValue, CellStyle style, Sheet sheet) {
@@ -215,5 +217,9 @@ public class ExcelExporter {
         }
 
         cell.setCellStyle(style);
+    }
+
+    private void resetValues() {
+        rowIndex = 0;
     }
 }
