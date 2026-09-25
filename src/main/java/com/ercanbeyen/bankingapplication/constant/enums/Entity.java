@@ -21,6 +21,7 @@ public enum Entity {
     TERM_DEPOSIT_INTEREST_RATE("Term Deposit Interest Rate"),
     DEDUCTION("Deduction"),
     AGREEMENT("Agreement"),
+    NEWS("News"),
     DAILY_ACTIVITY_LIMIT("Daily Activity Limit"),
     CASH_FLOW_CALENDAR("Cash Flow Calendar"),
     USER_CREDENTIALS("User Credentials"),
@@ -38,11 +39,28 @@ public enum Entity {
 
     private String getResource() {
         return switch (this) {
-            case MONEY_TRANSFER_ORDER -> "money-transfer-order";
             case ACCOUNT_ACTIVITY -> "account-activitie";
-            case BRANCH -> "branche";
-            case TERM_DEPOSIT_INTEREST_RATE -> "term-deposit-interest-rate";
-            case USER_CREDENTIALS, ROLE, PERMISSION, REFRESH_TOKEN, INCORRECT_LOGIN_ATTEMPT -> throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Resource"));
+            case BRANCH -> value.toLowerCase() + "e";
+            case NEWS -> {
+                final int length = value.length();
+                yield value.toLowerCase().substring(0, length - 1);
+            }
+            case CASH_FLOW_CALENDAR, NOTIFICATION, USER_CREDENTIALS, ROLE, PERMISSION, REFRESH_TOKEN, INCORRECT_LOGIN_ATTEMPT -> throw new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Resource"));
+            case TERM_DEPOSIT_INTEREST_RATE, DAILY_ACTIVITY_LIMIT, MONEY_TRANSFER_ORDER -> {
+                String[] words = value.toLowerCase().split(" ");
+                StringBuilder stringBuilder = new StringBuilder();
+
+                for (int i = 0; i < words.length; i++) {
+                    String word = words[i];
+                    stringBuilder.append(word);
+
+                    if (i != words.length - 1) {
+                        stringBuilder.append("-");
+                    }
+                }
+
+                yield stringBuilder.toString();
+            }
             default -> value.toLowerCase();
         };
     }
