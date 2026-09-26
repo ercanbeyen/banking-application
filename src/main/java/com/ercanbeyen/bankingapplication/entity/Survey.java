@@ -28,6 +28,8 @@ public class Survey {
     private ChannelType channelType;
     @Column(value = "valid_until")
     private Instant validUntil;
+    @Column(value = "filled_out_at")
+    private Instant filledOutAt;
     @Column(value = "created_at")
     private Instant createdAt;
     @Column(value = "updated_at")

@@ -12,6 +12,7 @@ import com.ercanbeyen.bankingapplication.dto.response.SurveyStatisticsResponse;
 import com.ercanbeyen.bankingapplication.embeddable.Rating;
 import com.ercanbeyen.bankingapplication.entity.Survey;
 import com.ercanbeyen.bankingapplication.entity.SurveyCompositeKey;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
@@ -175,32 +176,42 @@ public class SurveyServiceImpl implements SurveyService {
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, surveyType);
         Survey survey = findByKey(key);
 
+        String entity = Entity.SURVEY.getValue();
+
         if (survey.getValidUntil().isBefore(Instant.now())) {
-            throw new ResourceConflictException(Entity.SURVEY.getValue() + " has expired");
+            throw new ResourceConflictException(entity + " has expired!");
+        }
+
+        final int size = survey.getRatings().size();
+
+        if (request.ratings().size() != size) {
+            log.error("Number of ratings are mismatching!");
+            throw new BadRequestException("Invalid evaluation!");
         }
 
         /* Fill the rates */
-        for (int i = 0; i < survey.getRatings().size(); i++) {
+        for (int i = 0; i < size; i++) {
             Rating rating = survey.getRatings().get(i);
             Integer rate = request.ratings().get(i).getRate();
             rating.setRate(rate);
         }
 
         survey.setCustomerSuggestion(request.customerSuggestion());
+        survey.setFilledOutAt(Instant.now());
 
         surveyRepository.save(survey);
 
-        return "Thank you for participating in the survey";
+        return "Thank you for participating in the " + entity.toLowerCase();
     }
 
     @Override
-    public SurveyStatisticsResponse<Integer, Integer> getSurveyStatistics(String customerNationalId, String accountActivityId, LocalDate createdDate, SurveyType surveyType, Integer minimumFrequency) {
+    public SurveyStatisticsResponse<Integer, Integer> getSurveyStatistics(String customerNationalId, String accountActivityId, SurveyType surveyType, Integer minimumFrequency) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         SurveyCompositeKey key = new SurveyCompositeKey(customerNationalId, accountActivityId, surveyType);
         Survey survey = findByKey(key);
 
-        if (!survey.getUpdatedAt().isAfter(survey.getCreatedAt())) {
+        if (Optional.ofNullable(survey.getFilledOutAt()).isEmpty()) {
             throw new ResourceConflictException(String.format("%s must be filled to get the statistics", Entity.SURVEY.getValue()));
         }
 

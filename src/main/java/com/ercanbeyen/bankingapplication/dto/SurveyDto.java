@@ -36,6 +36,12 @@ public record SurveyDto(
                 pattern = "yyyy-MM-dd HH:mm:ss",
                 timezone = "UTC"
         )
+        Instant filledOutAt,
+        @JsonFormat(
+                shape = JsonFormat.Shape.STRING,
+                pattern = "yyyy-MM-dd HH:mm:ss",
+                timezone = "UTC"
+        )
         Instant createdAt,
         @JsonFormat(
                 shape = JsonFormat.Shape.STRING,
