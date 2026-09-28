@@ -290,7 +290,7 @@ public class AccountServiceImpl implements AccountService {
 
     @Transactional
     @Override
-    public String updateBlockStatus(Integer id, boolean status) {
+    public void updateBlockStatus(Integer id, boolean status) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findById(id);
@@ -300,15 +300,16 @@ public class AccountServiceImpl implements AccountService {
 
         if (account.isBlocked() == status) {
             log.warn("Same blocking status was applied to the {} {}", entity, id);
-        } else {
-            account.setBlocked(status);
-            accountRepository.save(account);
-
-            TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
-            transactionService.createAccountActivityForAccountStatusUpdate(account, ActivityType.ACCOUNT_BLOCKING, transactionInformation);
+            return;
         }
 
-        return status ? entity + " is successfully blocked" : entity + " blockage is successfully removed";
+        ActivityType activityType = status ? ActivityType.ACCOUNT_BLOCK_ADD : ActivityType.ACCOUNT_BLOCK_REMOVAL;
+
+        account.setBlocked(status);
+        accountRepository.save(account);
+
+        TransactionInformation transactionInformation = getTransactionPlaceForStatusUpdate(account.getBranch().getAddress());
+        transactionService.createAccountActivityForAccountStatusUpdate(account, activityType, transactionInformation);
     }
 
     @Transactional
@@ -366,11 +367,10 @@ public class AccountServiceImpl implements AccountService {
                     .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, "Time Zone of branch")));
 
             BalanceActivity balanceActivity = switch (accountActivityDto.type()) {
-                case ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING -> BalanceActivity.STABLE;
                 case MONEY_DEPOSIT, INTEREST_INCOME -> BalanceActivity.INCREASE;
                 case WITHDRAWAL, DEDUCTION -> BalanceActivity.DECREASE;
-                default -> // MONEY_TRANSFER and MONEY_EXCHANGE cases
-                        accountActivityDto.senderAccountId().equals(id) ? BalanceActivity.DECREASE : BalanceActivity.INCREASE;
+                case MONEY_TRANSFER, MONEY_EXCHANGE -> accountActivityDto.senderAccountId().equals(id) ? BalanceActivity.DECREASE : BalanceActivity.INCREASE;
+                default -> BalanceActivity.STABLE;
             };
 
             AccountActivityPreview accountActivityPreview = new AccountActivityPreview(

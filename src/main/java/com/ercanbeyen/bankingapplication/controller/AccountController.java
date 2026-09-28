@@ -192,7 +192,8 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PreAuthorize("hasRole('ADMIN')")
     @PatchMapping("/{id}/block")
     public ResponseEntity<MessageResponse<String>> updateBlockStatus(@PathVariable("id") Integer id, @RequestParam("status") Boolean status) {
-        MessageResponse<String> response = new MessageResponse<>(accountService.updateBlockStatus(id, status));
+        accountService.updateBlockStatus(id, status);
+        MessageResponse<String> response = new MessageResponse<>("Blocked status of account is successfully updated!");
         return ResponseEntity.ok(response);
     }
 
@@ -200,7 +201,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     @PatchMapping("/{id}/close")
     public ResponseEntity<MessageResponse<String>> closeAccount(@PathVariable("id") @P("accountId") Integer id) {
         accountService.closeAccount(id);
-        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, ActivityType.ACCOUNT_CLOSING.getValue()));
+        MessageResponse<String> response = new MessageResponse<>("Account is successfully closed!");
         return ResponseEntity.ok(response);
     }
 
