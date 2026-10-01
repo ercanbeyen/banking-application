@@ -1,7 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 public class AccountStatementUtil {
     public static final String CUSTOMER_NUMBER = "Customer Number: ";
@@ -16,10 +15,6 @@ public class AccountStatementUtil {
 
     public static String writeFullName(String fullName) {
         return "Dear " + fullName;
-    }
-
-    public static String writeDocumentIssueDate(LocalDateTime localDateTime) {
-        return localDateTime.toLocalDate().toString() + " " + TimeUtil.getTimeStatement(localDateTime.toLocalTime());
     }
 
     public static String writeInquiryCriteria(LocalDate fromDate, LocalDate toDate) {

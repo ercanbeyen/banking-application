@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.experimental.UtilityClass;
 import org.apache.poi.hssf.util.HSSFColor;
 import org.apache.poi.ss.usermodel.*;
@@ -85,7 +86,7 @@ public class ExcelExporter {
         for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
             Row row = sheet.createRow(rowIndex++);
             int columnIndex = BEGINNING_INDEX;
-            writeCell(row, columnIndex++, accountActivityPreview.createdAt().toString(), style, sheet);
+            writeCell(row, columnIndex++, TimeUtil.getLocalDateTimeStatement(accountActivityPreview.createdAt()), style, sheet);
             writeCell(row, columnIndex++, accountActivityPreview.activityType().getValue(), style, sheet);
             writeCell(row, columnIndex, FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)), style, sheet);
         }
@@ -165,7 +166,7 @@ public class ExcelExporter {
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, ExporterUtil.maskField(entry), valueColumnStyle, sheet);
         writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(zoneId)), valueColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfTransactionInformationTable, TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.BRANCH, fieldColumnStyle, sheet);
