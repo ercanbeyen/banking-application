@@ -257,7 +257,6 @@ public class AccountServiceImpl implements AccountService {
         }
 
         TransactionInformation transactionInformation = getTransactionPlaceForMoneyTransfer(channelInformation, senderAccount.getBranch().getAddress());
-
         transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, transactionInformation);
 
         if (!areAccountsOwnedBySameCustomer) {
@@ -389,46 +388,51 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public Account getDeducteeAccount(ActivityType activityType, Integer extraDeducteeAccountId, List<Account> relatedAccounts) {
+    public Account getDeducteeAccount(ActivityType activityType, Integer extraDeducteeAccountId, List<Account> accounts) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         return switch (activityType) {
             case ActivityType.MONEY_TRANSFER -> {
-                Account senderAccount = relatedAccounts.getFirst();
-                Account recipientAccount = relatedAccounts.getLast();
+                Account senderAccount = accounts.getFirst();
 
-                if (Objects.equals(senderAccount.getCustomer().getId(), recipientAccount.getCustomer().getId())) { // Customer transfers money between his/her accounts
+                if (senderAccount.getCurrency() == DEDUCTION_CURRENCY) {
                     yield senderAccount;
                 }
 
-                yield getDeducteeAccountInMoneyTransfer(extraDeducteeAccountId, senderAccount);
+                yield findDeducteeAccountById(extraDeducteeAccountId, senderAccount.getCustomer().getId());
             }
-            case ActivityType.MONEY_EXCHANGE ->
-                    getDeducteeAccountInMoneyExchange(extraDeducteeAccountId, relatedAccounts);
-            default ->
-                    throw new InternalServerErrorException("Unknown account activity type for getting deductee account");
+            case ActivityType.MONEY_EXCHANGE -> {
+                Account sellerAccount = accounts.getFirst();
+                Account buyerAccount = accounts.getLast();
+
+                if (sellerAccount.getCurrency() == DEDUCTION_CURRENCY) {
+                    yield sellerAccount;
+                } else if (buyerAccount.getCurrency() == DEDUCTION_CURRENCY) {
+                    yield buyerAccount;
+                }
+
+                yield findDeducteeAccountById(extraDeducteeAccountId, sellerAccount.getCustomer().getId());
+            }
+            default -> throw new InternalServerErrorException("Unknown activity type for getting deductee account");
         };
     }
 
-    @Override
-    public Account findDeducteeAccountById(Integer id) {
+    private Account findDeducteeAccountById(Integer accountId, Integer customerId) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Account account = findActiveAccountById(id);
-        String entity = Entity.ACCOUNT.getValue().toLowerCase();
-
-        if (account.getCurrency() != DEDUCTION_CURRENCY) {
-            throw new ResourceConflictException(String.format(ResponseMessage.INVALID_DEDUCTEE_ACCOUNT_CURRENCY, entity, DEDUCTION_CURRENCY));
+        if (Optional.ofNullable(accountId).isEmpty()) {
+            throw new ResourceConflictException("Extra deductee account required!");
         }
 
-        AccountType accountType = AccountType.CURRENT;
+        Account account = findActiveAccountById(accountId);
 
-        if (account.getType() != accountType) {
-            throw new ResourceConflictException(String.format("Deductee %s type should be %s", entity, accountType));
+        if (!Objects.equals(account.getCustomer().getId(), customerId)) {
+            throw new ResourceConflictException("Customer of account is different!");
         }
 
-
-        log.info(LogMessage.RESOURCE_FOUND, "Deductee " + entity);
+        if (account.getCurrency() != DEDUCTION_CURRENCY || account.getType() != AccountType.CURRENT) {
+            throw new ResourceConflictException("Invalid account for deduction!");
+        }
 
         return account;
     }
@@ -537,58 +541,13 @@ public class AccountServiceImpl implements AccountService {
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
         ExchangeUtil.checkCurrenciesBeforeMoneyExchange(sellerAccount.getCurrency(), buyerAccount.getCurrency());
 
+        ActivityType activityType = ActivityType.MONEY_EXCHANGE;
+
         if (!buyerAccount.getCustomer().getNationalId().equals(sellerAccount.getCustomer().getNationalId())) {
-            throw new ResourceConflictException(String.format("Money %s between different customers is disallowed", Entity.EXCHANGE.getValue()));
+            throw new ResourceConflictException(String.format("%s between different customers is disallowed", activityType.getValue()));
         }
 
-        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType(), ActivityType.MONEY_EXCHANGE);
-    }
-
-    private Account getDeducteeAccountInMoneyExchange(Integer id, List<Account> accounts) {
-        boolean accountWithDeductionCurrencyExists = accounts.stream()
-                .map(Account::getCurrency)
-                .anyMatch(currency -> currency == DEDUCTION_CURRENCY);
-
-        Account deducteeAccount;
-        String entity = Entity.ACCOUNT.getValue().toLowerCase();
-
-        if (Optional.ofNullable(id).isPresent()) { // need an extra deductee account
-            if (accountWithDeductionCurrencyExists) {
-                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_DEDUCTEE_ACCOUNT, entity, DEDUCTION_CURRENCY));
-            }
-
-            deducteeAccount = findDeducteeAccountById(id);
-        } else { // no need an extra deductee account
-            if (!accountWithDeductionCurrencyExists) {
-                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_DEDUCTEE_ACCOUNT_CURRENCY, entity, DEDUCTION_CURRENCY));
-            }
-
-            deducteeAccount = accounts.getFirst().getCurrency() == DEDUCTION_CURRENCY ? accounts.getFirst() : accounts.getLast();
-        }
-
-        return deducteeAccount;
-    }
-
-    private Account getDeducteeAccountInMoneyTransfer(Integer id, Account account) {
-        Account deducteeAccount;
-        String entity = Entity.ACCOUNT.getValue().toLowerCase();
-
-        if (Optional.ofNullable(id).isPresent()) { // need an extra deductee account
-            if (account.getCurrency() == DEDUCTION_CURRENCY) {
-                throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_DEDUCTEE_ACCOUNT, entity, DEDUCTION_CURRENCY));
-            }
-
-            deducteeAccount = findDeducteeAccountById(id);
-        } else { // no need an extra deductee account
-            if (account.getCurrency() != DEDUCTION_CURRENCY) {
-                throw new ResourceConflictException(String.format(ResponseMessage.INVALID_DEDUCTEE_ACCOUNT_CURRENCY, entity, DEDUCTION_CURRENCY));
-            }
-
-            log.info("Deductee {} is the related {} {}. So, no need the indicate a different {}", entity, entity, account.getId(), entity);
-            deducteeAccount = account;
-        }
-
-        return deducteeAccount;
+        AccountUtil.checkTypesOfAccountsBeforeMoneyTransferAndExchange(sellerAccount.getType(), buyerAccount.getType(), activityType);
     }
 
     private void checkActivityAmountsOfCustomer(Account account, Double amount, ActivityType activityType, ChannelType channelType) {
