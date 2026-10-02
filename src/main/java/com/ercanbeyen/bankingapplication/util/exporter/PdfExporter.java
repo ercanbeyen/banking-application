@@ -16,6 +16,7 @@ import com.ercanbeyen.bankingapplication.helper.event.BorderEvent;
 import com.ercanbeyen.bankingapplication.helper.event.PageNumerationEvent;
 import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import com.itextpdf.text.*;
 import com.itextpdf.text.Font;
 import com.itextpdf.text.Image;
@@ -113,7 +114,7 @@ public class PdfExporter {
 
         Chunk dateInputChunk = new Chunk("  Date: ", boldFont);
 
-        String todayDateTime = AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(ZoneId.systemDefault()));
+        String todayDateTime = TimeUtil.getLocalDateTimeStatement((LocalDateTime.now(ZoneId.systemDefault())));
 
         Chunk dateOutputChunk = new Chunk(todayDateTime);
 
@@ -210,7 +211,7 @@ public class PdfExporter {
 
             if (key.contains(SummaryField.TIME)) {
                 LocalDateTime dateTime = LocalDateTime.parse(receiptSummary.get(key).toString());
-                value = AccountStatementUtil.writeDocumentIssueDate(dateTime);
+                value = TimeUtil.getLocalDateTimeStatement(dateTime);
             }
 
             table.addCell(key);
@@ -363,7 +364,7 @@ public class PdfExporter {
         transactionInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
         transactionInformationTable.setTableEvent(borderEvent);
 
-        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + AccountStatementUtil.writeDocumentIssueDate(LocalDateTime.now(zoneId)));
+        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)));
         transactionInformationTable.addCell(AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
 
         table.addCell(transactionInformationTable);
@@ -380,7 +381,7 @@ public class PdfExporter {
 
         /* Data rows */
         for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
-            table.addCell(new PdfPCell(new Phrase(accountActivityPreview.createdAt().toString())));
+            table.addCell(new PdfPCell(new Phrase(TimeUtil.getLocalDateTimeStatement(accountActivityPreview.createdAt()))));
             table.addCell(new PdfPCell(new Phrase(accountActivityPreview.activityType().getValue())));
             table.addCell(new PdfPCell(new Phrase(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)))));
         }

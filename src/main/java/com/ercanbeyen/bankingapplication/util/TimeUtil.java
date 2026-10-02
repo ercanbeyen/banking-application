@@ -2,11 +2,16 @@ package com.ercanbeyen.bankingapplication.util;
 
 import lombok.experimental.UtilityClass;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.function.IntFunction;
 
 @UtilityClass
 public class TimeUtil {
+    public String getLocalDateTimeStatement(LocalDateTime localDateTime) {
+        return localDateTime.toLocalDate().toString() + " " + TimeUtil.getTimeStatement(localDateTime.toLocalTime());
+    }
+
     public String getTimeStatement(LocalTime localTime) {
         final String separator = ":";
         StringBuilder stringBuilder = new StringBuilder();

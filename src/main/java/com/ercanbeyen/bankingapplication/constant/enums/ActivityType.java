@@ -14,7 +14,8 @@ public enum ActivityType {
     INTEREST_INCOME("Interest Income"),
     DEDUCTION("Deduction"),
     ACCOUNT_OPENING("Account Opening"),
-    ACCOUNT_BLOCKING("Account Blocking"),
+    ACCOUNT_BLOCK_ADD("Account Block Add"),
+    ACCOUNT_BLOCK_REMOVAL("Account Block Removal"),
     ACCOUNT_CLOSING("Account Closing");
 
     @Getter
@@ -23,7 +24,7 @@ public enum ActivityType {
     private static final Set<ActivityType> accountStatusUpdatingActivities;
 
     static {
-        accountStatusUpdatingActivities = EnumSet.of(ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING);
+        accountStatusUpdatingActivities = EnumSet.of(ACCOUNT_OPENING, ACCOUNT_BLOCK_ADD, ACCOUNT_BLOCK_REMOVAL, ACCOUNT_CLOSING);
     }
 
     public List<ChannelType> getAvailableChannelTypes() {
@@ -31,7 +32,7 @@ public enum ActivityType {
             case MONEY_DEPOSIT, WITHDRAWAL -> List.of(ChannelType.BRANCH, ChannelType.ATM);
             case MONEY_TRANSFER, MONEY_EXCHANGE ->
                     List.of(ChannelType.BRANCH, ChannelType.ATM, ChannelType.INTERNET_BANKING, ChannelType.MOBILE_BANKING);
-            case ACCOUNT_OPENING, ACCOUNT_BLOCKING, ACCOUNT_CLOSING, INTEREST_INCOME, DEDUCTION ->
+            case ACCOUNT_OPENING, ACCOUNT_BLOCK_ADD, ACCOUNT_BLOCK_REMOVAL, ACCOUNT_CLOSING, INTEREST_INCOME, DEDUCTION ->
                     List.of(ChannelType.SYSTEM);
         };
     }

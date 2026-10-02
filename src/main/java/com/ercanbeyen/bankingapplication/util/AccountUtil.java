@@ -38,8 +38,7 @@ public class AccountUtil {
     }
 
     public void checkMoneyTransferRequest(MoneyTransferRequest request, ChannelInformation channelInformation) {
-        ActivityType activityType = ActivityType.MONEY_TRANSFER;
-        checkAccountActivityWithChannelType(channelInformation, activityType);
+        checkAccountActivityWithChannelType(channelInformation, ActivityType.MONEY_TRANSFER);
         checkHeaderParametersForMoneyTransferAndMoneyExchange(channelInformation);
 
         if (Objects.equals(request.senderAccountId(), request.recipientAccountId())) {
@@ -48,9 +47,7 @@ public class AccountUtil {
     }
 
     public void checkMoneyExchangeRequest(MoneyExchangeRequest request, ChannelInformation channelInformation) {
-        ActivityType activityType = ActivityType.MONEY_EXCHANGE;
-
-        checkAccountActivityWithChannelType(channelInformation, activityType);
+        checkAccountActivityWithChannelType(channelInformation, ActivityType.MONEY_EXCHANGE);
         checkHeaderParametersForMoneyTransferAndMoneyExchange(channelInformation);
 
         if (Objects.equals(request.sellerAccountId(), request.buyerAccountId())) {

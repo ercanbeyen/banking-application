@@ -10,14 +10,12 @@ import com.ercanbeyen.bankingapplication.util.SurveyUtil;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -89,9 +87,8 @@ public class SurveyController {
             @PathVariable("customer-national-id") String customerNationalId,
             @RequestParam("account-activity-id") String accountActivityId,
             @RequestParam("type") SurveyType surveyType,
-            @RequestParam("created-at") @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate createdDate,
             @RequestParam(value = "minimum-frequency", required = false, defaultValue = "0") Integer minimumFrequency) {
-        SurveyUtil.checkStatisticsParameters(createdDate, minimumFrequency);
-        return ResponseEntity.ok(surveyService.getSurveyStatistics(customerNationalId, accountActivityId, createdDate, surveyType, minimumFrequency));
+        SurveyUtil.checkStatisticsParameters(minimumFrequency);
+        return ResponseEntity.ok(surveyService.getSurveyStatistics(customerNationalId, accountActivityId, surveyType, minimumFrequency));
     }
 }

@@ -20,9 +20,7 @@ public final class ResponseMessage {
     public static final String UNPAIRED_CURRENCIES = "Currencies must be %s";
     public static final String INSUFFICIENT_FUNDS = "Insufficient funds";
     public static final String TRANSACTION_FEE_CANNOT_BE_PAYED = "Transaction fee cannot be payed";
-    public static final String INVALID_DEDUCTEE_ACCOUNT_CURRENCY = "Deductee %s's currency should be %s";
     public static final String PASSWORD_SHOULD_BE_DIFFERENT = "New password should be different from your last " + AuthUtil.getPasswordHistoryMaxSize() + " passwords!";
-    public static final String IMPROPER_DEDUCTEE_ACCOUNT = "Deductee %s should not be indicated for %s account activities";
     public static final String UNACCEPTABLE_CHANNEL = "Unacceptable channel!";
     public static final String ACCESS_DENIED = "{\"error\": \"Access Denied - %s\"}";
 

@@ -6,12 +6,11 @@ import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import lombok.experimental.UtilityClass;
 
 import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.Optional;
 
 @UtilityClass
 public class SurveyUtil {
+    private final int MINIMUM_FREQUENCY = 0;
     private final int AT_LEAST_VALIDATION_HOUR = 1;
 
     public void checkRequestBeforeSave(SurveyDto request) {
@@ -28,15 +27,9 @@ public class SurveyUtil {
         });
     }
 
-    public void checkStatisticsParameters(LocalDate createdDate, Integer frequency) {
-        if (createdDate.isAfter(LocalDate.ofInstant(Instant.now(), ZoneId.systemDefault()))) {
-            throw new BadRequestException("Value of created at should not be after now");
-        }
-
-        final int minimumValue = 0;
-
-        if (frequency < minimumValue) {
-            throw new BadRequestException("Minimum value of frequency should be " + minimumValue);
+    public void checkStatisticsParameters(Integer frequency) {
+        if (frequency < MINIMUM_FREQUENCY) {
+            throw new BadRequestException("Minimum frequency must be at least " + MINIMUM_FREQUENCY);
         }
     }
 }
