@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.constant.message;
 
+import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.util.AuthUtil;
 import com.ercanbeyen.bankingapplication.util.PhotoUtil;
 
@@ -21,6 +22,7 @@ public final class ResponseMessage {
     public static final String INSUFFICIENT_FUNDS = "Insufficient funds";
     public static final String TRANSACTION_FEE_CANNOT_BE_PAYED = "Transaction fee cannot be payed";
     public static final String PASSWORD_SHOULD_BE_DIFFERENT = "New password should be different from your last " + AuthUtil.getPasswordHistoryMaxSize() + " passwords!";
+    public static final String BRANCH_ORDER_IS_NOT_AVAILABLE = "The status of the " + Entity.BRANCH_ORDER.getValue() + " is not suitable for %s!";
     public static final String UNACCEPTABLE_CHANNEL = "Unacceptable channel!";
     public static final String ACCESS_DENIED = "{\"error\": \"Access Denied - %s\"}";
 

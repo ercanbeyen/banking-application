@@ -11,4 +11,5 @@ public interface BranchOrderService {
     List<BranchOrderDto> getBranchOrders(String customerNationalId, BranchOrderStatus status);
     BranchOrderDto getBranchOrder(String id);
     void deleteBranchOrder(String id);
+    void cancelBranchOrder(String id);
 }

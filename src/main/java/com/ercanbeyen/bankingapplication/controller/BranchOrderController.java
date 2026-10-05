@@ -55,4 +55,11 @@ public class BranchOrderController {
         branchOrderService.deleteBranchOrder(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
+
+    @PreAuthorize("@branchOrderSecurityService.isOwner(#branchOrderId, authentication)")
+    @PatchMapping("/{id}/cancel")
+    public ResponseEntity<Void> cancelBranchOrder(@PathVariable("id") @P("branchOrderId") String id) {
+        branchOrderService.cancelBranchOrder(id);
+        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
 }

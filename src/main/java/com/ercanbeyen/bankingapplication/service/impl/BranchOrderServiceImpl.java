@@ -8,6 +8,7 @@ import com.ercanbeyen.bankingapplication.dto.BranchOrderDto;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.BranchOrder;
 import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchOrderMapper;
 import com.ercanbeyen.bankingapplication.repository.BranchOrderRepository;
@@ -54,6 +55,10 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         BranchOrder branchOrder = findById(id);
 
+        if (branchOrder.getStatus() != BranchOrderStatus.WAIT && branchOrder.getStatus() != BranchOrderStatus.CANCELLED) {
+            throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "updating"));
+        }
+
         if (!branchOrder.getBranch().getName().equals(request.branchName())) {
             Branch branch = branchService.findByName(request.branchName());
             branchOrder.setBranch(branch);
@@ -94,8 +99,31 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         BranchOrder branchOrder = findById(id);
 
+        if (branchOrder.getStatus() != BranchOrderStatus.CANCELLED) {
+            throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "deletion"));
+        }
+
         branchOrderRepository.delete(branchOrder);
         log.info(LogMessage.RESOURCE_DELETE_SUCCESS, Entity.BRANCH_ORDER.getValue(), id);
+    }
+
+    @Override
+    public void cancelBranchOrder(String id) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        BranchOrder branchOrder = findById(id);
+        BranchOrderStatus status = branchOrder.getStatus();
+
+        if (status == BranchOrderStatus.CANCELLED) {
+            throw new ResourceConflictException(String.format("%s has already been cancelled before!", Entity.BRANCH_ORDER.getValue()));
+        }
+
+        if (status != BranchOrderStatus.WAIT) {
+            throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "cancellation"));
+        }
+
+        branchOrder.setStatus(BranchOrderStatus.CANCELLED);
+        branchOrderRepository.save(branchOrder);
     }
 
     private BranchOrder findById(String id) {
