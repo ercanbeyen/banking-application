@@ -14,6 +14,7 @@ public enum Entity {
     NOTIFICATION("Notification"),
     ACCOUNT_ACTIVITY("Account Activity"),
     MONEY_TRANSFER_ORDER("Money Transfer Order"),
+    BRANCH_ORDER("Branch Order"),
     SURVEY("Survey"),
     EXCHANGE("Exchange"),
     ATM("ATM"),
