@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.BranchOrderDto;
+import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.BranchOrder;
 import com.ercanbeyen.bankingapplication.entity.Customer;
@@ -12,6 +13,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchOrderMapper;
 import com.ercanbeyen.bankingapplication.repository.BranchOrderRepository;
+import com.ercanbeyen.bankingapplication.service.AccountActivityService;
 import com.ercanbeyen.bankingapplication.service.BranchService;
 import com.ercanbeyen.bankingapplication.service.BranchOrderService;
 import com.ercanbeyen.bankingapplication.service.CustomerService;
@@ -30,6 +32,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
     private final BranchOrderMapper branchOrderMapper;
     private final CustomerService customerService;
     private final BranchService branchService;
+    private final AccountActivityService accountActivityService;
 
     @Override
     public BranchOrderDto createBranchOrder(BranchOrderDto request) {
@@ -55,7 +58,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         BranchOrder branchOrder = findById(id);
 
-        if (branchOrder.getStatus() != BranchOrderStatus.WAIT && branchOrder.getStatus() != BranchOrderStatus.CANCELLED) {
+        if (branchOrder.getStatus() != BranchOrderStatus.WAIT && branchOrder.getStatus() != BranchOrderStatus.CANCELED) {
             throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "updating"));
         }
 
@@ -99,7 +102,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         BranchOrder branchOrder = findById(id);
 
-        if (branchOrder.getStatus() != BranchOrderStatus.CANCELLED) {
+        if (branchOrder.getStatus() != BranchOrderStatus.CANCELED) {
             throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "deletion"));
         }
 
@@ -114,7 +117,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
         BranchOrder branchOrder = findById(id);
         BranchOrderStatus status = branchOrder.getStatus();
 
-        if (status == BranchOrderStatus.CANCELLED) {
+        if (status == BranchOrderStatus.CANCELED) {
             throw new ResourceConflictException(String.format("%s has already been cancelled before!", Entity.BRANCH_ORDER.getValue()));
         }
 
@@ -122,7 +125,36 @@ public class BranchOrderServiceImpl implements BranchOrderService {
             throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "cancellation"));
         }
 
-        branchOrder.setStatus(BranchOrderStatus.CANCELLED);
+        branchOrder.setStatus(BranchOrderStatus.CANCELED);
+        branchOrderRepository.save(branchOrder);
+    }
+
+    @Override
+    public void updateStatusOfBranchOrder(String branchOrderId, BranchOrderStatus status, String accountActivityId) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        BranchOrder branchOrder = findById(branchOrderId);
+
+        /*
+            Branch Order Status Flow:
+            canceled <-> wait -> in process -> completed
+                                            |
+                                            -> incompleted
+         */
+        boolean statusFlowApplied = (branchOrder.getStatus() == BranchOrderStatus.WAIT && status == BranchOrderStatus.IN_PROCESS)
+                || (branchOrder.getStatus() == BranchOrderStatus.IN_PROCESS && (status == BranchOrderStatus.COMPLETED || status == BranchOrderStatus.INCOMPLETED));
+
+        if (!statusFlowApplied) {
+            throw new ResourceConflictException(String.format("%s status flow is violated!", Entity.BRANCH_ORDER.getValue()));
+        }
+
+
+        if (status == BranchOrderStatus.COMPLETED) {
+            AccountActivity accountActivity = accountActivityService.findById(accountActivityId);
+            branchOrder.setAccountActivity(accountActivity);
+        }
+
+        branchOrder.setStatus(status);
         branchOrderRepository.save(branchOrder);
     }
 

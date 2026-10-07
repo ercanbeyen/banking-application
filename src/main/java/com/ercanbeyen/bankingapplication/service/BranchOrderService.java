@@ -12,4 +12,5 @@ public interface BranchOrderService {
     BranchOrderDto getBranchOrder(String id);
     void deleteBranchOrder(String id);
     void cancelBranchOrder(String id);
+    void updateStatusOfBranchOrder(String branchOrderId, BranchOrderStatus status, String accountActivityId);
 }

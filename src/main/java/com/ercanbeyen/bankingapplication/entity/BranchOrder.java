@@ -24,6 +24,8 @@ public class BranchOrder {
     private Customer customer;
     @ManyToOne
     private Branch branch;
+    @OneToOne
+    private AccountActivity accountActivity;
     private String content;
     @CreationTimestamp
     private Instant createdAt;

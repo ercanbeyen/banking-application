@@ -78,10 +78,10 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return ResponseEntity.ok(accountService.getEntities(filteringOption));
     }
 
-    @PostAuthorize("returnObject.body.customerNationalId == authentication.principal.username OR hasAuthority('READ_DATA')")
+    @PostAuthorize("hasAuthority('READ_DATA') OR returnObject.body.customerNationalId == authentication.principal.username")
     @GetMapping("/{id}")
     @Override
-    public ResponseEntity<AccountDto> getEntity(@PathVariable("id") @P("accountId") Integer id) {
+    public ResponseEntity<AccountDto> getEntity(@PathVariable("id") Integer id) {
         return ResponseEntity.ok(accountService.getEntity(id));
     }
 
@@ -109,7 +109,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return ResponseEntity.ok().build();
     }
 
-    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
+    @PreAuthorize("hasRole('TELLER') OR @accountSecurityService.isOwner(#accountId, authentication)")
     @PutMapping("{id}/deposit")
     public ResponseEntity<MessageResponse<String>> depositMoney(
             @PathVariable("id") @P("accountId") Integer id,
@@ -128,7 +128,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
+    @PreAuthorize("hasRole('TELLER') OR @accountSecurityService.isOwner(#accountId, authentication)")
     @PutMapping("{id}/withdrawal")
     public ResponseEntity<MessageResponse<String>> withdrawMoney(
             @PathVariable("id") @P("accountId") Integer id,
@@ -153,7 +153,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PreAuthorize("@accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication) OR hasRole('ADMIN')")
+    @PreAuthorize("hasRole('TELLER') OR @accountSecurityService.isOwner(#moneyTransfer.senderAccountId, authentication)")
     @PutMapping("/transfer")
     public ResponseEntity<MessageResponse<String>> transferMoney(
             @RequestBody @Valid @P("moneyTransfer") MoneyTransferRequest request,
@@ -171,7 +171,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PreAuthorize("@accountSecurityService.isOwner(#moneyExchange.sellerAccountId, authentication)")
+    @PreAuthorize("hasRole('TELLER') OR @accountSecurityService.isOwner(#moneyExchange.sellerAccountId, authentication)")
     @PutMapping("/exchange")
     public ResponseEntity<MessageResponse<String>> exchangeMoney(
             @RequestBody @Valid @P("moneyExchange") MoneyExchangeRequest request,

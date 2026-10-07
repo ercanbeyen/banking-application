@@ -162,7 +162,8 @@ public class AccountActivityServiceImpl implements AccountActivityService {
         return accountActivityExists;
     }
 
-    private AccountActivity findById(String id) {
+    @Override
+    public AccountActivity findById(String id) {
         String entity = Entity.ACCOUNT_ACTIVITY.getValue();
         AccountActivity accountActivity = accountActivityRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, entity)));

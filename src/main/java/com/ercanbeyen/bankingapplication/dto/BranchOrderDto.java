@@ -17,6 +17,7 @@ public record BranchOrderDto(
         String customerNationalId,
         @NotBlank(message = "Branch name should not be blank")
         String branchName,
+        String accountActivityId,
         @NotBlank(message = "Content should not be blank")
         String content,
         @JsonFormat(
