@@ -8,7 +8,7 @@ import java.util.List;
 public interface BranchOrderService {
     BranchOrderDto createBranchOrder(BranchOrderDto request);
     BranchOrderDto updateBranchOrder(String id, BranchOrderDto request);
-    List<BranchOrderDto> getBranchOrders(String customerNationalId, BranchOrderStatus status);
+    List<BranchOrderDto> getBranchOrders(String branchName, String customerNationalId, BranchOrderStatus status);
     BranchOrderDto getBranchOrder(String id);
     void deleteBranchOrder(String id);
     void cancelBranchOrder(String id);

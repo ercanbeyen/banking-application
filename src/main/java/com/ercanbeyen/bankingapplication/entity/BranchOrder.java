@@ -16,16 +16,16 @@ public class BranchOrder {
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
+    @ManyToOne
+    private Branch branch;
+    @ManyToOne
+    private Customer customer;
+    @OneToOne
+    private AccountActivity accountActivity;
     @Enumerated(EnumType.STRING)
     private ActivityType activityType;
     @Enumerated(EnumType.STRING)
     private BranchOrderStatus status;
-    @ManyToOne
-    private Customer customer;
-    @ManyToOne
-    private Branch branch;
-    @OneToOne
-    private AccountActivity accountActivity;
     private String content;
     @CreationTimestamp
     private Instant createdAt;

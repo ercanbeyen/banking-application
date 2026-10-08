@@ -4,7 +4,6 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.SourceType;
 
 import java.time.Instant;
 
@@ -22,7 +21,7 @@ public class CustomerAgreement {
     @ManyToOne
     @JoinColumn(name = "agreement_title", referencedColumnName = "title")
     private Agreement agreement;
-    @CreationTimestamp(source = SourceType.DB)
+    @CreationTimestamp
     private Instant approvedAt;
 
     @Override

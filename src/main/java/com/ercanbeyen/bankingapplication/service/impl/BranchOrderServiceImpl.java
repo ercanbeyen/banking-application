@@ -23,6 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -74,14 +75,30 @@ public class BranchOrderServiceImpl implements BranchOrderService {
     }
 
     @Override
-    public List<BranchOrderDto> getBranchOrders(String customerNationalId, BranchOrderStatus status) {
+    public List<BranchOrderDto> getBranchOrders(String branchName, String customerNationalId, BranchOrderStatus status) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        Customer customer = customerService.findByNationalId(customerNationalId);
+        boolean doesBranchNamePresent = Optional.ofNullable(branchName).isPresent();
+        boolean doesCustomerNationalIdPresent = Optional.ofNullable(customerNationalId).isPresent();
+        BranchOrderStatus statusFilter = Optional.ofNullable(status).isPresent() ? status : BranchOrderStatus.WAIT;
 
-        return branchOrderRepository.findByCustomer(customer)
-                .stream()
-                .filter(branchOrder -> branchOrder.getCustomer().getNationalId().equals(customerNationalId) && branchOrder.getStatus() == status)
+        List<BranchOrder> branchOrders;
+
+        if (doesBranchNamePresent && doesCustomerNationalIdPresent) {
+            Branch branch = branchService.findByName(branchName);
+            Customer customer = customerService.findByNationalId(customerNationalId);
+            branchOrders = branchOrderRepository.findByBranchAndCustomerAndStatus(branch, customer, statusFilter);
+        } else if (doesBranchNamePresent) {
+            Branch branch = branchService.findByName(branchName);
+            branchOrders = branchOrderRepository.findByBranchAndStatus(branch, statusFilter);
+        } else if (doesCustomerNationalIdPresent) {
+            Customer customer = customerService.findByNationalId(customerNationalId);
+            branchOrders = branchOrderRepository.findByCustomerAndStatus(customer, statusFilter);
+        } else {
+            branchOrders = branchOrderRepository.findByStatus(statusFilter);
+        }
+
+        return branchOrders.stream()
                 .map(branchOrderMapper::entityToDto)
                 .toList();
     }

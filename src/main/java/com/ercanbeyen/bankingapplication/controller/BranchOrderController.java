@@ -43,8 +43,11 @@ public class BranchOrderController {
 
     @PreAuthorize("hasAuthority('READ_DATA')")
     @GetMapping
-    public ResponseEntity<List<BranchOrderDto>> getBranchOrders(@RequestParam("customer-national-id") String customerNationalId, @RequestParam("status") BranchOrderStatus status) {
-        return new ResponseEntity<>(branchOrderService.getBranchOrders(customerNationalId, status), HttpStatus.OK);
+    public ResponseEntity<List<BranchOrderDto>> getBranchOrders(
+            @RequestParam(value = "branch", required = false) String branchName,
+            @RequestParam(value = "customer-national-id", required = false) String customerNationalId,
+            @RequestParam(value = "status", required = false) BranchOrderStatus status) {
+        return new ResponseEntity<>(branchOrderService.getBranchOrders(branchName, customerNationalId, status), HttpStatus.OK);
     }
 
     @PostAuthorize("hasAuthority('READ_DATA') OR returnObject.body.customerNationalId == authentication.principal.username")

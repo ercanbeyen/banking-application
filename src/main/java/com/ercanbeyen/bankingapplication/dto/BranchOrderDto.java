@@ -10,14 +10,14 @@ import java.time.Instant;
 
 public record BranchOrderDto(
         String id,
+        @NotBlank(message = "Branch name should not be blank")
+        String branchName,
+        @NotBlank(message = "Customer national id should not be blank")
+        String customerNationalId,
+        String accountActivityId,
         @NotNull(message = "Activity type should not be null")
         ActivityType activityType,
         BranchOrderStatus status,
-        @NotBlank(message = "Customer national id should not be blank")
-        String customerNationalId,
-        @NotBlank(message = "Branch name should not be blank")
-        String branchName,
-        String accountActivityId,
         @NotBlank(message = "Content should not be blank")
         String content,
         @JsonFormat(
