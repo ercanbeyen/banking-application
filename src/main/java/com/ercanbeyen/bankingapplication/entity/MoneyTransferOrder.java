@@ -12,7 +12,6 @@ import java.time.LocalDate;
 @Entity
 @Table(name = "money_transfer_orders")
 public non-sealed class MoneyTransferOrder extends BaseEntity {
-    private Integer id;
     @ManyToOne
     private Account senderAccount;
     @ManyToOne

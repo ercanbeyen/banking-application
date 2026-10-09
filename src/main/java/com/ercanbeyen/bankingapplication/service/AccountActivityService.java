@@ -19,4 +19,5 @@ public interface AccountActivityService {
     List<AccountActivityView> getAccountActivityViews(Integer senderAccountId, Integer recipientAccountId);
     ByteArrayOutputStream generateReceiptStream(String id);
     boolean existsByIdAndCustomerNationalId(String id, String customerNationalId);
+    AccountActivity findById(String id);
 }

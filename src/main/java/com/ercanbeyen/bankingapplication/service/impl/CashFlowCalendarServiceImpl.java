@@ -7,6 +7,7 @@ import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.entity.CashFlowCalendar;
 import com.ercanbeyen.bankingapplication.repository.CashFlowCalendarRepository;
 import com.ercanbeyen.bankingapplication.service.CashFlowCalendarService;
+import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,6 +24,8 @@ public class CashFlowCalendarServiceImpl implements CashFlowCalendarService {
 
     @Override
     public CashFlowCalendar createCashFlowCalendar() {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         CashFlowCalendar cashFlowCalendar = new CashFlowCalendar();
         cashFlowCalendar.setCashFlows(new ArrayList<>());
 
@@ -33,6 +36,8 @@ public class CashFlowCalendarServiceImpl implements CashFlowCalendarService {
     }
 
     public void createCashFlow(CashFlowCalendar cashFlowCalendar, AccountActivity accountActivity, String explanation) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
         CashFlow cashFlow = new CashFlow();
 
         cashFlow.setDate(LocalDate.ofInstant(accountActivity.getCreatedAt(), ZoneId.systemDefault()));
