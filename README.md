@@ -16,7 +16,7 @@ It is a banking application includes basic banking services. Abstract CRUD appro
 - Customers can transfer money to their deposit accounts using their current accounts.
 - Customers can buy and sell foreign currency to the bank through current accounts at the specified buying and selling rates.
 - Customers can trade within daily activity limits and may incur transaction fees for some transactions.
-- Customers can create money transfer orders for future dates.
+- Customers can create money transfer and branch orders for future dates.
 - Customers are obliged to comply with the agreements they have approved.
 - Customers will receive notifications once the transactions are successfully completed.
 - Customers can participate in surveys related to their transactions.
