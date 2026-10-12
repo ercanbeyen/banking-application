@@ -26,6 +26,9 @@ public class BranchOrder {
     private ActivityType activityType;
     @Enumerated(EnumType.STRING)
     private BranchOrderStatus status;
+    @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @JoinColumn(name = "petition")
+    private File petition;
     private String content;
     @CreationTimestamp
     private Instant createdAt;

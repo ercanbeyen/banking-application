@@ -3,19 +3,24 @@ package com.ercanbeyen.bankingapplication.controller;
 import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.BranchOrderDto;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.security.service.BranchOrderSecurityService;
 import com.ercanbeyen.bankingapplication.service.BranchOrderService;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PostAuthorize;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -23,22 +28,27 @@ import java.util.Optional;
 @RestController
 @RequestMapping("/api/v1/branch-orders")
 @RequiredArgsConstructor
+@SecurityRequirement(name = "Bearer Authentication")
 public class BranchOrderController {
     private final BranchOrderService branchOrderService;
     private final BranchOrderSecurityService branchOrderSecurityService;
 
     @PreAuthorize("#branchOrder.customerNationalId == authentication.principal.username")
-    @PostMapping
-    public ResponseEntity<BranchOrderDto> createBranchOrder(@Valid @RequestBody @P("branchOrder") BranchOrderDto request) {
-        checkRequest(request);
-        return new ResponseEntity<>(branchOrderService.createBranchOrder(request), HttpStatus.CREATED);
+    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<MessageResponse<String>> createBranchOrder(@Valid @RequestPart("branchOrder") @P("branchOrder") BranchOrderDto request, @RequestPart(value = "petition", required = false) MultipartFile file) {
+        checkRequest(request, file);
+        branchOrderService.createBranchOrder(request, file);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, Entity.BRANCH_ORDER.getValue() + " creation"));
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("#branchOrder.customerNationalId == authentication.principal.username")
-    @PutMapping("/{id}")
-    public ResponseEntity<BranchOrderDto> updateBranchOrder(@PathVariable("id") String id, @Valid @RequestBody @P("branchOrder") BranchOrderDto request) {
-        checkRequest(request);
-        return new ResponseEntity<>(branchOrderService.updateBranchOrder(id, request), HttpStatus.OK);
+    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    public ResponseEntity<MessageResponse<String>> updateBranchOrder(@PathVariable("id") String id, @Valid @RequestPart("branchOrder") @P("branchOrder") BranchOrderDto request, @RequestPart(value = "petition", required = false) MultipartFile file) {
+        checkRequest(request, file);
+        branchOrderService.updateBranchOrder(id, request, file);
+        MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, Entity.BRANCH_ORDER.getValue() + " update"));
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
@@ -89,11 +99,15 @@ public class BranchOrderController {
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
     }
 
-    private void checkRequest(BranchOrderDto request) {
+    private void checkRequest(BranchOrderDto request, MultipartFile file) {
         List<ActivityType> validActivityTypes = List.of(ActivityType.MONEY_DEPOSIT, ActivityType.WITHDRAWAL, ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE);
 
         if (!validActivityTypes.contains(request.activityType())) {
             throw new BadRequestException("Invalid activity type!");
+        }
+
+        if (Optional.ofNullable(file).isEmpty() && StringUtils.isBlank(request.content())) {
+            throw new BadRequestException("No content or petition is submitted!");
         }
     }
 }

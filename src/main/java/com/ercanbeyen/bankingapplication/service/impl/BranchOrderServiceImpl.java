@@ -5,22 +5,20 @@ import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.BranchOrderDto;
-import com.ercanbeyen.bankingapplication.entity.AccountActivity;
-import com.ercanbeyen.bankingapplication.entity.Branch;
-import com.ercanbeyen.bankingapplication.entity.BranchOrder;
-import com.ercanbeyen.bankingapplication.entity.Customer;
+import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
+import com.ercanbeyen.bankingapplication.entity.*;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
+import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchOrderMapper;
 import com.ercanbeyen.bankingapplication.repository.BranchOrderRepository;
-import com.ercanbeyen.bankingapplication.service.AccountActivityService;
-import com.ercanbeyen.bankingapplication.service.BranchService;
-import com.ercanbeyen.bankingapplication.service.BranchOrderService;
-import com.ercanbeyen.bankingapplication.service.CustomerService;
+import com.ercanbeyen.bankingapplication.service.*;
+import com.ercanbeyen.bankingapplication.util.FileUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 import java.util.Optional;
@@ -34,9 +32,10 @@ public class BranchOrderServiceImpl implements BranchOrderService {
     private final CustomerService customerService;
     private final BranchService branchService;
     private final AccountActivityService accountActivityService;
+    private final FileService fileService;
 
     @Override
-    public BranchOrderDto createBranchOrder(BranchOrderDto request) {
+    public void createBranchOrder(BranchOrderDto request, MultipartFile file) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         BranchOrder branchOrder = branchOrderMapper.dtoToEntity(request);
@@ -45,16 +44,12 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         branchOrder.setCustomer(customer);
         branchOrder.setBranch(branch);
-        branchOrder.setStatus(BranchOrderStatus.WAIT);
 
-        BranchOrder savedBranchOrder = branchOrderRepository.save(branchOrder);
-        log.info(LogMessage.RESOURCE_CREATE_SUCCESS, Entity.BRANCH_ORDER.getValue(), savedBranchOrder.getId());
-
-        return branchOrderMapper.entityToDto(savedBranchOrder);
+        constructBranchOrder(null, request, file, branchOrder);
     }
 
     @Override
-    public BranchOrderDto updateBranchOrder(String id, BranchOrderDto request) {
+    public void updateBranchOrder(String id, BranchOrderDto request, MultipartFile file) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         BranchOrder branchOrder = findById(id);
@@ -63,15 +58,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
             throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "updating"));
         }
 
-        if (!branchOrder.getBranch().getName().equals(request.branchName())) {
-            Branch branch = branchService.findByName(request.branchName());
-            branchOrder.setBranch(branch);
-        }
-
-        branchOrder.setContent(request.content());
-        branchOrder.setStatus(BranchOrderStatus.WAIT);
-
-        return branchOrderMapper.entityToDto(branchOrderRepository.save(branchOrder));
+        constructBranchOrder(id, request, file, branchOrder);
     }
 
     @Override
@@ -178,5 +165,49 @@ public class BranchOrderServiceImpl implements BranchOrderService {
     private BranchOrder findById(String id) {
         return branchOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.BRANCH_ORDER.getValue())));
+    }
+
+    private void constructBranchOrder(String id, BranchOrderDto request, MultipartFile file, BranchOrder branchOrder) {
+        Customer customer;
+        Branch branch;
+
+        if (Optional.ofNullable(id).isPresent()) { // update operation
+            customer = branchOrder.getCustomer();
+            branch = branchOrder.getBranch().getName().equals(request.branchName()) ? branchOrder.getBranch() : branchService.findByName(request.branchName());
+        } else { // create operation
+            customer = customerService.findByNationalId(request.customerNationalId());
+            branch = branchService.findByName(request.branchName());
+        }
+
+        String entity = Entity.BRANCH_ORDER.getValue();
+
+        Optional.ofNullable(file).ifPresentOrElse(petitionRequest -> {
+                    FileUploadRequest fileUploadRequest = FileUtil.createFileUploadRequest(petitionRequest, null);
+                    fileService.saveFile(fileUploadRequest)
+                            .thenAccept(petition -> {
+                                branchOrder.setCustomer(customer);
+                                branchOrder.setBranch(branch);
+                                branchOrder.setStatus(BranchOrderStatus.WAIT);
+                                branchOrder.setPetition(petition);
+                                branchOrder.setContent(null);
+
+                                BranchOrder savedBranchOrder = branchOrderRepository.save(branchOrder);
+                                log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedBranchOrder.getId());
+                            })
+                            .exceptionally(exception -> {
+                                log.error("Unable to upload {}. Error: {}", Entity.FILE.getValue().toLowerCase(), exception.getMessage());
+                                throw new ResourceExpectationFailedException("Unable to upload petition!");
+                            });
+                }, () -> {
+                    branchOrder.setCustomer(customer);
+                    branchOrder.setBranch(branch);
+                    branchOrder.setStatus(BranchOrderStatus.WAIT);
+                    branchOrder.setPetition(null);
+                    branchOrder.setContent(request.content());
+
+                    BranchOrder savedBranchOrder = branchOrderRepository.save(branchOrder);
+                    log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedBranchOrder.getId());
+                }
+        );
     }
 }
