@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
+import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
@@ -20,6 +21,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,6 +30,8 @@ import java.util.Optional;
 @RequiredArgsConstructor
 @Slf4j
 public class BranchOrderServiceImpl implements BranchOrderService {
+    private static final int MAXIMUM_NUMBER_OF_ALLOWED_PENDING_BRANCH_ORDERS = 5;
+
     private final BranchOrderRepository branchOrderRepository;
     private final BranchOrderMapper branchOrderMapper;
     private final CustomerService customerService;
@@ -38,8 +43,11 @@ public class BranchOrderServiceImpl implements BranchOrderService {
     public void createBranchOrder(BranchOrderDto request, MultipartFile file) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
-        BranchOrder branchOrder = branchOrderMapper.dtoToEntity(request);
         Customer customer = customerService.findByNationalId(request.customerNationalId());
+
+        checkNumberOfPendingBranchOrdersOfCustomer(customer);
+
+        BranchOrder branchOrder = branchOrderMapper.dtoToEntity(request);
         Branch branch = branchService.findByName(request.branchName());
 
         branchOrder.setCustomer(customer);
@@ -53,8 +61,11 @@ public class BranchOrderServiceImpl implements BranchOrderService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         BranchOrder branchOrder = findById(id);
+        Customer customer = customerService.findByNationalId(request.customerNationalId());
 
-        if (branchOrder.getStatus() != BranchOrderStatus.WAIT && branchOrder.getStatus() != BranchOrderStatus.CANCELED) {
+        checkNumberOfPendingBranchOrdersOfCustomer(customer);
+
+        if (branchOrder.getStatus() != BranchOrderStatus.PENDING && branchOrder.getStatus() != BranchOrderStatus.CANCELED) {
             throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "updating"));
         }
 
@@ -67,7 +78,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         boolean doesBranchNamePresent = Optional.ofNullable(branchName).isPresent();
         boolean doesCustomerNationalIdPresent = Optional.ofNullable(customerNationalId).isPresent();
-        BranchOrderStatus statusFilter = Optional.ofNullable(status).isPresent() ? status : BranchOrderStatus.WAIT;
+        BranchOrderStatus statusFilter = Optional.ofNullable(status).isPresent() ? status : BranchOrderStatus.PENDING;
 
         List<BranchOrder> branchOrders;
 
@@ -125,7 +136,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
             throw new ResourceConflictException(String.format("%s has already been cancelled before!", Entity.BRANCH_ORDER.getValue()));
         }
 
-        if (status != BranchOrderStatus.WAIT) {
+        if (status != BranchOrderStatus.PENDING) {
             throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "cancellation"));
         }
 
@@ -141,11 +152,11 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         /*
             Branch Order Status Flow:
-            canceled <-> wait -> in process -> completed
+            canceled <-> pending -> in process -> completed
                                             |
                                             -> incompleted
          */
-        boolean statusFlowApplied = (branchOrder.getStatus() == BranchOrderStatus.WAIT && status == BranchOrderStatus.IN_PROCESS)
+        boolean statusFlowApplied = (branchOrder.getStatus() == BranchOrderStatus.PENDING && status == BranchOrderStatus.IN_PROCESS)
                 || (branchOrder.getStatus() == BranchOrderStatus.IN_PROCESS && (status == BranchOrderStatus.COMPLETED || status == BranchOrderStatus.INCOMPLETED));
 
         if (!statusFlowApplied) {
@@ -155,6 +166,11 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         if (status == BranchOrderStatus.COMPLETED) {
             AccountActivity accountActivity = accountActivityService.findById(accountActivityId);
+
+            if (!ActivityType.getBranchOrderActivities().contains(accountActivity.getType())) {
+                throw new ResourceConflictException(String.format("%s is improper for %s", Entity.ACCOUNT_ACTIVITY.getValue(), Entity.BRANCH_ORDER.getValue()));
+            }
+
             branchOrder.setAccountActivity(accountActivity);
         }
 
@@ -165,6 +181,14 @@ public class BranchOrderServiceImpl implements BranchOrderService {
     private BranchOrder findById(String id) {
         return branchOrderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException(String.format(ResponseMessage.NOT_FOUND, Entity.BRANCH_ORDER.getValue())));
+    }
+
+    private void checkNumberOfPendingBranchOrdersOfCustomer(Customer customer) {
+        int numberOfPendingBranchOrders = branchOrderRepository.findByCustomerAndStatus(customer, BranchOrderStatus.PENDING).size();
+
+        if (numberOfPendingBranchOrders > MAXIMUM_NUMBER_OF_ALLOWED_PENDING_BRANCH_ORDERS) {
+            throw new ResourceConflictException(String.format("Maximum number of allowed pending %s exceeded!", Entity.BRANCH_ORDER.getValue()));
+        }
     }
 
     private void constructBranchOrder(String id, BranchOrderDto request, MultipartFile file, BranchOrder branchOrder) {
@@ -182,12 +206,13 @@ public class BranchOrderServiceImpl implements BranchOrderService {
         String entity = Entity.BRANCH_ORDER.getValue();
 
         Optional.ofNullable(file).ifPresentOrElse(petitionRequest -> {
-                    FileUploadRequest fileUploadRequest = FileUtil.createFileUploadRequest(petitionRequest, null);
+            String customFileName = customer.getFullName() + " " + request.activityType().getValue() + " " + Entity.BRANCH_ORDER.getValue() + " on " + LocalDate.now(ZoneId.systemDefault());
+                    FileUploadRequest fileUploadRequest = FileUtil.createFileUploadRequest(petitionRequest, customFileName);
                     fileService.saveFile(fileUploadRequest)
                             .thenAccept(petition -> {
                                 branchOrder.setCustomer(customer);
                                 branchOrder.setBranch(branch);
-                                branchOrder.setStatus(BranchOrderStatus.WAIT);
+                                branchOrder.setStatus(BranchOrderStatus.PENDING);
                                 branchOrder.setPetition(petition);
                                 branchOrder.setContent(null);
 
@@ -201,7 +226,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
                 }, () -> {
                     branchOrder.setCustomer(customer);
                     branchOrder.setBranch(branch);
-                    branchOrder.setStatus(BranchOrderStatus.WAIT);
+                    branchOrder.setStatus(BranchOrderStatus.PENDING);
                     branchOrder.setPetition(null);
                     branchOrder.setContent(request.content());
 

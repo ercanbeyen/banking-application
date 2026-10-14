@@ -9,6 +9,7 @@ import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.security.service.BranchOrderSecurityService;
 import com.ercanbeyen.bankingapplication.service.BranchOrderService;
+import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -22,7 +23,9 @@ import org.springframework.security.core.parameters.P;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.*;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @RestController
@@ -34,7 +37,7 @@ public class BranchOrderController {
     private final BranchOrderSecurityService branchOrderSecurityService;
 
     @PreAuthorize("#branchOrder.customerNationalId == authentication.principal.username")
-    @PostMapping(consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse<String>> createBranchOrder(@Valid @RequestPart("branchOrder") @P("branchOrder") BranchOrderDto request, @RequestPart(value = "petition", required = false) MultipartFile file) {
         checkRequest(request, file);
         branchOrderService.createBranchOrder(request, file);
@@ -43,7 +46,7 @@ public class BranchOrderController {
     }
 
     @PreAuthorize("#branchOrder.customerNationalId == authentication.principal.username")
-    @PutMapping(value = "/{id}", consumes = {MediaType.MULTIPART_FORM_DATA_VALUE, MediaType.APPLICATION_JSON_VALUE})
+    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse<String>> updateBranchOrder(@PathVariable("id") String id, @Valid @RequestPart("branchOrder") @P("branchOrder") BranchOrderDto request, @RequestPart(value = "petition", required = false) MultipartFile file) {
         checkRequest(request, file);
         branchOrderService.updateBranchOrder(id, request, file);
@@ -87,7 +90,7 @@ public class BranchOrderController {
             @PathVariable("id") String branchOrderId,
             @RequestParam("status") BranchOrderStatus status,
             @RequestParam(value = "account-activity-id", required = false) String accountActivityId) {
-        if (status == BranchOrderStatus.WAIT || status == BranchOrderStatus.CANCELED) {
+        if (status == BranchOrderStatus.PENDING || status == BranchOrderStatus.CANCELED) {
             throw new BadRequestException("Invalid branch order status update for the teller");
         }
 
@@ -100,13 +103,30 @@ public class BranchOrderController {
     }
 
     private void checkRequest(BranchOrderDto request, MultipartFile file) {
+        if (!TimeUtil.isLocalDateTimeInWorkDaysAndHours(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw new BadRequestException(String.format("%ss may be submitted on business days and hours.", Entity.BRANCH_ORDER.getValue()));
+        }
+
         List<ActivityType> validActivityTypes = List.of(ActivityType.MONEY_DEPOSIT, ActivityType.WITHDRAWAL, ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE);
 
         if (!validActivityTypes.contains(request.activityType())) {
             throw new BadRequestException("Invalid activity type!");
         }
 
-        if (Optional.ofNullable(file).isEmpty() && StringUtils.isBlank(request.content())) {
+        boolean petitionPresent = Optional.ofNullable(file).isPresent();
+
+        if (petitionPresent) {
+            if (file.isEmpty()) {
+                throw new BadRequestException("Petition file is empty!");
+            }
+
+            final String permittedFileFormatForPetition = MediaType.APPLICATION_PDF_VALUE;
+
+            if (!Objects.equals(file.getContentType(), permittedFileFormatForPetition)) {
+                int index = permittedFileFormatForPetition.indexOf("/");
+                throw new BadRequestException("Only " + permittedFileFormatForPetition.substring(index + 1) + " file format is permitted for petition!");
+            }
+        } else if (StringUtils.isBlank(request.content())) {
             throw new BadRequestException("No content or petition is submitted!");
         }
     }
