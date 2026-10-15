@@ -145,7 +145,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
     }
 
     @Override
-    public void updateStatusOfBranchOrder(String branchOrderId, BranchOrderStatus status, String accountActivityId) {
+    public void updateBranchOrderStatus(String branchOrderId, BranchOrderStatus status, String accountActivityId) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         BranchOrder branchOrder = findById(branchOrderId);
@@ -160,7 +160,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
                 || (branchOrder.getStatus() == BranchOrderStatus.IN_PROCESS && (status == BranchOrderStatus.COMPLETED || status == BranchOrderStatus.INCOMPLETED));
 
         if (!statusFlowApplied) {
-            throw new ResourceConflictException(String.format("%s status flow is violated!", Entity.BRANCH_ORDER.getValue()));
+            throw new ResourceConflictException(ResponseMessage.BRANCH_ORDER_STATUS_VIOLATED);
         }
 
 

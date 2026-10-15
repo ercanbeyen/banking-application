@@ -159,11 +159,10 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void depositMoney(Integer id, Double amount, ChannelInformation channelInformation) {
+    public void depositMoney(Integer id, ActivityType activityType, Double amount, ChannelInformation channelInformation, BranchOrderInformation branchOrderInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        ActivityType activityType = ActivityType.MONEY_DEPOSIT;
         AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
 
         checkActivityAmountsOfCustomer(account, amount, activityType, channelInformation.channelType());
@@ -172,7 +171,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = entity + " " + account.getId() + " deposited " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation, branchOrderInformation);
 
         String message = String.format("%s %s has been deposited into your %s %s", amount, account.getCurrency(), entity, account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -181,11 +180,10 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void withdrawMoney(Integer id, Double amount, ChannelInformation channelInformation) {
+    public void withdrawMoney(Integer id, ActivityType activityType, Double amount, ChannelInformation channelInformation, BranchOrderInformation branchOrderInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account account = findActiveAccountById(id);
-        ActivityType activityType = ActivityType.WITHDRAWAL;
         AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.CURRENT, activityType);
 
         checkActivityAmountsOfCustomer(account, amount, activityType, channelInformation.channelType());
@@ -194,7 +192,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue();
         String cashFlowExplanation = entity + " " + account.getId() + " withdrew " + amount + " " + account.getCurrency();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation, branchOrderInformation);
 
         String message = String.format("%s %s has been withdrawn from your %s %s", amount, account.getCurrency(), entity.toLowerCase(), account.getId());
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format(message, amount, account.getCurrency(), entity, account.getId()));
@@ -226,7 +224,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation);
+        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation, null);
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
         notificationService.sendNotification(notificationDto);
@@ -237,7 +235,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void transferMoney(MoneyTransferRequest request, ChannelInformation channelInformation) {
+    public void transferMoney(MoneyTransferRequest request, ChannelInformation channelInformation, BranchOrderInformation branchOrderInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account senderAccount = findActiveAccountById(request.senderAccountId());
@@ -257,7 +255,7 @@ public class AccountServiceImpl implements AccountService {
         }
 
         TransactionInformation transactionInformation = getTransactionPlaceForMoneyTransfer(channelInformation, senderAccount.getBranch().getAddress());
-        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, transactionInformation);
+        transactionService.transferMoneyBetweenAccounts(request, amount, senderAccount, recipientAccount, deducteeAccount, transactionInformation, branchOrderInformation);
 
         if (!areAccountsOwnedBySameCustomer) {
             String entity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -271,7 +269,7 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public void exchangeMoney(MoneyExchangeRequest request, ChannelInformation channelInformation) {
+    public void exchangeMoney(MoneyExchangeRequest request, ChannelInformation channelInformation, BranchOrderInformation branchOrderInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account sellerAccount = findActiveAccountById(request.sellerAccountId());
@@ -284,7 +282,7 @@ public class AccountServiceImpl implements AccountService {
 
         Account deducteeAccount = getDeducteeAccount(activityType, request.deducteeAccountId(), List.of(sellerAccount, buyerAccount));
         TransactionInformation transactionInformation = getTransactionPlaceForMoneyExchange(channelInformation, sellerAccount, buyerAccount);
-        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount, transactionInformation);
+        transactionService.exchangeMoneyBetweenAccounts(request, sellerAccount, buyerAccount, deducteeAccount, transactionInformation, branchOrderInformation);
     }
 
     @Transactional
@@ -352,7 +350,7 @@ public class AccountServiceImpl implements AccountService {
         UserDetails userDetails = UserDetailsUtil.getUserDetailsOfLoggedInUser();
 
         if (account.getClosedAt() != null && !UserDetailsUtil.getPermissions(userDetails).contains(EPermission.READ_DATA.toString())) {
-            throw new AccessDeniedException(String.format(ResponseMessage.ACCESS_DENIED, "User cannot access to this account!"));
+            throw new AccessDeniedException(String.format(ResponseMessage.ACCESS_DENIED, ResponseMessage.USER_CANNOT_ACCESS_TO_ACCOUNT));
         }
 
         log.info("User can access to the account!");
@@ -714,7 +712,7 @@ public class AccountServiceImpl implements AccountService {
 
         if (Optional.ofNullable(closedAt).isPresent()) {
             log.error("{} {} has already been closed at {}", entity, id, closedAt);
-            throw new ResourceConflictException(String.format(ResponseMessage.IMPROPER_ACCOUNT + ". It has already been closed at %s", closedAt));
+            throw new ResourceConflictException(String.format("%s. It has already been closed at %s", ResponseMessage.IMPROPER_ACCOUNT, closedAt));
         }
 
         log.info("{} {} has not been closed", entity, id);

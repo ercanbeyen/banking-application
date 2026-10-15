@@ -8,6 +8,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Set;
+import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
 import java.util.stream.Collectors;
@@ -17,7 +18,7 @@ public class UserDetailsUtil {
     private final String ROLE_PREFIX = "ROLE_";
 
     public UserDetails getUserDetailsOfLoggedInUser() {
-        Authentication authentication =  SecurityContextHolder.getContext()
+        Authentication authentication = SecurityContextHolder.getContext()
                 .getAuthentication();
 
         assert authentication != null;
@@ -31,16 +32,21 @@ public class UserDetailsUtil {
         return userDetails;
     }
 
-    public String getRole(ERole eRole) {
-        return ROLE_PREFIX + eRole.toString();
-    }
-
     public Set<String> getRoles(UserDetails userDetails) {
         return userDetails.getAuthorities()
                 .stream()
                 .map(GrantedAuthority::getAuthority)
                 .filter(authorityStartsWith)
                 .map(extractRoleFromAuthority)
+                .collect(Collectors.toSet());
+    }
+
+    public Set<ERole> getERoles(UserDetails userDetails) {
+        return userDetails.getAuthorities()
+                .stream()
+                .map(GrantedAuthority::getAuthority)
+                .filter(authorityStartsWith)
+                .map(extractERoleFromAuthority)
                 .collect(Collectors.toSet());
     }
 
@@ -52,6 +58,9 @@ public class UserDetailsUtil {
                 .collect(Collectors.toSet());
     }
 
+    public final Function<ERole, String> getValueForSimpleGrantedAuthority = eRole -> ROLE_PREFIX + eRole.toString();
+
     private final UnaryOperator<String> extractRoleFromAuthority = authority -> authority.substring(ROLE_PREFIX.length());
+    private final Function<String, ERole> extractERoleFromAuthority = authority -> ERole.valueOf(extractRoleFromAuthority.apply(authority));
     private final Predicate<String> authorityStartsWith = authority -> authority.startsWith(ROLE_PREFIX);
 }

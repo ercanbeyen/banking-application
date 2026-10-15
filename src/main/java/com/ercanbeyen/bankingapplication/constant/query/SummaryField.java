@@ -12,6 +12,8 @@ public class SummaryField {
     public static final String BRANCH = "Branch";
     public static final String RATE = "Rate";
     public static final String TRANSACTION_FEE = "Transaction Fee";
+    public static final String BRANCH_ORDER_ID = "Branch Order Identity";
+    public static final String THIRD_PARTY_NATIONAL_IDENTITY = "Third Party National Identity";
     public static final String CHANNEL = "Channel";
     public static final String TRANSACTION_PLACE = "Transaction Place";
 

@@ -11,8 +11,8 @@ public enum ActivityType {
     WITHDRAWAL("Withdrawal"),
     MONEY_TRANSFER("Money Transfer"),
     MONEY_EXCHANGE("Money Exchange"),
-    THIRD_PERSON_MONEY_DEPOSIT("Third Person Money Deposit"),
-    THIRD_PERSON_WITHDRAWAL("Third Person Withdrawal"),
+    THIRD_PARTY_MONEY_DEPOSIT("Third Party Money Deposit"),
+    THIRD_PARTY_WITHDRAWAL("Third Party Withdrawal"),
     INTEREST_INCOME("Interest Income"),
     DEDUCTION("Deduction"),
     ACCOUNT_OPENING("Account Opening"),
@@ -26,16 +26,21 @@ public enum ActivityType {
     private static final Set<ActivityType> accountStatusUpdatingActivities;
     @Getter
     private static final List<ActivityType> branchOrderActivities;
+    @Getter
+    private static final List<ActivityType> thirdPartyActivities;
 
     static {
         accountStatusUpdatingActivities = EnumSet.of(ACCOUNT_OPENING, ACCOUNT_BLOCK_ADD, ACCOUNT_BLOCK_REMOVAL, ACCOUNT_CLOSING);
-        branchOrderActivities = List.of(ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE, ActivityType.THIRD_PERSON_MONEY_DEPOSIT, ActivityType.THIRD_PERSON_WITHDRAWAL);
+        thirdPartyActivities = List.of(ActivityType.THIRD_PARTY_MONEY_DEPOSIT, ActivityType.THIRD_PARTY_WITHDRAWAL);
+
+        branchOrderActivities = new ArrayList<>(List.of(ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE));
+        branchOrderActivities.addAll(thirdPartyActivities);
     }
 
     public List<ChannelType> getAvailableChannelTypes() {
         return switch (this) {
             case MONEY_DEPOSIT, WITHDRAWAL -> List.of(ChannelType.BRANCH, ChannelType.ATM);
-            case THIRD_PERSON_MONEY_DEPOSIT, THIRD_PERSON_WITHDRAWAL -> List.of(ChannelType.BRANCH);
+            case THIRD_PARTY_MONEY_DEPOSIT, THIRD_PARTY_WITHDRAWAL -> List.of(ChannelType.BRANCH);
             case MONEY_TRANSFER, MONEY_EXCHANGE ->
                     List.of(ChannelType.BRANCH, ChannelType.ATM, ChannelType.INTERNET_BANKING, ChannelType.MOBILE_BANKING);
             case ACCOUNT_OPENING, ACCOUNT_BLOCK_ADD, ACCOUNT_BLOCK_REMOVAL, ACCOUNT_CLOSING, INTEREST_INCOME, DEDUCTION ->

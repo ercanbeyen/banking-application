@@ -40,7 +40,9 @@ public class BranchOrderController {
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse<String>> createBranchOrder(@Valid @RequestPart("branchOrder") @P("branchOrder") BranchOrderDto request, @RequestPart(value = "petition", required = false) MultipartFile file) {
         checkRequest(request, file);
+
         branchOrderService.createBranchOrder(request, file);
+
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, Entity.BRANCH_ORDER.getValue() + " creation"));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -49,7 +51,9 @@ public class BranchOrderController {
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<MessageResponse<String>> updateBranchOrder(@PathVariable("id") String id, @Valid @RequestPart("branchOrder") @P("branchOrder") BranchOrderDto request, @RequestPart(value = "petition", required = false) MultipartFile file) {
         checkRequest(request, file);
+
         branchOrderService.updateBranchOrder(id, request, file);
+
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, Entity.BRANCH_ORDER.getValue() + " update"));
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
@@ -86,30 +90,20 @@ public class BranchOrderController {
 
     @PreAuthorize("hasRole('TELLER')")
     @PatchMapping("/{id}")
-    public ResponseEntity<Void> updateStatusOfBranchOrder(
+    public ResponseEntity<MessageResponse<String>> updateBranchOrderStatus(
             @PathVariable("id") String branchOrderId,
             @RequestParam("status") BranchOrderStatus status,
             @RequestParam(value = "account-activity-id", required = false) String accountActivityId) {
-        if (status == BranchOrderStatus.PENDING || status == BranchOrderStatus.CANCELED) {
-            throw new BadRequestException("Invalid branch order status update for the teller");
-        }
+        checkBranchOrderStatusUpdate(status, accountActivityId);
 
-        if (status == BranchOrderStatus.COMPLETED && Optional.ofNullable(accountActivityId).isEmpty()) {
-            throw new BadRequestException("Account activity id is empty!");
-        }
+        branchOrderService.updateBranchOrderStatus(branchOrderId, status, accountActivityId);
 
-        branchOrderService.updateStatusOfBranchOrder(branchOrderId, status, accountActivityId);
-        return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+        MessageResponse<String> response = new MessageResponse<>(String.format("%s status is successfully updated!", Entity.BRANCH_ORDER.getValue()));
+        return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     private void checkRequest(BranchOrderDto request, MultipartFile file) {
-        if (!TimeUtil.isLocalDateTimeInWorkDaysAndHours(LocalDateTime.now(ZoneId.systemDefault()))) {
-            throw new BadRequestException(String.format("%ss may be submitted on business days and hours.", Entity.BRANCH_ORDER.getValue()));
-        }
-
-        List<ActivityType> validActivityTypes = List.of(ActivityType.MONEY_DEPOSIT, ActivityType.WITHDRAWAL, ActivityType.MONEY_TRANSFER, ActivityType.MONEY_EXCHANGE);
-
-        if (!validActivityTypes.contains(request.activityType())) {
+        if (!ActivityType.getBranchOrderActivities().contains(request.activityType())) {
             throw new BadRequestException("Invalid activity type!");
         }
 
@@ -128,6 +122,22 @@ public class BranchOrderController {
             }
         } else if (StringUtils.isBlank(request.content())) {
             throw new BadRequestException("No content or petition is submitted!");
+        }
+    }
+
+    private static void checkBranchOrderStatusUpdate(BranchOrderStatus status, String accountActivityId) {
+        String entity = Entity.BRANCH_ORDER.getValue();
+
+        if (!TimeUtil.isLocalDateTimeInWorkDaysAndHours(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw new BadRequestException(String.format("%ss may be processed on business days and hours.", entity));
+        }
+
+        if (status == BranchOrderStatus.PENDING || status == BranchOrderStatus.CANCELED) {
+            throw new BadRequestException(String.format("Invalid %s status update for the teller", entity.toLowerCase()));
+        }
+
+        if (status == BranchOrderStatus.COMPLETED && Optional.ofNullable(accountActivityId).isEmpty()) {
+            throw new BadRequestException(String.format("%s id is empty!", Entity.ACCOUNT_ACTIVITY.getValue()));
         }
     }
 }

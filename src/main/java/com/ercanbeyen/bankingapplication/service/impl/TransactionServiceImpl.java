@@ -1,9 +1,11 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
+import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
+import com.ercanbeyen.bankingapplication.dto.BranchOrderInformation;
 import com.ercanbeyen.bankingapplication.dto.TransactionInformation;
 import com.ercanbeyen.bankingapplication.dto.TermDepositInterestRateDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
@@ -28,10 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.ZoneId;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.function.DoublePredicate;
 
 @RequiredArgsConstructor
@@ -69,7 +68,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void applyAccountActivityForSingleAccount(ActivityType activityType, Double amount, Account account, String cashFlowExplanation, TransactionInformation transactionInformation) {
+    public void applyAccountActivityForSingleAccount(ActivityType activityType, Double amount, Account account, String cashFlowExplanation, TransactionInformation transactionInformation, BranchOrderInformation branchOrderInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account[] accounts = new Account[2]; // first account is sender, second account is recipient
@@ -80,7 +79,7 @@ public class TransactionServiceImpl implements TransactionService {
         DoublePredicate validBalancePredicate = balance -> balance >= 0;
 
         double newBalance = switch (activityType) {
-            case MONEY_DEPOSIT, INTEREST_INCOME -> {
+            case MONEY_DEPOSIT, THIRD_PARTY_MONEY_DEPOSIT, INTEREST_INCOME -> {
                 double updatedBalance = previousBalance + amount - transactionFee;
 
                 if (!validBalancePredicate.test(updatedBalance)) {
@@ -91,7 +90,7 @@ public class TransactionServiceImpl implements TransactionService {
                 accounts[1] = account;
                 yield updatedBalance;
             }
-            case WITHDRAWAL -> {
+            case WITHDRAWAL, THIRD_PARTY_WITHDRAWAL -> {
                 double updatedBalance = previousBalance - (amount + transactionFee);
 
                 if (!validBalancePredicate.test(updatedBalance)) {
@@ -120,6 +119,11 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + account.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee);
 
+        Optional.ofNullable(branchOrderInformation).ifPresent(presentBranchOrderInformation -> {
+            summary.put(SummaryField.BRANCH_ORDER_ID, presentBranchOrderInformation.branchOrderId());
+            summary.put(SummaryField.THIRD_PARTY_NATIONAL_IDENTITY, presentBranchOrderInformation.thirdPartyNationalId());
+        });
+
         ChannelType channelType = transactionInformation.channel();
         summary.put(SummaryField.CHANNEL, channelType);
         summary.put(SummaryField.TRANSACTION_PLACE, transactionInformation.placeName());
@@ -132,7 +136,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount, TransactionInformation transactionInformation) {
+    public void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount, TransactionInformation transactionInformation, BranchOrderInformation branchOrderInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         ActivityType activityType = ActivityType.MONEY_TRANSFER;
@@ -183,6 +187,8 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(SummaryField.AMOUNT, amountInSummary + " " + senderAccount.getCurrency());
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
 
+        Optional.ofNullable(branchOrderInformation).ifPresent(presentBranchOrderInformation -> summary.put(SummaryField.BRANCH_ORDER_ID, presentBranchOrderInformation.branchOrderId()));
+
         summary.put(SummaryField.CHANNEL, transactionInformation.channel());
         summary.put(senderWord + SummaryField.TRANSACTION_PLACE, transactionInformation.placeName());
         summary.put(senderWord + SummaryField.TIME, LocalDateTime.now(transactionInformation.zoneId()).toString());
@@ -206,7 +212,7 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount, TransactionInformation transactionInformation) {
+    public void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount, TransactionInformation transactionInformation, BranchOrderInformation branchOrderInformation) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         ActivityType activityType = ActivityType.MONEY_EXCHANGE;
@@ -260,6 +266,8 @@ public class TransactionServiceImpl implements TransactionService {
         summary.put(SummaryField.RATE, FormatterUtil.convertNumberToFormalExpression(rate));
 
         summary.put(SummaryField.TRANSACTION_FEE, transactionFee + " " + Currency.getDeductionCurrency());
+
+        Optional.ofNullable(branchOrderInformation).ifPresent(presentBranchOrderInformation -> summary.put(SummaryField.BRANCH_ORDER_ID, presentBranchOrderInformation.branchOrderId()));
 
         ChannelType channelType = transactionInformation.channel();
         summary.put(SummaryField.CHANNEL, channelType);
