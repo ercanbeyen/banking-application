@@ -207,7 +207,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
 
     @PreAuthorize("#customerId == authentication.principal.id")
     @GetMapping("/{id}/expected-transactions")
-    public ResponseEntity<List<ExpectedTransaction>> getExpectedTransactions(@PathVariable("id") @P("customerId") Integer id, @RequestParam(value = "month", defaultValue = "1") Integer month) {
+    public ResponseEntity<List<ExpectedTransaction>> getExpectedTransactions(@PathVariable("id") @P("customerId") Integer id, @RequestParam(value = "month", required = false, defaultValue = "1") Integer month) {
         CashFlowCalendarUtil.checkMonthValueForExpectedTransactions(month);
         return ResponseEntity.ok(customerService.getExpectedTransactions(id, month));
     }
@@ -222,6 +222,17 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     @GetMapping("/{id}/registered-recipients")
     public ResponseEntity<List<RegisteredRecipient>> getRegisteredRecipients(@PathVariable("id") @P("customerId") Integer id) {
         return ResponseEntity.ok(customerService.getRegisteredRecipients(id));
+    }
+
+    @PreAuthorize("#customerId == authentication.principal.id")
+    @GetMapping("/{id}/branch-orders")
+    public ResponseEntity<List<BranchOrderDto>> getBranchOrders(
+            @PathVariable(value = "id") @P(value = "customerId") Integer id,
+            @RequestParam(value = "branch-name", required = false) String branchName,
+            @RequestParam(value = "from-month", required = false, defaultValue = "1") Integer fromMonth,
+            @RequestParam(value = "statuses", required = false) List<BranchOrderStatus> branchOrderStatuses) {
+        BranchOrderUtil.checkRequestParametersForGetBranchOrders(fromMonth);
+        return ResponseEntity.ok(customerService.getBranchOrders(id, branchName, fromMonth, branchOrderStatuses));
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")

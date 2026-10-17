@@ -19,6 +19,7 @@ public class BranchOrder {
     @ManyToOne
     private Branch branch;
     @ManyToOne
+    @JoinColumn(name = "customer_national_id", referencedColumnName = "national_id")
     private Customer customer;
     @OneToOne
     private AccountActivity accountActivity;
