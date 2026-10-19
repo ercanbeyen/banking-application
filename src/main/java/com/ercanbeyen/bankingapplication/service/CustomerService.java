@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.service;
 
 import com.ercanbeyen.bankingapplication.constant.enums.AccountType;
+import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.constant.enums.PaymentType;
 import com.ercanbeyen.bankingapplication.dto.*;
@@ -33,6 +34,7 @@ public interface CustomerService extends BaseService<CustomerDto, CustomerFilter
     List<ExpectedTransaction> getExpectedTransactions(Integer id, Integer month);
     List<CustomerAgreementDto> getAgreements(Integer id);
     List<RegisteredRecipient> getRegisteredRecipients(Integer id);
+    List<BranchOrderDto> getBranchOrders(Integer id, String branchName, Integer fromMonth, List<BranchOrderStatus> branchOrderStatuses);
     Map<AccountType, List<List<AccountFinancialStatus>>> calculateFinancialStatus(Integer id);
     Double calculateNetBalance(Integer id, AccountType accountType, Currency currency);
     Customer findById(Integer id);

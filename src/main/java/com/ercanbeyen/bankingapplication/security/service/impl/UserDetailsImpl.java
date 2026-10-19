@@ -5,6 +5,7 @@ import com.ercanbeyen.bankingapplication.entity.Role;
 import com.ercanbeyen.bankingapplication.entity.UserCredentials;
 import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import lombok.Getter;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -33,7 +34,7 @@ public class UserDetailsImpl implements UserDetails {
         Set<GrantedAuthority> authorities = new HashSet<>();
 
         for (Role role : userCredentials.getRoles()) {
-            authorities.add(new SimpleGrantedAuthority(UserDetailsUtil.getRole(role.getName())));
+            authorities.add(new SimpleGrantedAuthority(UserDetailsUtil.getValueForSimpleGrantedAuthority.apply(role.getName())));
 
             for (Permission permission : role.getPermissions()) {
                 authorities.add(new SimpleGrantedAuthority(permission.getName()));
@@ -49,6 +50,7 @@ public class UserDetailsImpl implements UserDetails {
         );
     }
 
+    @NullMarked
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return authorities;
@@ -59,6 +61,7 @@ public class UserDetailsImpl implements UserDetails {
         return password;
     }
 
+    @NullMarked
     @Override
     public String getUsername() {
         return username;

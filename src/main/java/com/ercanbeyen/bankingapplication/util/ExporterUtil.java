@@ -22,7 +22,7 @@ public class ExporterUtil {
     private final String LOGO_PATH = "/app/photo/logo.png";
     private final String TIME_ZONE_MESSAGE = "Trading hours are displayed according to the time zone of the region where the account is located.";
 
-    public final List<String> maskedSummaryFields = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY);
+    public final List<String> maskedSummaryFields = List.of(SummaryField.FULL_NAME, SummaryField.NATIONAL_IDENTITY, SummaryField.THIRD_PARTY_NATIONAL_IDENTITY);
 
     public Double calculateAmountForDataLine(AccountActivityPreview accountActivityPreview) {
         Double amount = accountActivityPreview.amount();

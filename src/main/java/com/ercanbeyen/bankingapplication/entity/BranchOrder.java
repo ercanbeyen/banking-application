@@ -19,6 +19,7 @@ public class BranchOrder {
     @ManyToOne
     private Branch branch;
     @ManyToOne
+    @JoinColumn(name = "customer_national_id", referencedColumnName = "national_id")
     private Customer customer;
     @OneToOne
     private AccountActivity accountActivity;
@@ -26,6 +27,9 @@ public class BranchOrder {
     private ActivityType activityType;
     @Enumerated(EnumType.STRING)
     private BranchOrderStatus status;
+    @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
+    @JoinColumn(name = "petition")
+    private File petition;
     private String content;
     @CreationTimestamp
     private Instant createdAt;

@@ -47,6 +47,7 @@ public class CustomerServiceImpl implements CustomerService {
     private final NotificationMapper notificationMapper;
     private final CashFlowCalendarMapper cashFlowCalendarMapper;
     private final CustomerAgreementMapper customerAgreementMapper;
+    private final BranchOrderMapper branchOrderMapper;
     private final FileService fileService;
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
@@ -412,6 +413,30 @@ public class CustomerServiceImpl implements CustomerService {
     public List<RegisteredRecipient> getRegisteredRecipients(Integer id) {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
         return findById(id).getRegisteredRecipients();
+    }
+
+    @Override
+    public List<BranchOrderDto> getBranchOrders(Integer id, String branchName, Integer fromMonth, List<BranchOrderStatus> branchOrderStatuses) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        Predicate<BranchOrder> branchOrderPredicate = branchOrder -> {
+            boolean branchNameFilter = Optional.ofNullable(branchName).isEmpty() || branchOrder.getBranch().getName().equals(branchName);
+
+            LocalDate month = LocalDate.now(ZoneId.systemDefault()).minusMonths(fromMonth);
+            boolean fromMonthFilter = LocalDate.ofInstant(branchOrder.getCreatedAt(), ZoneId.systemDefault()).isAfter(month);
+
+            boolean branchOrderStatusesFilter = Optional.ofNullable(branchOrderStatuses).isEmpty() || branchOrderStatuses.isEmpty() || branchOrderStatuses.contains(branchOrder.getStatus());
+
+            return branchNameFilter && fromMonthFilter && branchOrderStatusesFilter;
+        };
+
+        return findById(id)
+                .getBranchOrders()
+                .stream()
+                .filter(branchOrderPredicate)
+                .sorted(Comparator.comparing(BranchOrder::getCreatedAt, Comparator.reverseOrder()))
+                .map(branchOrderMapper::entityToDto)
+                .toList();
     }
 
     @Override

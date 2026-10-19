@@ -79,6 +79,9 @@ public non-sealed class Customer extends BaseEntity {
     @Getter
     @OneToOne(cascade = CascadeType.REMOVE)
     private CashFlowCalendar cashFlowCalendar;
+    @Getter
+    @OneToMany(mappedBy = "customer", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    private List<BranchOrder> branchOrders;
 
     @Transient
     public String getFullName() {

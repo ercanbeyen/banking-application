@@ -18,13 +18,19 @@ public record BranchOrderDto(
         @NotNull(message = "Activity type should not be null")
         ActivityType activityType,
         BranchOrderStatus status,
-        @NotBlank(message = "Content should not be blank")
+        String fileId,
         String content,
         @JsonFormat(
                 shape = JsonFormat.Shape.STRING,
                 pattern = "yyyy-MM-dd HH:mm:ss",
                 timezone = "UTC"
         )
-        Instant createdAt) {
+        Instant createdAt,
+        @JsonFormat(
+                shape = JsonFormat.Shape.STRING,
+                pattern = "yyyy-MM-dd HH:mm:ss",
+                timezone = "UTC"
+        )
+        Instant updatedAt) {
 
 }
