@@ -18,7 +18,9 @@ public class PhotoUtil {
     }
 
     public List<String> getPlainContentTypes() {
-        return FileUtil.getPlainContentTypes(validContentTypes);
+        return validContentTypes.stream()
+                .map(FileUtil::getFileExtension)
+                .toList();
     }
 
     private void checkContentTypeOfPhoto(MultipartFile file) {

@@ -9,7 +9,6 @@ import org.apache.poi.util.StringUtil;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -17,14 +16,16 @@ import java.util.Optional;
 @UtilityClass
 public class FileUtil {
     private final int FILE_NAME_LENGTH_THRESHOLD = 100;
+    public final String APPLICATION_DOC_VALUE = "application/msword";
+    public final String APPLICATION_DOCX_VALUE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
     public FileUploadRequest createFileUploadRequest(MultipartFile request, String customFileName) {
         checkFile(request);
 
         try {
             byte[] data = request.getBytes();
-            String name = customFileName != null
-                    ? customFileName + "." + getPlainContentType(request.getContentType()) // file extension is added
+            String name = Optional.ofNullable(customFileName).isPresent()
+                    ? customFileName + "." + getFileExtension(request.getContentType()) // file extension is added
                     : request.getOriginalFilename();
             return new FileUploadRequest(name, request.getContentType(), data);
         } catch (IOException exception) {
@@ -38,7 +39,7 @@ public class FileUtil {
     }
 
     public void checkFileContent(MultipartFile request) {
-        if (request == null || request.isEmpty()) {
+        if (Optional.ofNullable(request).isEmpty() || request.isEmpty()) {
             throw new ResourceExpectationFailedException("File should not be empty");
         }
 
@@ -49,35 +50,29 @@ public class FileUtil {
         }
     }
 
-    public List<String> getPlainContentTypes(List<String> contentTypes) {
-        return contentTypes.stream()
-                .map(FileUtil::extractPlainContentType)
-                .toList();
-    }
-
-    public String getPlainContentType(String contentType) {
+    public String getFileExtension(String contentType) {
         if (StringUtil.isBlank(contentType)) {
             throw new ResourceExpectationFailedException("Invalid content type");
         }
 
-        return extractPlainContentType(contentType);
+        return extractFileExtension(contentType);
     }
 
     private void checkLengthOfFileName(MultipartFile request) {
         String originalFileName = request.getOriginalFilename();
 
-        if (originalFileName == null) {
+        if (Optional.ofNullable(originalFileName).isEmpty()) {
             throw new ResourceExpectationFailedException("File name should not be empty!");
         }
 
         int lengthOfOriginalFileName = originalFileName.length();
         log.info("File original name and its length: {} - {}", originalFileName, lengthOfOriginalFileName);
 
-        String plainContentType = extractPlainContentType(Objects.requireNonNull(request.getContentType()));
-        log.info("Plain content type: {}", plainContentType);
+        String fileExtension = extractFileExtension(Objects.requireNonNull(request.getContentType()));
+        log.info("File extension: {}", fileExtension);
 
-        int lengthOfPlainContentType = plainContentType.length();
-        int endIndex = lengthOfOriginalFileName - (1 + lengthOfPlainContentType); // full stop + plain content type -> .pdf
+        int lengthOfFileExtension = fileExtension.length();
+        int endIndex = lengthOfOriginalFileName - (1 + lengthOfFileExtension); // full stop + file extension -> .pdf
         String plainFileName = originalFileName.substring(0, endIndex);
         log.info("Plain file name: {}", plainFileName);
 
@@ -86,14 +81,20 @@ public class FileUtil {
         }
     }
 
-    private String extractPlainContentType(String contentType) {
-        String[] contentTypeSplitArray = contentType.split("/");
-        String plainContentType = contentTypeSplitArray[1];
+    private String extractFileExtension(String contentType) {
+        return switch (contentType) {
+            case APPLICATION_DOC_VALUE -> "doc";
+            case APPLICATION_DOCX_VALUE -> "docx";
+            default -> {
+                String[] contentTypeSplitArray = contentType.split("/");
+                String plainContentType = contentTypeSplitArray[1];
 
-        if (Optional.ofNullable(plainContentType).isEmpty()) {
-            throw new ResourceExpectationFailedException("Invalid content type");
-        }
+                if (Optional.ofNullable(plainContentType).isEmpty()) {
+                    throw new ResourceExpectationFailedException("Invalid content type");
+                }
 
-        return plainContentType;
+                yield plainContentType;
+            }
+        };
     }
 }

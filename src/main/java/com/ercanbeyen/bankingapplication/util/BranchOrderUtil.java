@@ -14,13 +14,13 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
-import java.util.Objects;
 import java.util.Optional;
 
 @UtilityClass
 @Slf4j
 public class BranchOrderUtil {
     private final List<Integer> VALID_MONTH_FILTERS = List.of(1, 3, 6);
+    private final List<String> permittedFileFormatsForForPetition = List.of(MediaType.APPLICATION_PDF_VALUE, FileUtil.APPLICATION_DOC_VALUE, FileUtil.APPLICATION_DOCX_VALUE);
 
     public void checkRequest(BranchOrderDto request, MultipartFile file) {
         if (!ActivityType.getBranchOrderActivities().contains(request.activityType())) {
@@ -32,11 +32,8 @@ public class BranchOrderUtil {
                 throw new BadRequestException("Petition file is empty!");
             }
 
-            final String permittedFileFormatForPetition = MediaType.APPLICATION_PDF_VALUE;
-
-            if (!Objects.equals(file.getContentType(), permittedFileFormatForPetition)) {
-                int index = permittedFileFormatForPetition.indexOf("/");
-                throw new BadRequestException("Only " + permittedFileFormatForPetition.substring(index + 1) + " file format is permitted for petition!");
+            if (!permittedFileFormatsForForPetition.contains(file.getContentType())) {
+                throw new BadRequestException("Invalid file format! Permitted file formats: " + permittedFileFormatsForForPetition);
             }
         } else if (StringUtils.isBlank(request.content())) {
             throw new BadRequestException("No content or petition is submitted!");
