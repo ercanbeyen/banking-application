@@ -11,6 +11,7 @@ import lombok.EqualsAndHashCode;
 import org.hibernate.validator.constraints.Range;
 
 import java.time.Instant;
+import java.time.LocalDate;
 
 @EqualsAndHashCode(callSuper = true)
 @Data
@@ -37,5 +38,6 @@ public non-sealed class AccountDto extends BaseDto {
     @Range(min = 0, max = 100, message = "Interest rate is not between {min} and {max}")
     private Double interestRate;
     private Integer depositMaturity;
+    private LocalDate depositMaturityDate;
     private Double balanceAfterNextInterestIncome;
 }

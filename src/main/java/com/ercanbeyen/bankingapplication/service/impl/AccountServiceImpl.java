@@ -14,10 +14,7 @@ import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
-import com.ercanbeyen.bankingapplication.exception.BadRequestException;
-import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
-import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.exception.*;
 import com.ercanbeyen.bankingapplication.helper.DailyActivityLimitHelper;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
@@ -29,6 +26,7 @@ import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.TermDepositInterestRateUtil;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -105,8 +103,7 @@ public class AccountServiceImpl implements AccountService {
             agreementService.approveAgreements(AgreementSubject.DEPOSIT_ACCOUNT, customer);
 
             log.info("{} is {}, so update interest rate and balance after next {}", entity, accountType.getValue(), Entity.TERM_DEPOSIT_INTEREST_RATE.getValue());
-            account.setInterestRate(0D);
-            account.setBalanceAfterNextInterestIncome(0D);
+            transactionService.updateDepositAccountFields(account, 0, request.getDepositMaturity());
         }
 
         account.setCustomer(customer);
@@ -205,7 +202,7 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = findActiveAccountById(id);
 
-        if (!AccountUtil.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositMaturity())) {
+        if (!checkAccountForPeriodicMoneyAdd(account)) {
             return "Maturity date has not arrived yet";
         }
 
@@ -224,14 +221,21 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation, null);
+
+        try {
+            transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation, null);
+        } catch (ResourceExpectationFailedException exception) {
+            account.setDepositMaturityDate(LocalDate.now(ZoneId.systemDefault()).plusMonths(account.getDepositMaturity()));
+            accountRepository.save(account);
+            return exception.getMessage();
+        } catch (Exception exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
         notificationService.sendNotification(notificationDto);
 
-        String response = activityType.getValue() + " transfer";
-
-        return String.format(ResponseMessage.SUCCESS, response);
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue() + " transfer");
     }
 
     @Override
@@ -668,6 +672,12 @@ public class AccountServiceImpl implements AccountService {
                 channelType,
                 zoneId
         );
+    }
+
+    private static boolean checkAccountForPeriodicMoneyAdd(Account account) {
+        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.DEPOSIT, ActivityType.INTEREST_INCOME);
+        TermDepositInterestRateUtil.checkValidityOfDepositMaturity(account.getDepositMaturity());
+        return account.getDepositMaturityDate().isEqual(LocalDate.now(ZoneId.systemDefault()));
     }
 
     private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, ActivityType activityType, List<ChannelType> channelTypes) {

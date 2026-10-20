@@ -28,6 +28,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
@@ -288,6 +289,7 @@ public class TransactionServiceImpl implements TransactionService {
 
         account.setInterestRate(interestRate);
         account.setDepositMaturity(depositMaturity);
+        account.setDepositMaturityDate(LocalDate.now(ZoneId.systemDefault()).plusMonths(depositMaturity));
         account.setBalanceAfterNextInterestIncome(balanceAfterNextInterestIncome);
 
         log.info("{} {} related fields are updated", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
