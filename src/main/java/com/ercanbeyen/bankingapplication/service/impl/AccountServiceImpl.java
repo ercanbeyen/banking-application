@@ -15,6 +15,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
 import com.ercanbeyen.bankingapplication.exception.*;
+import com.ercanbeyen.bankingapplication.helper.DepositAccountHelper;
 import com.ercanbeyen.bankingapplication.helper.DailyActivityLimitHelper;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
@@ -48,6 +49,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AccountServiceImpl implements AccountService {
     private static final Currency DEDUCTION_CURRENCY = Currency.getDeductionCurrency();
+
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final CustomerService customerService;
@@ -60,6 +62,8 @@ public class AccountServiceImpl implements AccountService {
     private final AgreementService agreementService;
     private final ExchangeService exchangeService;
     private final TimeZoneService timeZoneService;
+    private final DeductionService deductionService;
+    private final DepositAccountHelper depositAccountHelper;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOption filteringOption) {
@@ -103,7 +107,7 @@ public class AccountServiceImpl implements AccountService {
             agreementService.approveAgreements(AgreementSubject.DEPOSIT_ACCOUNT, customer);
 
             log.info("{} is {}, so update interest rate and balance after next {}", entity, accountType.getValue(), Entity.TERM_DEPOSIT_INTEREST_RATE.getValue());
-            transactionService.updateDepositAccountFields(account, 0, request.getDepositMaturity());
+            depositAccountHelper.updateDepositAccountFields(account, request.getDepositMaturity(), 0);
         }
 
         account.setCustomer(customer);
@@ -143,7 +147,8 @@ public class AccountServiceImpl implements AccountService {
 
         if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(account.getDepositMaturity(), request.getDepositMaturity())) {
             log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
-            transactionService.updateDepositAccountFields(account, account.getBalance(), request.getDepositMaturity());
+            double transactionFee = deductionService.getDeduction(ActivityType.INTEREST_INCOME).amount();
+            depositAccountHelper.updateDepositAccountFields(account, request.getDepositMaturity(), transactionFee);
         }
 
         return accountMapper.entityToDto(accountRepository.save(account));
@@ -206,7 +211,7 @@ public class AccountServiceImpl implements AccountService {
             return "Maturity date has not arrived yet";
         }
 
-        Double amount = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
+        Double amount = DepositAccountHelper.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
         ActivityType activityType = ActivityType.INTEREST_INCOME;
 
         Address address = account.getBranch().getAddress();

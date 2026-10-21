@@ -7,7 +7,6 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.constant.query.SummaryField;
 import com.ercanbeyen.bankingapplication.dto.BranchOrderInformation;
 import com.ercanbeyen.bankingapplication.dto.TransactionInformation;
-import com.ercanbeyen.bankingapplication.dto.TermDepositInterestRateDto;
 import com.ercanbeyen.bankingapplication.dto.request.AccountActivityRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
@@ -16,8 +15,7 @@ import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.AccountActivity;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
-import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.dto.option.TermDepositInterestRateFilteringOption;
+import com.ercanbeyen.bankingapplication.helper.DepositAccountHelper;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
@@ -28,11 +26,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.*;
-import java.util.function.DoublePredicate;
 
 @RequiredArgsConstructor
 @Slf4j
@@ -43,9 +39,9 @@ public class TransactionServiceImpl implements TransactionService {
     private final AccountActivityService accountActivityService;
     private final ExchangeService exchangeService;
     private final DeductionService deductionService;
-    private final TermDepositInterestRateService termDepositInterestRateService;
     private final CashFlowCalendarService cashFlowCalendarService;
     private final TimeZoneService timeZoneService;
+    private final DepositAccountHelper depositAccountHelper;
 
     @Override
     public void createAccountActivityForAccountStatusUpdate(Account account, ActivityType activityType, TransactionInformation transactionInformation) {
@@ -73,41 +69,41 @@ public class TransactionServiceImpl implements TransactionService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         Account[] accounts = new Account[2]; // first account is sender, second account is recipient
-        Double transactionFee = getTransactionFee(activityType, List.of(account));
+        double transactionFee = deductionService.getDeduction(activityType).amount();
         log.info(LogMessage.ACCOUNT_ACTIVITY_STATUS_ECHO, activityType.getValue(), amount, transactionFee);
 
-        final double previousBalance = account.getBalance();
-        DoublePredicate validBalancePredicate = balance -> balance >= 0;
+        final double previousNetBalance = account.getBalance();
 
-        double newBalance = switch (activityType) {
+        double newNetBalance = switch (activityType) {
             case MONEY_DEPOSIT, THIRD_PARTY_MONEY_DEPOSIT, INTEREST_INCOME -> {
-                double updatedBalance = previousBalance + amount - transactionFee;
+                double updatedNetBalance = previousNetBalance + amount - transactionFee;
 
-                if (!validBalancePredicate.test(updatedBalance)) {
+                if (updatedNetBalance < 0) {
                     throw new ResourceExpectationFailedException(ResponseMessage.TRANSACTION_FEE_CANNOT_BE_PAYED);
                 }
 
                 /* Balance update of recipient account */
                 accounts[1] = account;
-                yield updatedBalance;
+                yield updatedNetBalance;
             }
             case WITHDRAWAL, THIRD_PARTY_WITHDRAWAL -> {
-                double updatedBalance = previousBalance - (amount + transactionFee);
+                double updatedNetBalance = previousNetBalance - amount - transactionFee;
 
-                if (!validBalancePredicate.test(updatedBalance)) {
+                if (updatedNetBalance < 0) {
                     throw new ResourceExpectationFailedException(ResponseMessage.INSUFFICIENT_FUNDS);
                 }
 
                 /* Balance update of sender account */
                 accounts[0] = account;
-                yield updatedBalance;
+                yield updatedNetBalance;
             }
             default -> throw new ResourceConflictException(ResponseMessage.IMPROPER_ACCOUNT_ACTIVITY);
         };
 
         log.info(LogMessage.ENOUGH_BALANCE, activityType.getValue());
 
-        updateBalance(account, newBalance);
+        account.setBalance(newNetBalance);
+        updateDepositAccountFields(account, transactionFee);
         accountRepository.saveAndFlush(account);
 
         String amountInSummary = FormatterUtil.convertNumberToFormalExpression(amount);
@@ -142,20 +138,26 @@ public class TransactionServiceImpl implements TransactionService {
 
         ActivityType activityType = ActivityType.MONEY_TRANSFER;
         List<Account> accountsInMoneyTransfer = List.of(senderAccount, recipientAccount);
-        double transactionFee = getTransactionFee(activityType, accountsInMoneyTransfer);
+
+        boolean sameCustomerTransferMoneyBetweenAccounts = senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId());
+        double transactionFee = sameCustomerTransferMoneyBetweenAccounts ? 0 : deductionService.getDeduction(activityType).amount();
+
         checkBalanceBeforeMoneyTransferAndExchange(deducteeAccount, accountsInMoneyTransfer, amount, transactionFee, activityType);
 
         /* Balance update of sender account */
-        double newBalance = senderAccount.getBalance() - amount;
-        updateBalance(senderAccount, newBalance);
+        double netBalance = senderAccount.getBalance() - amount;
+        senderAccount.setBalance(netBalance);
+        updateDepositAccountFields(senderAccount, 0);
 
         /* Balance update of deductee account */
-        newBalance = deducteeAccount.getBalance() - transactionFee;
-        updateBalance(deducteeAccount, newBalance);
+        netBalance = deducteeAccount.getBalance() - transactionFee;
+        deducteeAccount.setBalance(netBalance);
+        updateDepositAccountFields(deducteeAccount, transactionFee);
 
         /* Balance update of recipient account */
-        newBalance = recipientAccount.getBalance() + amount;
-        updateBalance(recipientAccount, newBalance);
+        netBalance = recipientAccount.getBalance() + amount;
+        recipientAccount.setBalance(netBalance);
+        updateDepositAccountFields(recipientAccount, 0);
 
         accountRepository.saveAllAndFlush(List.of(senderAccount, deducteeAccount, recipientAccount));
 
@@ -219,7 +221,7 @@ public class TransactionServiceImpl implements TransactionService {
         ActivityType activityType = ActivityType.MONEY_EXCHANGE;
 
         List<Account> accountsInMoneyExchange = List.of(sellerAccount, buyerAccount);
-        double transactionFee = getTransactionFee(activityType, accountsInMoneyExchange);
+        double transactionFee = deductionService.getDeduction(activityType).amount();
         checkBalanceBeforeMoneyTransferAndExchange(deducteeAccount, accountsInMoneyExchange, request.amount(), transactionFee, activityType);
 
         Currency sellerAccountCurrency = sellerAccount.getCurrency();
@@ -229,16 +231,19 @@ public class TransactionServiceImpl implements TransactionService {
         Double earnedAmount = exchangeService.convertMoneyBetweenCurrencies(sellerAccountCurrency, buyerAccountCurrency, spentAmount);
 
         /* Balance update of seller account */
-        double newBalance = sellerAccount.getBalance() - spentAmount;
-        updateBalance(sellerAccount, newBalance);
+        double netBalance = sellerAccount.getBalance() - spentAmount;
+        buyerAccount.setBalance(netBalance);
+        updateDepositAccountFields(sellerAccount, 0);
 
         /* Balance update of deductee account */
-        newBalance = deducteeAccount.getBalance() - transactionFee;
-        updateBalance(deducteeAccount, newBalance);
+        netBalance = deducteeAccount.getBalance() - transactionFee;
+        deducteeAccount.setBalance(netBalance);
+        updateDepositAccountFields(deducteeAccount, transactionFee);
 
         /* Balance update of recipient account */
-        newBalance = buyerAccount.getBalance() + earnedAmount;
-        updateBalance(buyerAccount, newBalance);
+        netBalance = buyerAccount.getBalance() + earnedAmount;
+        buyerAccount.setBalance(netBalance);
+        updateDepositAccountFields(buyerAccount, 0);
 
         accountRepository.saveAllAndFlush(List.of(sellerAccount, deducteeAccount, buyerAccount));
 
@@ -280,88 +285,19 @@ public class TransactionServiceImpl implements TransactionService {
         createAccountActivityForDeduction(transactionFee, summary, deducteeAccount);
     }
 
-    @Override
-    public void updateDepositAccountFields(Account account, double balance, int depositMaturity) {
-        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+    private void updateDepositAccountFields(Account account, double transactionFee) {
+        AccountType expectedAccountType = AccountType.DEPOSIT;
 
-        double interestRate = getInterestRate(account.getCurrency(), balance, depositMaturity);
-        double balanceAfterNextInterestIncome = AccountUtil.calculateBalanceAfterNextInterestIncome(balance, depositMaturity, interestRate);
-
-        account.setInterestRate(interestRate);
-        account.setDepositMaturity(depositMaturity);
-        account.setDepositMaturityDate(LocalDate.now(ZoneId.systemDefault()).plusMonths(depositMaturity));
-        account.setBalanceAfterNextInterestIncome(balanceAfterNextInterestIncome);
-
-        log.info("{} {} related fields are updated", AccountType.DEPOSIT.getValue(), Entity.ACCOUNT.getValue());
-    }
-
-    private void updateBalance(Account account, double balance) {
-        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT)) {
-            log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
-            updateDepositAccountFields(account, balance, account.getDepositMaturity());
+        if (!AccountUtil.checkAccountTypeMatch.test(account.getType(), expectedAccountType)) {
+            return;
         }
 
-        account.setBalance(balance);
-        log.info("{} balance is updated", Entity.ACCOUNT.getValue());
+        log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
+        depositAccountHelper.updateDepositAccountFields(account, account.getDepositMaturity(), transactionFee);
+
+        log.info("{} {} fields are updated", expectedAccountType.getValue(),  Entity.ACCOUNT.getValue());
     }
 
-    private double getInterestRate(Currency currency, double balance, int depositMaturity) {
-        double interestRate = 0;
-
-        /* Match interest rate for the given currency, balance and deposit maturity */
-        try {
-            interestRate = termDepositInterestRateService.getInterestRate(currency, depositMaturity, balance);
-        } catch (ResourceNotFoundException _) {
-            TermDepositInterestRateFilteringOption filteringOption = new TermDepositInterestRateFilteringOption();
-            filteringOption.setCurrency(currency);
-            filteringOption.setDepositMaturity(depositMaturity);
-
-            String entity = Entity.TERM_DEPOSIT_INTEREST_RATE.getValue();
-            String exceptionMessage = "No %s balance in the " + entity.toLowerCase();
-
-            /* Less than minimum balance of Term Deposit Interest Rate */
-            double minimumBalance = termDepositInterestRateService.getEntities(filteringOption)
-                    .stream()
-                    .mapToDouble(TermDepositInterestRateDto::getMinimumBalance)
-                    .min()
-                    .orElseThrow(() -> new ResourceNotFoundException(String.format(exceptionMessage, "minimum")));
-
-            if (balance < minimumBalance) {
-                log.info("Balance is less than the minimum {} balance for deposit maturity {}. Therefore, interest rate is {}", entity.toLowerCase(), depositMaturity, interestRate);
-                return interestRate;
-            }
-
-            /* Greater than maximum balance of Term Deposit Interest Rate */
-            double maximumBalance = termDepositInterestRateService.getEntities(filteringOption)
-                    .stream()
-                    .mapToDouble(TermDepositInterestRateDto::getMaximumBalance)
-                    .max()
-                    .orElseThrow(() -> new ResourceNotFoundException(String.format(exceptionMessage, "maximum")));
-
-            if (balance > maximumBalance) {
-                log.info("Balance is greater than or equal to the maximum balance for deposit maturity {}. Therefore, interest rate of the maximum {} balance", depositMaturity, entity.toLowerCase());
-                return termDepositInterestRateService.getInterestRate(currency, depositMaturity, maximumBalance);
-            }
-
-            /* Unmatched Term Deposit Interest Rate Balance Case */
-            log.error("Unexpected condition! There are unmatched {} balances. Balance: {} & Deposit Maturity: {}", entity.toLowerCase(), balance, depositMaturity);
-            throw new ResourceNotFoundException(entity + " balance is not found for " + balance);
-        }
-
-        return interestRate;
-    }
-
-    private double getTransactionFee(ActivityType activityType, List<Account> accounts) {
-        boolean sameCustomerTransferMoneyBetweenAccounts = activityType == ActivityType.MONEY_TRANSFER
-                && accounts.getFirst().getCustomer().getNationalId().equals(accounts.getLast().getCustomer().getNationalId());
-
-        if (sameCustomerTransferMoneyBetweenAccounts) {
-            log.warn("There is no transaction fee when transferring money between accounts of the same customer");
-            return 0;
-        }
-
-        return deductionService.getDeduction(activityType).amount();
-    }
 
     private void createAccountActivityForDeduction(Double transactionFee, Map<String, Object> summary, Account deducteeAccount) {
         if (transactionFee == 0) {

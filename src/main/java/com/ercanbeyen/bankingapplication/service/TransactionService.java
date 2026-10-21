@@ -12,5 +12,4 @@ public interface TransactionService {
     void applyAccountActivityForSingleAccount(ActivityType activityType, Double amount, Account account, String cashFlowExplanation, TransactionInformation transactionInformation, BranchOrderInformation branchOrderInformation);
     void transferMoneyBetweenAccounts(MoneyTransferRequest request, Double amount, Account senderAccount, Account recipientAccount, Account deducteeAccount, TransactionInformation transactionInformation, BranchOrderInformation branchOrderInformation);
     void exchangeMoneyBetweenAccounts(MoneyExchangeRequest request, Account sellerAccount, Account buyerAccount, Account deducteeAccount, TransactionInformation transactionInformation, BranchOrderInformation branchOrderInformation);
-    void updateDepositAccountFields(Account account, double balance, int depositMaturity);
 }
