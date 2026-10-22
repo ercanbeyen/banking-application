@@ -23,6 +23,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -41,8 +43,8 @@ public class AccountScheduledTask {
     private final JwtService jwtService;
 
     @Scheduled(cron = "0 0 9 * * *") // 9:00 everyday
-    public void payInterestOnDepositAccounts() {
-        final String task = "periodic money deposit to deposit account";
+    public void payInterestIncomeToDepositAccounts() {
+        final String task = "periodic interest income payment to deposit accounts";
         log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
@@ -53,7 +55,8 @@ public class AccountScheduledTask {
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
         UriComponents uriComponents = UriComponentsBuilder.fromUriString(Entity.ACCOUNT.getCollectionUrl())
-                .queryParam("type", String.valueOf(AccountType.DEPOSIT))
+                .queryParam("type", AccountType.DEPOSIT.name())
+                .queryParam("depositMaturityDate", LocalDate.now(ZoneId.systemDefault()).toString())
                 .build();
 
         List<AccountDto> accountDtos;

@@ -71,15 +71,17 @@ public class AccountServiceImpl implements AccountService {
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (Optional.ofNullable(filteringOption.getType()).isEmpty() || filteringOption.getType() == account.getType());
+            boolean depositMaturityDateFilter = (Optional.ofNullable(filteringOption.getDepositMaturityDate())).isEmpty() || filteringOption.getDepositMaturityDate().equals(account.getDepositMaturityDate());
             boolean timeFilter = (Optional.ofNullable(filteringOption.getCreatedAt()).isEmpty() || filteringOption.getCreatedAt().isEqual(LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault())));
             boolean blockedFilter = (Optional.ofNullable(filteringOption.getIsBlocked()).isEmpty() || filteringOption.getIsBlocked() == account.isBlocked());
             boolean closedAtFilter = (Optional.ofNullable(filteringOption.getIsClosed()).isEmpty() || filteringOption.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
-            return typeFilter && timeFilter && blockedFilter && closedAtFilter;
+            return typeFilter && depositMaturityDateFilter && timeFilter && blockedFilter && closedAtFilter;
         };
 
         return accountRepository.findAll()
                 .stream()
                 .filter(accountPredicate)
+                .sorted(Comparator.comparing(Account::getCreatedAt).reversed())
                 .map(accountMapper::entityToDto)
                 .toList();
     }
