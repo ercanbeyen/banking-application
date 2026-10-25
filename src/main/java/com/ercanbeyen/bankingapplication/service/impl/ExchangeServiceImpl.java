@@ -14,7 +14,6 @@ import com.ercanbeyen.bankingapplication.mapper.ExchangeMapper;
 import com.ercanbeyen.bankingapplication.dto.option.ExchangeFilteringOption;
 import com.ercanbeyen.bankingapplication.repository.ExchangeRepository;
 import com.ercanbeyen.bankingapplication.view.repository.ExchangeViewRepository;
-import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -180,8 +179,6 @@ public class ExchangeServiceImpl implements ExchangeService {
     }
 
     private void checkExistsByBaseAndTargetCurrencies(Currency base, Currency target) {
-        ExchangeUtil.checkCurrenciesBeforeMoneyExchange(base, target);
-
         final String logMessage = "Existence of Exchange (Base: {} & Target: {}): {}";
         boolean existsByBaseAndTarget = exchangeRepository.existsByBaseCurrencyAndTargetCurrency(base, target);
         log.info(logMessage, base, target, existsByBaseAndTarget);

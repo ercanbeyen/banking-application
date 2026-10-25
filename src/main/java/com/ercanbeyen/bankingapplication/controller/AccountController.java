@@ -20,7 +20,6 @@ import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
-import com.ercanbeyen.bankingapplication.helper.DailyActivityLimitHelper;
 import com.ercanbeyen.bankingapplication.security.service.AccountSecurityService;
 import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.AccountService;
@@ -65,23 +64,19 @@ import java.util.function.UnaryOperator;
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;
     private final AccountSecurityService accountSecurityService;
-    private final DailyActivityLimitHelper dailyActivityLimitHelper;
     private final BranchOrderService branchOrderService;
     private final EmailService emailService;
     private final TimeZoneService timeZoneService;
 
-
     public AccountController(
             AccountService accountService,
             AccountSecurityService accountSecurityService,
-            DailyActivityLimitHelper dailyActivityLimitHelper,
             BranchOrderService branchOrderService,
             EmailService emailService,
             TimeZoneService timeZoneService) {
         super(accountService);
         this.accountService = accountService;
         this.accountSecurityService = accountSecurityService;
-        this.dailyActivityLimitHelper = dailyActivityLimitHelper;
         this.branchOrderService = branchOrderService;
         this.emailService = emailService;
         this.timeZoneService = timeZoneService;
@@ -109,7 +104,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return new ResponseEntity<>(accountService.createEntity(request), HttpStatus.CREATED);
     }
 
-    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @PreAuthorize("@accountSecurityService.isOwner(#accountId, authentication)")
     @PutMapping("/{id}")
     @Override
     public ResponseEntity<AccountDto> updateEntity(@PathVariable("id") Integer id, @RequestBody @Valid AccountDto request) {
@@ -143,8 +138,6 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
         AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
 
-        dailyActivityLimitHelper.checkActivityLimits(activityType, amount, channelType);
-
         accountService.depositMoney(id, activityType, amount, channelInformation, branchOrderInformation);
 
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, activityType.getValue()));
@@ -168,8 +161,6 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
 
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
         AccountUtil.checkAccountActivityWithChannelType(channelInformation, activityType);
-
-        dailyActivityLimitHelper.checkActivityLimits(activityType, amount, channelType);
 
         accountService.withdrawMoney(id, activityType, amount, channelInformation, branchOrderInformation);
 
@@ -198,7 +189,6 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
 
         AccountUtil.checkMoneyTransferRequest(request, channelInformation);
-        dailyActivityLimitHelper.checkActivityLimits(activityType, request.amount(), channelType);
 
         accountService.transferMoney(request, channelInformation, branchOrderInformation);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, activityType.getValue()));
@@ -220,7 +210,6 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         ChannelInformation channelInformation = new ChannelInformation(channelId, channelType);
 
         AccountUtil.checkMoneyExchangeRequest(request, channelInformation);
-        dailyActivityLimitHelper.checkActivityLimits(activityType, request.amount(), channelType);
 
         accountService.exchangeMoney(request, channelInformation, branchOrderInformation);
         MessageResponse<String> response = new MessageResponse<>(String.format(ResponseMessage.SUCCESS, activityType.getValue()));
@@ -276,15 +265,15 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<byte[]> downloadAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementPdf(id, request);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_PDF);
-        headers.setContentLength(byteArrayOutputStream.size());
-        headers.setContentDisposition(ContentDisposition.attachment()
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.setContentType(MediaType.APPLICATION_PDF);
+        httpHeaders.setContentLength(byteArrayOutputStream.size());
+        httpHeaders.setContentDisposition(ContentDisposition.attachment()
                 .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
                 .build());
 
         return ResponseEntity.ok()
-                .headers(headers)
+                .headers(httpHeaders)
                 .body(byteArrayOutputStream.toByteArray());
     }
 
@@ -293,15 +282,15 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
     public ResponseEntity<byte[]> downloadAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementExcel(id, request);
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
-        headers.setContentLength(byteArrayOutputStream.size());
-        headers.setContentDisposition(ContentDisposition.attachment()
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        httpHeaders.setContentLength(byteArrayOutputStream.size());
+        httpHeaders.setContentDisposition(ContentDisposition.attachment()
                 .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
                 .build());
 
         return ResponseEntity.ok()
-                .headers(headers)
+                .headers(httpHeaders)
                 .body(byteArrayOutputStream.toByteArray());
     }
 
@@ -380,12 +369,12 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         if (Optional.ofNullable(branchOrderId).isEmpty()) {
             return;
         }
+
         BranchOrderDto branchOrderDto = branchOrderService.getBranchOrder(branchOrderId);
 
         if (branchOrderDto.activityType() != expectedActivityType) {
             throw new ResourceConflictException("Activity types are mismatching!");
         }
-
 
         if (branchOrderDto.status() != BranchOrderStatus.IN_PROCESS) {
             throw new ResourceConflictException(ResponseMessage.BRANCH_ORDER_STATUS_VIOLATED);
@@ -396,7 +385,6 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         if (!accountDto.getCustomerNationalId().equals(branchOrderDto.customerNationalId())) {
             throw new ResourceConflictException(String.format("%s does not belong to %s", Entity.ACCOUNT.getValue(), Entity.CUSTOMER.getValue()));
         }
-
 
         UserDetails userDetails = UserDetailsUtil.getUserDetails(Objects.requireNonNull(SecurityContextHolder.getContext().getAuthentication()));
         Set<ERole> eRoles = UserDetailsUtil.getERoles(userDetails);

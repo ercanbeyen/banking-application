@@ -17,7 +17,7 @@ public enum ChannelType {
     private static final String SYSTEM_CHANNEL_PLACE_NAME = "Application";
     private final String value;
 
-    public static String getPlaceNameForSystemChannel() {
+    public static String placeNameForSystemChannel() {
         return SYSTEM_CHANNEL_PLACE_NAME;
     }
 
@@ -25,7 +25,7 @@ public enum ChannelType {
         return List.of(BRANCH, ATM);
     }
 
-    public static ChannelType getChannelTypeWithNoDailyAccountActivityLimit() {
+    public static ChannelType channelExemptFromDailyActivityLimit() {
         return BRANCH;
     }
 }

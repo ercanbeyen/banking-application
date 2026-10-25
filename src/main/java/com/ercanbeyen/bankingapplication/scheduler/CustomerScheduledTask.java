@@ -53,41 +53,41 @@ public class CustomerScheduledTask {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
         Map<String, String> tokens = jwtService.generateTokens(userDetails);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        httpHeaders.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
         List<CustomerDto> customerDtos;
 
         try {
-            customerDtos = getCustomers(uriComponents, headers);
+            customerDtos = getCustomers(uriComponents, httpHeaders);
         } catch (Exception exception) {
             log.error(LogMessage.EXCEPTION, exception.getMessage());
             return;
         }
 
-        notifyCustomers(customerDtos, notificationMessage, headers);
+        notifyCustomers(customerDtos, notificationMessage, httpHeaders);
 
         log.info(LogMessage.SCHEDULED_TASK_ENDED, task);
     }
 
-    private void notifyCustomers(List<CustomerDto> customerDtos, String notificationMessage, HttpHeaders headers) {
+    private void notifyCustomers(List<CustomerDto> customerDtos, String notificationMessage, HttpHeaders httpHeaders) {
         customerDtos.forEach(customerDto -> {
             NotificationDto request = new NotificationDto(customerDto.getNationalId(), notificationMessage);
 
             try {
                 log.info(LogMessage.BEFORE_REQUEST);
 
-                HttpEntity<NotificationDto> httpEntity = new HttpEntity<>(request, headers);
-                ResponseEntity<NotificationDto> responseEntity = restTemplate.exchange(
+                HttpEntity<NotificationDto> httpEntity = new HttpEntity<>(request, httpHeaders);
+                NotificationDto response = restTemplate.postForObject(
                         Entity.NOTIFICATION.getCollectionUrl(),
-                        HttpMethod.POST,
                         httpEntity,
                         NotificationDto.class
                 );
 
-                log.info(LogMessage.REST_TEMPLATE_SUCCESS, responseEntity.getBody());
+                log.info(LogMessage.REST_TEMPLATE_SUCCESS, response);
             } catch (Exception exception) {
                 log.error(LogMessage.EXCEPTION, exception.getMessage());
             }
@@ -96,11 +96,11 @@ public class CustomerScheduledTask {
         });
     }
 
-    private List<CustomerDto> getCustomers(UriComponents uriComponents, HttpHeaders headers) {
+    private List<CustomerDto> getCustomers(UriComponents uriComponents, HttpHeaders httpHeaders) {
         List<CustomerDto> customerDtos;
-        String url = uriComponents.toString();
-        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
 
+        String url = uriComponents.toString();
+        HttpEntity<Void> httpEntity = new HttpEntity<>(httpHeaders);
         ResponseEntity<List> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,

@@ -3,7 +3,6 @@ package com.ercanbeyen.bankingapplication.scheduler;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.dto.MoneyTransferOrderDto;
-import com.ercanbeyen.bankingapplication.dto.RegularMoneyTransferDto;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyTransferRequest;
 import com.ercanbeyen.bankingapplication.dto.response.MessageResponse;
 import com.ercanbeyen.bankingapplication.security.config.SystemAdminProperties;
@@ -45,50 +44,50 @@ public class MoneyTransferOrderScheduledTask {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
         Map<String, String> tokens = jwtService.generateTokens(userDetails);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        httpHeaders.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
         List<MoneyTransferOrderDto> moneyTransferOrderDtos;
 
         try {
-            moneyTransferOrderDtos = getMoneyTransferOrders(headers);
+            moneyTransferOrderDtos = getMoneyTransferOrders(httpHeaders);
         } catch (Exception exception) {
             log.error(LogMessage.EXCEPTION, exception.getMessage());
             return;
         }
 
-        applyMoneyTransferOrders(moneyTransferOrderDtos, headers);
+        applyMoneyTransferOrders(moneyTransferOrderDtos, httpHeaders);
 
         log.info(LogMessage.SCHEDULED_TASK_ENDED, task);
     }
 
-    private void applyMoneyTransferOrders(List<MoneyTransferOrderDto> moneyTransferOrderDtos, HttpHeaders headers) {
+    private void applyMoneyTransferOrders(List<MoneyTransferOrderDto> moneyTransferOrderDtos, HttpHeaders httpHeaders) {
         moneyTransferOrderDtos.forEach(transferOrderDto -> {
             if (MoneyTransferOrderUtil.getMoneyTransferOrderDtoPredicate().test(transferOrderDto)) {
                 log.info("Time check is passed");
-                transferMoneyConsumer(headers).accept(transferOrderDto);
+                transferMoneyConsumer(httpHeaders).accept(transferOrderDto);
                 log.info("Transfer is successfully completed");
             }
         });
     }
 
-    private Consumer<MoneyTransferOrderDto> transferMoneyConsumer(HttpHeaders headers) {
+    private Consumer<MoneyTransferOrderDto> transferMoneyConsumer(HttpHeaders httpHeaders) {
         return moneyTransferOrderDto -> {
-            RegularMoneyTransferDto regularMoneyTransferDto = moneyTransferOrderDto.getRegularMoneyTransferDto();
             MoneyTransferRequest moneyTransferRequest = new MoneyTransferRequest(
                     moneyTransferOrderDto.getSenderAccountId(),
-                    regularMoneyTransferDto.recipientAccountId(),
-                    regularMoneyTransferDto.deducteeAccountId(),
-                    regularMoneyTransferDto.amount(),
-                    regularMoneyTransferDto.paymentType(),
-                    regularMoneyTransferDto.explanation()
+                    moneyTransferOrderDto.getRegularMoneyTransferDto().recipientAccountId(),
+                    moneyTransferOrderDto.getRegularMoneyTransferDto().deducteeAccountId(),
+                    moneyTransferOrderDto.getRegularMoneyTransferDto().amount(),
+                    moneyTransferOrderDto.getRegularMoneyTransferDto().paymentType(),
+                    moneyTransferOrderDto.getRegularMoneyTransferDto().explanation()
             );
 
             try {
                 String url = Entity.ACCOUNT.getCollectionUrl() + "/transfer";
-                HttpEntity<MoneyTransferRequest> httpEntity = new HttpEntity<>(moneyTransferRequest, headers);
+                HttpEntity<MoneyTransferRequest> httpEntity = new HttpEntity<>(moneyTransferRequest, httpHeaders);
 
                 ResponseEntity<MessageResponse> response = restTemplate.exchange(
                         url,
@@ -106,9 +105,9 @@ public class MoneyTransferOrderScheduledTask {
         };
     }
 
-    private List<MoneyTransferOrderDto> getMoneyTransferOrders(HttpHeaders headers) {
+    private List<MoneyTransferOrderDto> getMoneyTransferOrders(HttpHeaders httpHeaders) {
         String url = Entity.MONEY_TRANSFER_ORDER.getCollectionUrl();
-        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+        HttpEntity<Void> httpEntity = new HttpEntity<>(httpHeaders);
 
         ResponseEntity<List> response = restTemplate.exchange(
                 url,

@@ -49,10 +49,11 @@ public class AccountScheduledTask {
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
         Map<String, String> tokens = jwtService.generateTokens(userDetails);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        httpHeaders.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
         UriComponents uriComponents = UriComponentsBuilder.fromUriString(Entity.ACCOUNT.getCollectionUrl())
                 .queryParam("type", AccountType.DEPOSIT.name())
@@ -62,18 +63,18 @@ public class AccountScheduledTask {
         List<AccountDto> accountDtos;
 
         try {
-            accountDtos = getAccounts(uriComponents, headers);
+            accountDtos = getAccounts(uriComponents, httpHeaders);
         } catch (Exception exception) {
             log.error(LogMessage.EXCEPTION, exception.getMessage());
             return;
         }
 
-        payInterestIncomes(accountDtos, headers);
+        payInterestIncomes(accountDtos, httpHeaders);
 
         log.info(LogMessage.SCHEDULED_TASK_ENDED, task);
     }
 
-    private void payInterestIncomes(List<AccountDto> accountDtos, HttpHeaders headers) {
+    private void payInterestIncomes(List<AccountDto> accountDtos, HttpHeaders httpHeaders) {
         accountDtos.stream()
                 .map(AccountDto::getId)
                 .toList()
@@ -83,7 +84,7 @@ public class AccountScheduledTask {
                     try {
                         Map<String, Integer> parameters = Map.of(ID, accountId);
                         String url = Entity.ACCOUNT.getCollectionUrl() + "/{" + ID + "}/pay/interest-income";
-                        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+                        HttpEntity<Void> httpEntity = new HttpEntity<>(httpHeaders);
 
                         ResponseEntity<MessageResponse> responseEntity = restTemplate.exchange(
                                 url,
@@ -102,10 +103,9 @@ public class AccountScheduledTask {
                 });
     }
 
-    private List<AccountDto> getAccounts(UriComponents uriComponents, HttpHeaders headers) {
+    private List<AccountDto> getAccounts(UriComponents uriComponents, HttpHeaders httpHeaders) {
         String url = uriComponents.toString();
-        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
-
+        HttpEntity<Void> httpEntity = new HttpEntity<>(httpHeaders);
         ResponseEntity<List> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,

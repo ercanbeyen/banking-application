@@ -18,7 +18,6 @@ import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedExce
 import com.ercanbeyen.bankingapplication.helper.DepositAccountHelper;
 import com.ercanbeyen.bankingapplication.repository.AccountRepository;
 import com.ercanbeyen.bankingapplication.service.*;
-import com.ercanbeyen.bankingapplication.util.AccountUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
@@ -288,7 +287,7 @@ public class TransactionServiceImpl implements TransactionService {
     private void updateDepositAccountFields(Account account, double transactionFee) {
         AccountType expectedAccountType = AccountType.DEPOSIT;
 
-        if (!AccountUtil.checkAccountTypeMatch.test(account.getType(), expectedAccountType)) {
+        if (account.getType() != expectedAccountType) {
             return;
         }
 
@@ -297,7 +296,6 @@ public class TransactionServiceImpl implements TransactionService {
 
         log.info("{} {} fields are updated", expectedAccountType.getValue(),  Entity.ACCOUNT.getValue());
     }
-
 
     private void createAccountActivityForDeduction(Double transactionFee, Map<String, Object> summary, Account deducteeAccount) {
         if (transactionFee == 0) {

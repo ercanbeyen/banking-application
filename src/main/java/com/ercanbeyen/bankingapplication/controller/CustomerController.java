@@ -54,6 +54,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PreAuthorize("hasAuthority('READ_DATA')")
+    @GetMapping
     @Override
     public ResponseEntity<List<CustomerDto>> getEntities(CustomerFilteringOption filteringOption) {
         return ResponseEntity.ok(customerService.getEntities(filteringOption));
@@ -66,6 +67,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         return ResponseEntity.ok(customerService.getEntity(id));
     }
 
+    @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @PostMapping
     @Override
     public ResponseEntity<CustomerDto> createEntity(@RequestBody @Valid CustomerDto request) {
@@ -82,8 +84,9 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
+    @DeleteMapping("/{id}")
     @Override
-    public ResponseEntity<Void> deleteEntity(Integer id) {
+    public ResponseEntity<Void> deleteEntity(@PathVariable("id") Integer id) {
         customerService.deleteEntity(id);
         return ResponseEntity.ok().build();
     }

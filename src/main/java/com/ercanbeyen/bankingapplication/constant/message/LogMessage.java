@@ -14,7 +14,7 @@ public final class LogMessage {
     public static final String BEFORE_REQUEST = "Before sending the request";
     public static final String AFTER_REQUEST = "After sent the request";
     public static final String REST_TEMPLATE_SUCCESS = """
-            Response is returned successfully after rest template call.
+            Response is returned successfully following the rest template call.
             Response: {}
             """;
     public static final String POSITIVE_CALLBACK_MESSAGE = "+++ [CALLBACK] Background process completed successfully! Response: {}";

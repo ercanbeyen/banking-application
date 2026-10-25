@@ -1,8 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
-import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.ChannelInformation;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
@@ -14,7 +12,6 @@ import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.*;
-import java.util.function.BiPredicate;
 
 @Slf4j
 @UtilityClass
@@ -76,17 +73,11 @@ public class AccountUtil {
     }
 
     public void checkAccountActivityAndAccountTypeMatch(AccountType givenAccountType, AccountType expectedAccountType, ActivityType activityType) {
-        if (!checkAccountTypeMatch.test(givenAccountType, expectedAccountType)) {
+        if (givenAccountType != expectedAccountType) {
             throw new ResourceConflictException(activityType.getValue() + " can only be done from " + expectedAccountType.getValue() + " Accounts");
         }
 
         log.info("Account Type {} can apply account activity {}", givenAccountType.getValue(), activityType.getValue());
-    }
-
-    public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {
-        if (from != to) {
-            throw new ResourceConflictException(String.format(ResponseMessage.UNPAIRED_CURRENCIES, "same"));
-        }
     }
 
     public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to, ActivityType activityType) {
@@ -97,8 +88,6 @@ public class AccountUtil {
 
         log.info("Both accounts are {}", expectedAccountType.getValue());
     }
-
-    public final BiPredicate<AccountType, AccountType> checkAccountTypeMatch = (givenAccountType, expectedAccountType) -> givenAccountType == expectedAccountType;
 
     private void checkHeaderParametersForMoneyTransferAndMoneyExchange(ChannelInformation channelInformation) {
         ChannelType channelType = channelInformation.channelType();

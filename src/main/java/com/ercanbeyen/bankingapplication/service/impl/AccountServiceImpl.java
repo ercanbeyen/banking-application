@@ -25,7 +25,6 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse
 import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
-import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import com.ercanbeyen.bankingapplication.util.TermDepositInterestRateUtil;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
@@ -104,7 +103,7 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue();
 
-        if (AccountUtil.checkAccountTypeMatch.test(accountType, AccountType.DEPOSIT)) {
+        if (accountType == AccountType.DEPOSIT) {
             log.info("Account type is {}. So, agreements and interest rate will be assigned", accountType.getValue());
             agreementService.approveAgreements(AgreementSubject.DEPOSIT_ACCOUNT, customer);
 
@@ -147,7 +146,7 @@ public class AccountServiceImpl implements AccountService {
 
         account.setBranch(branch);
 
-        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(account.getDepositMaturity(), request.getDepositMaturity())) {
+        if (account.getType() == AccountType.DEPOSIT && !Objects.equals(account.getDepositMaturity(), request.getDepositMaturity())) {
             log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
             double transactionFee = deductionService.getDeduction(ActivityType.INTEREST_INCOME).amount();
             depositAccountHelper.updateDepositAccountFields(account, request.getDepositMaturity(), transactionFee);
@@ -221,7 +220,7 @@ public class AccountServiceImpl implements AccountService {
                 .orElse(ZoneId.systemDefault());
 
         TransactionInformation transactionInformation = new TransactionInformation(
-                ChannelType.getPlaceNameForSystemChannel(),
+                ChannelType.placeNameForSystemChannel(),
                 ChannelType.SYSTEM,
                 zoneId
         );
@@ -472,7 +471,9 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account recipientAccount) {
-        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), recipientAccount.getCurrency());
+        if (senderAccount.getCurrency() != recipientAccount.getCurrency()) {
+            throw new ResourceConflictException(String.format(ResponseMessage.UNPAIRED_CURRENCIES, "same"));
+        }
 
         if (senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String accountEntity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -481,7 +482,7 @@ public class AccountServiceImpl implements AccountService {
             log.warn("Same {} is transferring money between {}s", customerEntity, accountEntity);
             AccountType expectedAccountType = AccountType.CURRENT;
 
-            if (!AccountUtil.checkAccountTypeMatch.test(senderAccount.getType(), expectedAccountType) && !AccountUtil.checkAccountTypeMatch.test(recipientAccount.getType(), expectedAccountType)) {
+            if (senderAccount.getType() != expectedAccountType && recipientAccount.getType() != expectedAccountType) {
                 log.error("There should be at least 1 {} {} in money transfer between {}s of the same {}", accountEntity, expectedAccountType.getValue().toLowerCase(), accountEntity, customerEntity);
                 throw new ResourceConflictException(AccountType.DEPOSIT.getValue() + " " + accountEntity + "s cannot transfer money between themselves");
             }
@@ -548,7 +549,9 @@ public class AccountServiceImpl implements AccountService {
     }
 
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
-        ExchangeUtil.checkCurrenciesBeforeMoneyExchange(sellerAccount.getCurrency(), buyerAccount.getCurrency());
+        if (sellerAccount.getCurrency() == buyerAccount.getCurrency()) {
+            throw new BadRequestException(String.format(ResponseMessage.UNPAIRED_CURRENCIES, "different"));
+        }
 
         ActivityType activityType = ActivityType.MONEY_EXCHANGE;
 
@@ -560,12 +563,13 @@ public class AccountServiceImpl implements AccountService {
     }
 
     private void checkActivityAmountsOfCustomer(Account account, Double amount, ActivityType activityType, ChannelType channelType) {
-        if (DailyActivityLimitHelper.channelExemptFromDailyActivityLimit(channelType)) {
+        if (channelType == ChannelType.channelExemptFromDailyActivityLimit()) {
+            log.info("There is no daily activity limit for transactions made at the {}", channelType.getValue());
             return;
         }
 
         List<ChannelType> channelTypes = new ArrayList<>(activityType.getAvailableChannelTypes());
-        channelTypes.remove(ChannelType.getChannelTypeWithNoDailyAccountActivityLimit());
+        channelTypes.remove(ChannelType.channelExemptFromDailyActivityLimit());
 
         List<Account> accountsUnderReview = account.getCustomer()
                 .getAccounts()
@@ -588,14 +592,14 @@ public class AccountServiceImpl implements AccountService {
         dailyActivityAmountOfCustomer += amount;
         log.info("Updated daily activity amount of customer: {}", dailyActivityAmountOfCustomer);
 
-        dailyActivityLimitHelper.checkActivityLimits(activityType, amount, channelType);
+        dailyActivityLimitHelper.checkActivityLimits(activityType, amount);
     }
 
     private TransactionInformation getTransactionPlaceForStatusUpdate(Address address) {
         ZoneId zoneId = getZoneId(address);
 
         return new TransactionInformation(
-                ChannelType.getPlaceNameForSystemChannel(),
+                ChannelType.placeNameForSystemChannel(),
                 ChannelType.SYSTEM,
                 zoneId
         );
@@ -629,7 +633,7 @@ public class AccountServiceImpl implements AccountService {
             case BRANCH -> branchService.getEntity(channelId);
             case MOBILE_BANKING, INTERNET_BANKING -> {
                 ChannelDto requestedChannel = new ChannelDto();
-                requestedChannel.setName(ChannelType.getPlaceNameForSystemChannel());
+                requestedChannel.setName(ChannelType.placeNameForSystemChannel());
                 requestedChannel.setAddress(senderAccountAddress);
                 yield requestedChannel;
             }
@@ -655,7 +659,7 @@ public class AccountServiceImpl implements AccountService {
             case BRANCH -> branchService.getEntity(channelId);
             case MOBILE_BANKING, INTERNET_BANKING -> {
                 ChannelDto requestedChannel = new ChannelDto();
-                requestedChannel.setName(ChannelType.getPlaceNameForSystemChannel());
+                requestedChannel.setName(ChannelType.placeNameForSystemChannel());
 
                 Currency sellerAccountCurrency = sellerAccount.getCurrency();
                 Currency buyerAccountCurrency = sellerAccount.getCurrency();

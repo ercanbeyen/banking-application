@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 
+import java.util.Optional;
+
 @Service
 @RequiredArgsConstructor
 public class AccountSecurityService {
@@ -15,6 +17,6 @@ public class AccountSecurityService {
     public boolean isOwner(Integer accountId, Authentication authentication) {
         AccountDto requestedAccount = accountService.getEntity(accountId);
         String customerNationalId = UserDetailsUtil.getUserDetails(authentication).getUsername();
-        return requestedAccount.getCustomerNationalId().equals(customerNationalId);
+        return requestedAccount.getCustomerNationalId().equals(customerNationalId) && Optional.ofNullable(requestedAccount.getClosedAt()).isEmpty();
     }
 }
