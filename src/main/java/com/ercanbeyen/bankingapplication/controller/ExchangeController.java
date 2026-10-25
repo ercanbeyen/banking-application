@@ -42,12 +42,14 @@ public class ExchangeController extends BaseController<ExchangeDto, ExchangeFilt
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @Override
     public ResponseEntity<ExchangeDto> createEntity(ExchangeDto request) {
+        ExchangeUtil.checkRequest(request);
         return ResponseEntity.ok(exchangeService.createEntity(request));
     }
 
     @PreAuthorize("hasAuthority('MANAGE_ENTITY')")
     @Override
     public ResponseEntity<ExchangeDto> updateEntity(Integer id, ExchangeDto request) {
+        ExchangeUtil.checkRequest(request);
         return ResponseEntity.ok(exchangeService.updateEntity(id, request));
     }
 
@@ -68,8 +70,15 @@ public class ExchangeController extends BaseController<ExchangeDto, ExchangeFilt
             @PathVariable("from") Currency fromCurrency,
             @PathVariable("to") Currency toCurrency,
             @PathVariable("amount") @Valid @Min(value = 1, message = "Minimum amount should be {value}") Double amount) {
-        ExchangeUtil.checkCurrenciesBeforeMoneyExchange(fromCurrency, toCurrency);
-        MessageResponse<Double> response = new MessageResponse<>(exchangeService.convertMoneyBetweenCurrencies(fromCurrency, toCurrency, amount));
+        MessageResponse<Double> response;
+
+        if (fromCurrency == toCurrency) {
+            response = new MessageResponse<>(amount);
+            return ResponseEntity.ok(response);
+        }
+
+        response = new MessageResponse<>(exchangeService.convertMoneyBetweenCurrencies(fromCurrency, toCurrency, amount));
+
         return ResponseEntity.ok(response);
     }
 }

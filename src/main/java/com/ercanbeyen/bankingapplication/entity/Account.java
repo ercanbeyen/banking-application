@@ -8,6 +8,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -44,5 +45,6 @@ public non-sealed class Account extends BaseEntity {
     /* Deposit Account fields */
     private Double interestRate;
     private Integer depositMaturity;
+    private LocalDate depositMaturityDate;
     private Double balanceAfterNextInterestIncome;
 }

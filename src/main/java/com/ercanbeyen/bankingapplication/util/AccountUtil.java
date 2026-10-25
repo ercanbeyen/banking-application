@@ -1,8 +1,6 @@
 package com.ercanbeyen.bankingapplication.util;
 
 import com.ercanbeyen.bankingapplication.constant.enums.*;
-import com.ercanbeyen.bankingapplication.constant.enums.Currency;
-import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.AccountDto;
 import com.ercanbeyen.bankingapplication.dto.ChannelInformation;
 import com.ercanbeyen.bankingapplication.dto.request.MoneyExchangeRequest;
@@ -13,12 +11,7 @@ import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedExce
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 
-import java.time.Instant;
-import java.time.LocalDate;
-import java.time.ZoneId;
 import java.util.*;
-import java.util.function.BiPredicate;
-import java.util.function.Predicate;
 
 @Slf4j
 @UtilityClass
@@ -29,7 +22,22 @@ public class AccountUtil {
             throw new BadRequestException("Request should not contain block and closed at statuses");
         }
 
-        checkAccountType(request);
+        AccountType accountType = request.getType();
+
+        if (accountType == AccountType.DEPOSIT) {
+            if (Optional.ofNullable(request.getInterestRate()).isEmpty() || Optional.ofNullable(request.getDepositMaturity()).isEmpty()) {
+                throw new ResourceExpectationFailedException(String.format("%s must have interest and deposit maturity values", accountType.getValue()));
+            }
+
+            TermDepositInterestRateUtil.checkValidityOfDepositMaturity(request.getDepositMaturity());
+        } else {
+            request.setInterestRate(null);
+            request.setDepositMaturity(null);
+            request.setDepositMaturityDate(null);
+
+            log.warn("{} account does not have deposit maturity", accountType.getValue());
+        }
+
         Double balance = request.getBalance();
 
         if (Optional.ofNullable(balance).isPresent() && balance != 0) {
@@ -65,37 +73,11 @@ public class AccountUtil {
     }
 
     public void checkAccountActivityAndAccountTypeMatch(AccountType givenAccountType, AccountType expectedAccountType, ActivityType activityType) {
-        if (!checkAccountTypeMatch.test(givenAccountType, expectedAccountType)) {
+        if (givenAccountType != expectedAccountType) {
             throw new ResourceConflictException(activityType.getValue() + " can only be done from " + expectedAccountType.getValue() + " Accounts");
         }
 
         log.info("Account Type {} can apply account activity {}", givenAccountType.getValue(), activityType.getValue());
-    }
-
-    public double calculateInterestIncome(Double balance, Integer depositMaturity, Double interestRate) {
-        checkValidityOfBalanceAndInterestRate(balance, interestRate);
-        double interestIncome = (balance / 100) * (interestRate / 12) * depositMaturity;
-        log.info("Interest after calculation with balance ({}), interest rate ({}) and deposit maturity ({}): {}", balance, interestRate, depositMaturity, interestIncome);
-        return interestIncome;
-    }
-
-    public double calculateBalanceAfterNextInterestIncome(Double balance, Integer depositMaturity, Double interestRate) {
-        double interestIncome = AccountUtil.calculateInterestIncome(balance, depositMaturity, interestRate);
-        double balanceAfterNextInterestIncome = balance + interestIncome;
-        log.info("Balance after interest income: {}", balanceAfterNextInterestIncome);
-        return balanceAfterNextInterestIncome;
-    }
-
-    public boolean checkAccountForPeriodicMoneyAdd(AccountType accountType, Instant updatedAt, Integer depositMaturity) {
-        checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(accountType, depositMaturity);
-        LocalDate isGoingToBeUpdatedAt = LocalDate.ofInstant(updatedAt, ZoneId.systemDefault()).plusMonths(depositMaturity);
-        return isGoingToBeUpdatedAt.isEqual(LocalDate.now(ZoneId.systemDefault()));
-    }
-
-    public void checkCurrenciesBeforeMoneyTransfer(Currency from, Currency to) {
-        if (from != to) {
-            throw new ResourceConflictException(String.format(ResponseMessage.UNPAIRED_CURRENCIES, "same"));
-        }
     }
 
     public void checkTypesOfAccountsBeforeMoneyTransferAndExchange(AccountType from, AccountType to, ActivityType activityType) {
@@ -106,8 +88,6 @@ public class AccountUtil {
 
         log.info("Both accounts are {}", expectedAccountType.getValue());
     }
-
-    public final BiPredicate<AccountType, AccountType> checkAccountTypeMatch = (givenAccountType, expectedAccountType) -> givenAccountType == expectedAccountType;
 
     private void checkHeaderParametersForMoneyTransferAndMoneyExchange(ChannelInformation channelInformation) {
         ChannelType channelType = channelInformation.channelType();
@@ -125,47 +105,4 @@ public class AccountUtil {
             throw new BadRequestException("Channel Id should not be there for " + channelsNotRequiredChannelId);
         }
     }
-
-    private void checkAccountTypeAndDepositMaturityForPeriodBalanceUpdate(AccountType accountType, Integer depositMaturity) {
-        checkAccountActivityAndAccountTypeMatch(accountType, AccountType.DEPOSIT, ActivityType.INTEREST_INCOME);
-        TermDepositInterestRateUtil.checkValidityOfDepositMaturity(depositMaturity);
-    }
-
-    private void checkValidityOfBalanceAndInterestRate(Double balance, Double interestRate) {
-        boolean isBalanceValid = balance >= 0;
-        boolean isInterestRateValid = interestRate >= 0;
-
-        if (!isBalanceValid || !isInterestRateValid) {
-            throw new BadRequestException(String.format("Balance and interest rate must be greater than or equal to %s", 0));
-        }
-    }
-
-    private void checkAccountType(AccountDto accountDto) {
-        checkOptionalFieldsOfAccount(accountDto);
-
-        if (accountDto.getType() == AccountType.DEPOSIT) {
-            TermDepositInterestRateUtil.checkValidityOfDepositMaturity(accountDto.getDepositMaturity());
-            accountDto.setBalanceAfterNextInterestIncome(0D);
-        } else {
-            log.warn("{} account does not have deposit maturity", accountDto.getType().getValue());
-        }
-    }
-
-    private void checkOptionalFieldsOfAccount(AccountDto accountDto) {
-        boolean isInterestNull = isNull.test(accountDto.getInterestRate());
-        boolean isDepositPeriodNull = isNull.test(accountDto.getDepositMaturity());
-
-        AccountType accountType = accountDto.getType();
-        String message = "have interest and deposit maturity values";
-
-        if ((accountType == AccountType.DEPOSIT) && (isInterestNull || isDepositPeriodNull)) {
-            String exceptionMessage = accountType.getValue() + " must " + message;
-            throw new ResourceExpectationFailedException(exceptionMessage);
-        } else if ((accountType == AccountType.CURRENT) && (!isInterestNull || !isDepositPeriodNull)) {
-            String exceptionMessage = accountType + " " + Entity.ACCOUNT.getValue().toLowerCase() + " does not " + message;
-            throw new ResourceExpectationFailedException(exceptionMessage);
-        }
-    }
-
-    private final Predicate<Object> isNull = Objects::isNull;
 }

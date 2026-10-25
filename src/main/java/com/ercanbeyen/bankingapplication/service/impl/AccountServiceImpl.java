@@ -14,10 +14,8 @@ import com.ercanbeyen.bankingapplication.embeddable.Address;
 import com.ercanbeyen.bankingapplication.entity.Account;
 import com.ercanbeyen.bankingapplication.entity.Branch;
 import com.ercanbeyen.bankingapplication.entity.Customer;
-import com.ercanbeyen.bankingapplication.exception.BadRequestException;
-import com.ercanbeyen.bankingapplication.exception.InternalServerErrorException;
-import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
-import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
+import com.ercanbeyen.bankingapplication.exception.*;
+import com.ercanbeyen.bankingapplication.helper.DepositAccountHelper;
 import com.ercanbeyen.bankingapplication.helper.DailyActivityLimitHelper;
 import com.ercanbeyen.bankingapplication.mapper.AccountMapper;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
@@ -27,8 +25,8 @@ import com.ercanbeyen.bankingapplication.dto.response.CustomerStatisticsResponse
 import com.ercanbeyen.bankingapplication.security.util.UserDetailsUtil;
 import com.ercanbeyen.bankingapplication.service.*;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
-import com.ercanbeyen.bankingapplication.util.ExchangeUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
+import com.ercanbeyen.bankingapplication.util.TermDepositInterestRateUtil;
 import com.ercanbeyen.bankingapplication.view.entity.ExchangeView;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -50,6 +48,7 @@ import java.util.stream.Collectors;
 @Slf4j
 public class AccountServiceImpl implements AccountService {
     private static final Currency DEDUCTION_CURRENCY = Currency.getDeductionCurrency();
+
     private final AccountRepository accountRepository;
     private final AccountMapper accountMapper;
     private final CustomerService customerService;
@@ -62,6 +61,8 @@ public class AccountServiceImpl implements AccountService {
     private final AgreementService agreementService;
     private final ExchangeService exchangeService;
     private final TimeZoneService timeZoneService;
+    private final DeductionService deductionService;
+    private final DepositAccountHelper depositAccountHelper;
 
     @Override
     public List<AccountDto> getEntities(AccountFilteringOption filteringOption) {
@@ -69,15 +70,17 @@ public class AccountServiceImpl implements AccountService {
 
         Predicate<Account> accountPredicate = account -> {
             boolean typeFilter = (Optional.ofNullable(filteringOption.getType()).isEmpty() || filteringOption.getType() == account.getType());
+            boolean depositMaturityDateFilter = (Optional.ofNullable(filteringOption.getDepositMaturityDate())).isEmpty() || filteringOption.getDepositMaturityDate().equals(account.getDepositMaturityDate());
             boolean timeFilter = (Optional.ofNullable(filteringOption.getCreatedAt()).isEmpty() || filteringOption.getCreatedAt().isEqual(LocalDate.ofInstant(account.getCreatedAt(), ZoneId.systemDefault())));
             boolean blockedFilter = (Optional.ofNullable(filteringOption.getIsBlocked()).isEmpty() || filteringOption.getIsBlocked() == account.isBlocked());
             boolean closedAtFilter = (Optional.ofNullable(filteringOption.getIsClosed()).isEmpty() || filteringOption.getIsClosed() == (Optional.ofNullable(account.getClosedAt()).isPresent()));
-            return typeFilter && timeFilter && blockedFilter && closedAtFilter;
+            return typeFilter && depositMaturityDateFilter && timeFilter && blockedFilter && closedAtFilter;
         };
 
         return accountRepository.findAll()
                 .stream()
                 .filter(accountPredicate)
+                .sorted(Comparator.comparing(Account::getCreatedAt).reversed())
                 .map(accountMapper::entityToDto)
                 .toList();
     }
@@ -100,13 +103,12 @@ public class AccountServiceImpl implements AccountService {
 
         String entity = Entity.ACCOUNT.getValue();
 
-        if (AccountUtil.checkAccountTypeMatch.test(accountType, AccountType.DEPOSIT)) {
+        if (accountType == AccountType.DEPOSIT) {
             log.info("Account type is {}. So, agreements and interest rate will be assigned", accountType.getValue());
             agreementService.approveAgreements(AgreementSubject.DEPOSIT_ACCOUNT, customer);
 
             log.info("{} is {}, so update interest rate and balance after next {}", entity, accountType.getValue(), Entity.TERM_DEPOSIT_INTEREST_RATE.getValue());
-            account.setInterestRate(0D);
-            account.setBalanceAfterNextInterestIncome(0D);
+            depositAccountHelper.updateDepositAccountFields(account, request.getDepositMaturity(), 0);
         }
 
         account.setCustomer(customer);
@@ -144,9 +146,10 @@ public class AccountServiceImpl implements AccountService {
 
         account.setBranch(branch);
 
-        if (AccountUtil.checkAccountTypeMatch.test(account.getType(), AccountType.DEPOSIT) && !Objects.equals(account.getDepositMaturity(), request.getDepositMaturity())) {
+        if (account.getType() == AccountType.DEPOSIT && !Objects.equals(account.getDepositMaturity(), request.getDepositMaturity())) {
             log.info(LogMessage.DEPOSIT_ACCOUNT_FIELDS_SHOULD_UPDATE);
-            transactionService.updateDepositAccountFields(account, account.getBalance(), request.getDepositMaturity());
+            double transactionFee = deductionService.getDeduction(ActivityType.INTEREST_INCOME).amount();
+            depositAccountHelper.updateDepositAccountFields(account, request.getDepositMaturity(), transactionFee);
         }
 
         return accountMapper.entityToDto(accountRepository.save(account));
@@ -205,11 +208,11 @@ public class AccountServiceImpl implements AccountService {
 
         Account account = findActiveAccountById(id);
 
-        if (!AccountUtil.checkAccountForPeriodicMoneyAdd(account.getType(), account.getUpdatedAt(), account.getDepositMaturity())) {
+        if (!checkAccountForPeriodicMoneyAdd(account)) {
             return "Maturity date has not arrived yet";
         }
 
-        Double amount = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
+        Double amount = DepositAccountHelper.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
         ActivityType activityType = ActivityType.INTEREST_INCOME;
 
         Address address = account.getBranch().getAddress();
@@ -217,21 +220,28 @@ public class AccountServiceImpl implements AccountService {
                 .orElse(ZoneId.systemDefault());
 
         TransactionInformation transactionInformation = new TransactionInformation(
-                ChannelType.getPlaceNameForSystemChannel(),
+                ChannelType.placeNameForSystemChannel(),
                 ChannelType.SYSTEM,
                 zoneId
         );
 
         String entity = Entity.ACCOUNT.getValue().toLowerCase();
         String cashFlowExplanation = amount + " " + account.getCurrency() + " is transferred to " + entity + " " + account.getId();
-        transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation, null);
+
+        try {
+            transactionService.applyAccountActivityForSingleAccount(activityType, amount, account, cashFlowExplanation, transactionInformation, null);
+        } catch (ResourceExpectationFailedException exception) {
+            account.setDepositMaturityDate(LocalDate.now(ZoneId.systemDefault()).plusMonths(account.getDepositMaturity()));
+            accountRepository.save(account);
+            return exception.getMessage();
+        } catch (Exception exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
 
         NotificationDto notificationDto = new NotificationDto(account.getCustomer().getNationalId(), String.format("Term of your %s is deposit %s has been renewed.", account.getCurrency(), entity));
         notificationService.sendNotification(notificationDto);
 
-        String response = activityType.getValue() + " transfer";
-
-        return String.format(ResponseMessage.SUCCESS, response);
+        return String.format(ResponseMessage.SUCCESS, activityType.getValue() + " transfer");
     }
 
     @Override
@@ -461,7 +471,9 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public void checkAccountsBeforeMoneyTransfer(Account senderAccount, Account recipientAccount) {
-        AccountUtil.checkCurrenciesBeforeMoneyTransfer(senderAccount.getCurrency(), recipientAccount.getCurrency());
+        if (senderAccount.getCurrency() != recipientAccount.getCurrency()) {
+            throw new ResourceConflictException(String.format(ResponseMessage.UNPAIRED_CURRENCIES, "same"));
+        }
 
         if (senderAccount.getCustomer().getNationalId().equals(recipientAccount.getCustomer().getNationalId())) {
             String accountEntity = Entity.ACCOUNT.getValue().toLowerCase();
@@ -470,7 +482,7 @@ public class AccountServiceImpl implements AccountService {
             log.warn("Same {} is transferring money between {}s", customerEntity, accountEntity);
             AccountType expectedAccountType = AccountType.CURRENT;
 
-            if (!AccountUtil.checkAccountTypeMatch.test(senderAccount.getType(), expectedAccountType) && !AccountUtil.checkAccountTypeMatch.test(recipientAccount.getType(), expectedAccountType)) {
+            if (senderAccount.getType() != expectedAccountType && recipientAccount.getType() != expectedAccountType) {
                 log.error("There should be at least 1 {} {} in money transfer between {}s of the same {}", accountEntity, expectedAccountType.getValue().toLowerCase(), accountEntity, customerEntity);
                 throw new ResourceConflictException(AccountType.DEPOSIT.getValue() + " " + accountEntity + "s cannot transfer money between themselves");
             }
@@ -537,7 +549,9 @@ public class AccountServiceImpl implements AccountService {
     }
 
     private static void checkAccountsBeforeMoneyExchange(Account sellerAccount, Account buyerAccount) {
-        ExchangeUtil.checkCurrenciesBeforeMoneyExchange(sellerAccount.getCurrency(), buyerAccount.getCurrency());
+        if (sellerAccount.getCurrency() == buyerAccount.getCurrency()) {
+            throw new BadRequestException(String.format(ResponseMessage.UNPAIRED_CURRENCIES, "different"));
+        }
 
         ActivityType activityType = ActivityType.MONEY_EXCHANGE;
 
@@ -549,12 +563,13 @@ public class AccountServiceImpl implements AccountService {
     }
 
     private void checkActivityAmountsOfCustomer(Account account, Double amount, ActivityType activityType, ChannelType channelType) {
-        if (DailyActivityLimitHelper.channelExemptFromDailyActivityLimit(channelType)) {
+        if (channelType == ChannelType.channelExemptFromDailyActivityLimit()) {
+            log.info("There is no daily activity limit for transactions made at the {}", channelType.getValue());
             return;
         }
 
         List<ChannelType> channelTypes = new ArrayList<>(activityType.getAvailableChannelTypes());
-        channelTypes.remove(ChannelType.getChannelTypeWithNoDailyAccountActivityLimit());
+        channelTypes.remove(ChannelType.channelExemptFromDailyActivityLimit());
 
         List<Account> accountsUnderReview = account.getCustomer()
                 .getAccounts()
@@ -577,14 +592,14 @@ public class AccountServiceImpl implements AccountService {
         dailyActivityAmountOfCustomer += amount;
         log.info("Updated daily activity amount of customer: {}", dailyActivityAmountOfCustomer);
 
-        dailyActivityLimitHelper.checkActivityLimits(activityType, amount, channelType);
+        dailyActivityLimitHelper.checkActivityLimits(activityType, amount);
     }
 
     private TransactionInformation getTransactionPlaceForStatusUpdate(Address address) {
         ZoneId zoneId = getZoneId(address);
 
         return new TransactionInformation(
-                ChannelType.getPlaceNameForSystemChannel(),
+                ChannelType.placeNameForSystemChannel(),
                 ChannelType.SYSTEM,
                 zoneId
         );
@@ -618,7 +633,7 @@ public class AccountServiceImpl implements AccountService {
             case BRANCH -> branchService.getEntity(channelId);
             case MOBILE_BANKING, INTERNET_BANKING -> {
                 ChannelDto requestedChannel = new ChannelDto();
-                requestedChannel.setName(ChannelType.getPlaceNameForSystemChannel());
+                requestedChannel.setName(ChannelType.placeNameForSystemChannel());
                 requestedChannel.setAddress(senderAccountAddress);
                 yield requestedChannel;
             }
@@ -644,7 +659,7 @@ public class AccountServiceImpl implements AccountService {
             case BRANCH -> branchService.getEntity(channelId);
             case MOBILE_BANKING, INTERNET_BANKING -> {
                 ChannelDto requestedChannel = new ChannelDto();
-                requestedChannel.setName(ChannelType.getPlaceNameForSystemChannel());
+                requestedChannel.setName(ChannelType.placeNameForSystemChannel());
 
                 Currency sellerAccountCurrency = sellerAccount.getCurrency();
                 Currency buyerAccountCurrency = sellerAccount.getCurrency();
@@ -668,6 +683,12 @@ public class AccountServiceImpl implements AccountService {
                 channelType,
                 zoneId
         );
+    }
+
+    private static boolean checkAccountForPeriodicMoneyAdd(Account account) {
+        AccountUtil.checkAccountActivityAndAccountTypeMatch(account.getType(), AccountType.DEPOSIT, ActivityType.INTEREST_INCOME);
+        TermDepositInterestRateUtil.checkValidityOfDepositMaturity(account.getDepositMaturity());
+        return account.getDepositMaturityDate().isEqual(LocalDate.now(ZoneId.systemDefault()));
     }
 
     private static AccountActivityFilteringOption constructAccountActivityFilteringOptionForDailyAccountActivityCheck(Integer accountId, ActivityType activityType, List<ChannelType> channelTypes) {

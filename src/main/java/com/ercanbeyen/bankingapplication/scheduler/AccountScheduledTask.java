@@ -23,6 +23,8 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponents;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -41,36 +43,38 @@ public class AccountScheduledTask {
     private final JwtService jwtService;
 
     @Scheduled(cron = "0 0 9 * * *") // 9:00 everyday
-    public void payInterestOnDepositAccounts() {
-        final String task = "periodic money deposit to deposit account";
+    public void payInterestIncomeToDepositAccounts() {
+        final String task = "periodic interest income payment to deposit accounts";
         log.info(LogMessage.SCHEDULED_TASK_STARTED, task);
 
         UserDetails userDetails = userDetailsService.loadUserByUsername(systemAdminProperties.getUsername());
         Map<String, String> tokens = jwtService.generateTokens(userDetails);
-        HttpHeaders headers = new HttpHeaders();
-        headers.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.set(HttpHeaders.AUTHORIZATION, JwtUtil.generateAuthorizationHeaderValue(tokens.get(JwtUtil.Header.ACCESS_TOKEN_HEADER)));
+        httpHeaders.setContentType(MediaType.APPLICATION_JSON);
+        httpHeaders.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
         UriComponents uriComponents = UriComponentsBuilder.fromUriString(Entity.ACCOUNT.getCollectionUrl())
-                .queryParam("type", String.valueOf(AccountType.DEPOSIT))
+                .queryParam("type", AccountType.DEPOSIT.name())
+                .queryParam("depositMaturityDate", LocalDate.now(ZoneId.systemDefault()).toString())
                 .build();
 
         List<AccountDto> accountDtos;
 
         try {
-            accountDtos = getAccounts(uriComponents, headers);
+            accountDtos = getAccounts(uriComponents, httpHeaders);
         } catch (Exception exception) {
             log.error(LogMessage.EXCEPTION, exception.getMessage());
             return;
         }
 
-        payInterestIncomes(accountDtos, headers);
+        payInterestIncomes(accountDtos, httpHeaders);
 
         log.info(LogMessage.SCHEDULED_TASK_ENDED, task);
     }
 
-    private void payInterestIncomes(List<AccountDto> accountDtos, HttpHeaders headers) {
+    private void payInterestIncomes(List<AccountDto> accountDtos, HttpHeaders httpHeaders) {
         accountDtos.stream()
                 .map(AccountDto::getId)
                 .toList()
@@ -80,7 +84,7 @@ public class AccountScheduledTask {
                     try {
                         Map<String, Integer> parameters = Map.of(ID, accountId);
                         String url = Entity.ACCOUNT.getCollectionUrl() + "/{" + ID + "}/pay/interest-income";
-                        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
+                        HttpEntity<Void> httpEntity = new HttpEntity<>(httpHeaders);
 
                         ResponseEntity<MessageResponse> responseEntity = restTemplate.exchange(
                                 url,
@@ -99,10 +103,9 @@ public class AccountScheduledTask {
                 });
     }
 
-    private List<AccountDto> getAccounts(UriComponents uriComponents, HttpHeaders headers) {
+    private List<AccountDto> getAccounts(UriComponents uriComponents, HttpHeaders httpHeaders) {
         String url = uriComponents.toString();
-        HttpEntity<Void> httpEntity = new HttpEntity<>(headers);
-
+        HttpEntity<Void> httpEntity = new HttpEntity<>(httpHeaders);
         ResponseEntity<List> response = restTemplate.exchange(
                 url,
                 HttpMethod.GET,

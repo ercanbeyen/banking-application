@@ -4,6 +4,7 @@ import com.ercanbeyen.bankingapplication.constant.enums.*;
 import com.ercanbeyen.bankingapplication.constant.enums.Currency;
 import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
+import com.ercanbeyen.bankingapplication.helper.DepositAccountHelper;
 import com.ercanbeyen.bankingapplication.util.*;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
@@ -618,7 +619,7 @@ public class CustomerServiceImpl implements CustomerService {
                     log.info("Add the interest income to the balance");
 
                     account.setBalance(account.getBalanceAfterNextInterestIncome());
-                    double interest = AccountUtil.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
+                    double interest = DepositAccountHelper.calculateInterestIncome(account.getBalance(), account.getDepositMaturity(), account.getInterestRate());
                     double balanceAfterNextFee = account.getBalance() + interest;
                     account.setBalanceAfterNextInterestIncome(balanceAfterNextFee);
 
