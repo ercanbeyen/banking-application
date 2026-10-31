@@ -44,7 +44,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "financial status");
+        writeTitle(document, "FINANCIAL STATUS");
         addNewLine(document);
 
         writeFinancialStatusReportBody(document, customer, netBalanceOfCustomer, netBalancesOfAccountTypes, financialStatusesOfAccountTypesWithConvertedCurrencies);
@@ -64,7 +64,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "receipt");
+        writeTitle(document, "RECEIPT");
         addNewLine(document);
 
         writeReceiptBody(document, accountActivity);
@@ -99,7 +99,7 @@ public class PdfExporter {
     private void writeTitle(Document document, String title) throws DocumentException {
         Font font = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
 
-        Paragraph paragraph = new Paragraph(title.toUpperCase(), font);
+        Paragraph paragraph = new Paragraph(title, font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
 
         document.add(paragraph);
@@ -424,7 +424,6 @@ public class PdfExporter {
         Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
 
         Paragraph paragraph = new Paragraph(ExporterUtil.getLawMessage(), font);
-
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
 

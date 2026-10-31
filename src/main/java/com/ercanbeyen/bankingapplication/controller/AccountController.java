@@ -26,16 +26,20 @@ import com.ercanbeyen.bankingapplication.service.AccountService;
 import com.ercanbeyen.bankingapplication.service.BranchOrderService;
 import com.ercanbeyen.bankingapplication.service.EmailService;
 import com.ercanbeyen.bankingapplication.service.TimeZoneService;
+import com.ercanbeyen.bankingapplication.util.FileUtil;
 import com.ercanbeyen.bankingapplication.util.exporter.ExcelExporter;
 import com.ercanbeyen.bankingapplication.util.exporter.PdfExporter;
 import com.ercanbeyen.bankingapplication.util.AccountActivityUtil;
 import com.ercanbeyen.bankingapplication.util.AccountUtil;
+import com.ercanbeyen.bankingapplication.util.exporter.WordExporter;
 import com.itextpdf.text.DocumentException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.springframework.http.*;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PostAuthorize;
@@ -260,7 +264,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         return ResponseEntity.ok(accountService.getAccountActivityPreviews(id, request));
     }
 
-    @PreAuthorize("hasAuthority('READ_DATA')")
+    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
     @PostMapping(value = "/{id}/statement/pdf/download", produces = MediaType.APPLICATION_PDF_VALUE)
     public ResponseEntity<byte[]> downloadAccountStatementPdf(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementPdf(id, request);
@@ -277,16 +281,33 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
                 .body(byteArrayOutputStream.toByteArray());
     }
 
-    @PreAuthorize("hasAuthority('READ_DATA')")
+    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
     @PostMapping(value = "/{id}/statement/excel/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
     public ResponseEntity<byte[]> downloadAccountStatementExcel(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
         ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementExcel(id, request);
 
         HttpHeaders httpHeaders = new HttpHeaders();
-        httpHeaders.setContentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"));
+        httpHeaders.setContentType(MediaType.parseMediaType(FileUtil.APPLICATION_EXCEL_VALUE));
         httpHeaders.setContentLength(byteArrayOutputStream.size());
         httpHeaders.setContentDisposition(ContentDisposition.attachment()
                 .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
+                .build());
+
+        return ResponseEntity.ok()
+                .headers(httpHeaders)
+                .body(byteArrayOutputStream.toByteArray());
+    }
+
+    @PreAuthorize("hasAuthority('READ_DATA') OR @accountSecurityService.isOwner(#accountId, authentication)")
+    @PostMapping(value = "/{id}/statement/word/download", produces = MediaType.APPLICATION_OCTET_STREAM_VALUE)
+    public ResponseEntity<byte[]> downloadAccountStatementWord(@PathVariable("id") @P("accountId") Integer id, AccountActivityFilteringRequest request) {
+        ByteArrayOutputStream byteArrayOutputStream = generateAccountStatementWord(id, request);
+
+        HttpHeaders httpHeaders = new HttpHeaders();
+        httpHeaders.setContentType(MediaType.parseMediaType(FileUtil.APPLICATION_DOCX_VALUE));
+        httpHeaders.setContentLength(byteArrayOutputStream.size());
+        httpHeaders.setContentDisposition(ContentDisposition.attachment()
+                .filename("Account Statement - Word.docx")
                 .build());
 
         return ResponseEntity.ok()
@@ -361,6 +382,25 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
             workbook.write(byteArrayOutputStream);
             return byteArrayOutputStream;
         } catch (IOException exception) {
+            throw new InternalServerErrorException(exception.getMessage());
+        }
+    }
+
+    private ByteArrayOutputStream generateAccountStatementWord(Integer id, AccountActivityFilteringRequest request) {
+        AccountActivityUtil.checkFilteringRequest(request);
+
+        List<AccountActivityPreview> accountActivityPreviews = accountService.getAccountActivityPreviews(id, request);
+        Account account = accountService.findById(id);
+
+        ZoneId zoneId = getTimeZoneOfBranch(account.getBranch().getAddress());
+
+        LocalDate fromDate = fillDateInFilteringRequest.apply(request.fromDate());
+        LocalDate toDate = fillDateInFilteringRequest.apply(request.toDate());
+
+        try (XWPFDocument xwpfDocument = WordExporter.generateAccountStatementWord(account, zoneId, fromDate, toDate, accountActivityPreviews); ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream()) {
+            xwpfDocument.write(byteArrayOutputStream);
+            return byteArrayOutputStream;
+        } catch (IOException | InvalidFormatException exception) {
             throw new InternalServerErrorException(exception.getMessage());
         }
     }
