@@ -12,8 +12,10 @@ import lombok.experimental.UtilityClass;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.*;
+import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 
 import java.io.IOException;
+import java.math.BigInteger;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -95,17 +97,99 @@ public class WordExporter {
 
     private void writeAccountActivityTable(XWPFDocument document, List<AccountActivityPreview> accountActivityPreviews) {
         XWPFTable table = document.createTable();
+        writeHeaderRow(table);
+        writeDataRows(accountActivityPreviews, table);
+    }
+
+    private void writeDataRows(List<AccountActivityPreview> accountActivityPreviews, XWPFTable table) {
+        for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
+            XWPFTableRow row = table.createRow();
+
+            XWPFTableCell cell = row.getCell(0);
+            cell.setText(TimeUtil.getLocalDateTimeStatement(accountActivityPreview.createdAt()));
+
+            cell = row.getCell(1);
+            cell.setText(accountActivityPreview.activityType().getValue());
+
+            cell = row.getCell(2);
+            cell.setText(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)));
+
+            for (XWPFTableCell cellInRow : row.getTableCells()) {
+                /* Center horizontally */
+                for (XWPFParagraph paragraphInRow : cellInRow.getParagraphs()) {
+                    paragraphInRow.setAlignment(ParagraphAlignment.CENTER);
+                }
+
+                /* Center vertically */
+                cell.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER);
+            }
+        }
+    }
+
+    private void writeHeaderRow(XWPFTable table) {
+        CTTblPr tblPr = table.getCTTbl().getTblPr();
+
+        CTTblCellMar cellMar = tblPr.isSetTblCellMar()
+                ? tblPr.getTblCellMar()
+                : tblPr.addNewTblCellMar();
+
+        CTTblWidth topWidth = cellMar.addNewTop();
+        topWidth.setW(BigInteger.valueOf(100));
+        topWidth.setType(STTblWidth.DXA);
+
+        CTTblWidth bottomWidth = cellMar.addNewBottom();
+        bottomWidth.setW(BigInteger.valueOf(100));
+        bottomWidth.setType(STTblWidth.DXA);
+
+        CTTblWidth leftWidth = cellMar.addNewLeft();
+        leftWidth.setW(BigInteger.valueOf(120));
+        leftWidth.setType(STTblWidth.DXA);
+
+        CTTblWidth rightWidth = cellMar.addNewRight();
+        rightWidth.setW(BigInteger.valueOf(120));
+        rightWidth.setType(STTblWidth.DXA);
+
+        CTJcTable jcTable = tblPr.isSetJc()
+                ? tblPr.getJc()
+                : tblPr.addNewJc();
+
+        jcTable.setVal(STJcTable.CENTER);
+
         XWPFTableRow row = table.getRow(0);
 
         row.getCell(0).setText(SummaryField.TIME);
         row.addNewTableCell().setText(SummaryField.ACCOUNT_ACTIVITY);
         row.addNewTableCell().setText(SummaryField.AMOUNT);
 
-        for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
-            row = table.createRow();
-            row.getCell(0).setText(TimeUtil.getLocalDateTimeStatement(accountActivityPreview.createdAt()));
-            row.getCell(1).setText(accountActivityPreview.activityType().getValue());
-            row.getCell(2).setText(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)));
+        CTTrPr trPr = row.getCtRow().isSetTrPr()
+                ? row.getCtRow().getTrPr()
+                : row.getCtRow().addNewTrPr();
+
+        trPr.addNewTblHeader().setVal(true);
+
+        for (XWPFTableCell cellInRow : row.getTableCells()) {
+            CTTcPr tcPr = cellInRow.getCTTc().isSetTcPr()
+                    ? cellInRow.getCTTc().getTcPr()
+                    : cellInRow.getCTTc().addNewTcPr();
+
+            CTShd shd = tcPr.isSetShd()
+                    ? tcPr.getShd()
+                    : tcPr.addNewShd();
+
+            shd.setFill("0E69E8");
+            shd.setVal(STShd.CLEAR);
+
+            cellInRow.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER);
+
+            for (XWPFParagraph paragraphInCell : cellInRow.getParagraphs()) {
+                paragraphInCell.setAlignment(ParagraphAlignment.CENTER);
+
+                for (XWPFRun run : paragraphInCell.getRuns()) {
+                    run.setColor("FFFFFF");
+                    run.setBold(true);
+                    run.setFontSize(12);
+                }
+            }
         }
     }
 
