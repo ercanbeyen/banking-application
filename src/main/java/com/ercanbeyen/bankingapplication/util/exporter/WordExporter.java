@@ -12,6 +12,7 @@ import lombok.experimental.UtilityClass;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
 import org.apache.poi.xwpf.usermodel.*;
+import org.apache.xmlbeans.XmlCursor;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 
 import java.io.IOException;
@@ -52,47 +53,51 @@ public class WordExporter {
         XWPFTable mainTable = document.createTable(1, 2);
         mainTable.setTableAlignment(TableRowAlign.CENTER);
 
-        XWPFTableCell accountInformationCell = mainTable.getRow(0).getCell(0);
-        XWPFTable accountInformationTable = accountInformationCell.insertNewTbl(accountInformationCell.getParagraphArray(0).getCTP().newCursor());
-        accountInformationTable.setTableAlignment(TableRowAlign.CENTER);
+        XWPFTable accountInformationTable = createNestedTable(mainTable.getRow(0).getCell(0));
 
         Customer customer = account.getCustomer();
         Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
 
+        addTableRow(accountInformationTable, AccountStatementUtil.writeFullName(customer.getName()));
+        addTableRow(accountInformationTable, "\n");
+        addTableRow(accountInformationTable, AccountStatementUtil.CUSTOMER_NUMBER + customer.getId());
+        addTableRow(accountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER + ExporterUtil.maskField(entry));
+        addTableRow(accountInformationTable, AccountStatementUtil.BRANCH + account.getBranch().getName());
+        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_IDENTITY + account.getId());
+        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_TYPE + account.getType());
+        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_CURRENCY + account.getCurrency());
+        addTableRow(accountInformationTable, AccountStatementUtil.BALANCE + FormatterUtil.convertNumberToFormalExpression(account.getBalance()));
 
-        XWPFTableRow row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.writeFullName(customer.getName()));
+        XWPFTable transactionInformationTable = createNestedTable(mainTable.getRow(0).getCell(1));
 
-        row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.CUSTOMER_NUMBER + customer.getId());
+        addTableRow(transactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE + TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)));
+        addTableRow(transactionInformationTable, AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
+    }
 
-        row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER + ExporterUtil.maskField(entry));
+    private void addTableRow(XWPFTable table, String text) {
+        XWPFTableRow row = table.createRow();
+        row.addNewTableCell();
 
-        row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.BRANCH + account.getBranch().getName());
+        XWPFTableCell cell = row.getCell(0);
+        cell.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER);
 
-        row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.ACCOUNT_IDENTITY + account.getId());
+        XWPFParagraph paragraph = cell.getParagraphs().getFirst();
+        paragraph.setAlignment(ParagraphAlignment.CENTER);
 
-        row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.ACCOUNT_TYPE + account.getType());
+        XWPFRun run = paragraph.createRun();
+        run.setText(text);
+    }
 
-        row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.ACCOUNT_CURRENCY + account.getCurrency());
+    private XWPFTable createNestedTable(XWPFTableCell tableCell) {
+        XWPFTable nestedTable;
 
-        row = accountInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.BALANCE + FormatterUtil.convertNumberToFormalExpression(account.getBalance()));
+        try (XmlCursor cursor = tableCell.getParagraphArray(0).getCTP().newCursor()) {
+            nestedTable = tableCell.insertNewTbl(cursor);
+        }
 
-        XWPFTableCell transactionInformationCell = mainTable.getRow(0).getCell(1);
-        XWPFTable transactionInformationTable = transactionInformationCell.insertNewTbl(transactionInformationCell.getParagraphArray(0).getCTP().newCursor());
-        transactionInformationTable.setTableAlignment(TableRowAlign.CENTER);
+        nestedTable.setTableAlignment(TableRowAlign.CENTER);
 
-        row = transactionInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.DOCUMENT_ISSUE_DATE + TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)));
-
-        row = transactionInformationTable.createRow();
-        row.addNewTableCell().setText(AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
+        return nestedTable;
     }
 
     private void writeAccountActivityTable(XWPFDocument document, List<AccountActivityPreview> accountActivityPreviews) {
@@ -197,24 +202,24 @@ public class WordExporter {
         XWPFParagraph paragraph = document.createParagraph();
         paragraph.setAlignment(ParagraphAlignment.CENTER);
 
-        XWPFRun paragraphRun = paragraph.createRun();
-        paragraphRun.setText(ExporterUtil.getAccountStatementTitle());
-        paragraphRun.setColor("E8280E");
-        paragraphRun.setBold(true);
-        paragraphRun.setFontFamily("Helvetica");
-        paragraphRun.setFontSize(20);
+        XWPFRun run = paragraph.createRun();
+        run.setText(ExporterUtil.getAccountStatementTitle());
+        run.setColor("E8280E");
+        run.setBold(true);
+        run.setFontFamily("Helvetica");
+        run.setFontSize(20);
     }
 
     private void writeHeader(XWPFDocument document) throws IOException, InvalidFormatException {
         XWPFParagraph paragraph = document.createParagraph();
         paragraph.setAlignment(ParagraphAlignment.CENTER);
 
-        XWPFRun paragraphRun = paragraph.createRun();
-        paragraphRun.setText(ExporterUtil.getBankName());
-        paragraphRun.setColor("0E69E8");
-        paragraphRun.setBold(true);
-        paragraphRun.setFontFamily("Helvetica");
-        paragraphRun.setFontSize(16);
+        XWPFRun run = paragraph.createRun();
+        run.setText(ExporterUtil.getBankName());
+        run.setColor("0E69E8");
+        run.setBold(true);
+        run.setFontFamily("Helvetica");
+        run.setFontSize(16);
 
         writeLogo(document);
     }
@@ -223,36 +228,36 @@ public class WordExporter {
         XWPFParagraph paragraph = document.createParagraph();
         paragraph.setAlignment(ParagraphAlignment.CENTER);
 
-        XWPFRun paragraphRun = paragraph.createRun();
-        paragraphRun.setText(ExporterUtil.getLawMessage());
-        paragraphRun.setFontSize(8);
-        paragraphRun.setItalic(true);
+        XWPFRun run = paragraph.createRun();
+        run.setText(ExporterUtil.getLawMessage());
+        run.setFontSize(8);
+        run.setItalic(true);
 
         paragraph = document.createParagraph();
         paragraph.setAlignment(ParagraphAlignment.CENTER);
 
-        paragraphRun = paragraph.createRun();
-        paragraphRun.setText(ExporterUtil.getTimeZoneMessage());
-        paragraphRun.setFontSize(8);
-        paragraphRun.setItalic(true);
+        run = paragraph.createRun();
+        run.setText(ExporterUtil.getTimeZoneMessage());
+        run.setFontSize(8);
+        run.setItalic(true);
     }
 
     private void writeLogo(XWPFDocument document) throws IOException, InvalidFormatException {
         XWPFParagraph paragraph = document.createParagraph();
         paragraph.setAlignment(ParagraphAlignment.CENTER);
 
-        XWPFRun paragraphRun = paragraph.createRun();
-        paragraphRun.setTextPosition(20);
+        XWPFRun run = paragraph.createRun();
+        run.setTextPosition(20);
 
         Path imagePath = Paths.get(ExporterUtil.getLogoPath()).toAbsolutePath();
-        paragraphRun.addPicture(Files.newInputStream(imagePath),
+        run.addPicture(Files.newInputStream(imagePath),
                 XWPFDocument.PICTURE_TYPE_PNG, imagePath.getFileName().toString(),
                 Units.toEMU(50), Units.toEMU(50));
     }
 
     private void addNewLine(XWPFDocument document) {
         XWPFParagraph paragraph = document.createParagraph();
-        XWPFRun paragraphRun = paragraph.createRun();
-        paragraphRun.setText("\n");
+        XWPFRun run = paragraph.createRun();
+        run.setText("\n");
     }
 }
