@@ -290,7 +290,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         httpHeaders.setContentType(MediaType.parseMediaType(FileUtil.APPLICATION_EXCEL_VALUE));
         httpHeaders.setContentLength(byteArrayOutputStream.size());
         httpHeaders.setContentDisposition(ContentDisposition.attachment()
-                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), FileUtil.APPLICATION_EXCEL_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
                 .build());
 
         return ResponseEntity.ok()
@@ -307,7 +307,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         httpHeaders.setContentType(MediaType.parseMediaType(FileUtil.APPLICATION_DOCX_VALUE));
         httpHeaders.setContentLength(byteArrayOutputStream.size());
         httpHeaders.setContentDisposition(ContentDisposition.attachment()
-                .filename("Account Statement - Word.docx")
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), FileUtil.APPLICATION_DOCX_VALUE, AttachmentFile.ACCOUNT_STATEMENT))
                 .build());
 
         return ResponseEntity.ok()
@@ -341,7 +341,7 @@ public class AccountController extends BaseController<AccountDto, AccountFilteri
         emailService.sendEmail(
                 email,
                 attachmentFile.getValue(),
-                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_OCTET_STREAM_VALUE, attachmentFile),
+                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), FileUtil.APPLICATION_EXCEL_VALUE, attachmentFile),
                 byteArrayOutputStream.toByteArray()
         );
 

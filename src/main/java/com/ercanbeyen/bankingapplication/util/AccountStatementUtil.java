@@ -1,25 +1,23 @@
 package com.ercanbeyen.bankingapplication.util;
 
+import lombok.experimental.UtilityClass;
+
 import java.time.LocalDate;
 
+@UtilityClass
 public class AccountStatementUtil {
-    public static final String CUSTOMER_NUMBER = "Customer Number: ";
-    public static final String CUSTOMER_NATIONAL_IDENTITY_NUMBER = "Customer National Identity Number: ";
-    public static final String BRANCH = "Branch: ";
-    public static final String ACCOUNT_IDENTITY = "Account Identity: ";
-    public static final String ACCOUNT_TYPE = "Account Type: ";
-    public static final String ACCOUNT_CURRENCY = "Account Currency: ";
-    public static final String BALANCE = "Balance: ";
-    public static final String DOCUMENT_ISSUE_DATE = "Document Issue Date: ";
-    public static final String INQUIRY_CRITERIA = "Inquiry Criteria: ";
+    public final String CUSTOMER_FULL_NAME = "Customer Full Name: ";
+    public final String CUSTOMER_NUMBER = "Customer Number: ";
+    public final String CUSTOMER_NATIONAL_IDENTITY_NUMBER = "Customer National Identity Number: ";
+    public final String BRANCH = "Branch: ";
+    public final String ACCOUNT_IDENTITY = "Account Identity: ";
+    public final String ACCOUNT_TYPE = "Account Type: ";
+    public final String ACCOUNT_CURRENCY = "Account Currency: ";
+    public final String BALANCE = "Balance: ";
+    public final String DOCUMENT_ISSUE_DATE = "Document Issue Date: ";
+    public final String INQUIRY_CRITERIA = "Inquiry Criteria: ";
 
-    public static String writeFullName(String fullName) {
-        return "Dear " + fullName;
-    }
-
-    public static String writeInquiryCriteria(LocalDate fromDate, LocalDate toDate) {
+    public String writeInquiryCriteria(LocalDate fromDate, LocalDate toDate) {
         return fromDate + " - " + toDate;
     }
-
-    private AccountStatementUtil() {}
 }

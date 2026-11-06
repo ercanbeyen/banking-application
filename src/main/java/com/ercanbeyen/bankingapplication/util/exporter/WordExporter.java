@@ -58,34 +58,36 @@ public class WordExporter {
         Customer customer = account.getCustomer();
         Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
 
-        addTableRow(accountInformationTable, AccountStatementUtil.writeFullName(customer.getName()));
-        addTableRow(accountInformationTable, "\n");
-        addTableRow(accountInformationTable, AccountStatementUtil.CUSTOMER_NUMBER + customer.getId());
-        addTableRow(accountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER + ExporterUtil.maskField(entry));
-        addTableRow(accountInformationTable, AccountStatementUtil.BRANCH + account.getBranch().getName());
-        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_IDENTITY + account.getId());
-        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_TYPE + account.getType());
-        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_CURRENCY + account.getCurrency());
-        addTableRow(accountInformationTable, AccountStatementUtil.BALANCE + FormatterUtil.convertNumberToFormalExpression(account.getBalance()));
+        addTableRow(accountInformationTable, AccountStatementUtil.CUSTOMER_FULL_NAME, customer.getName());
+        addTableRow(accountInformationTable, AccountStatementUtil.CUSTOMER_NUMBER, customer.getId().toString());
+        addTableRow(accountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER, ExporterUtil.maskField(entry));
+        addTableRow(accountInformationTable, AccountStatementUtil.BRANCH, account.getBranch().getName());
+        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_IDENTITY, account.getId().toString());
+        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_TYPE, account.getType().toString());
+        addTableRow(accountInformationTable, AccountStatementUtil.ACCOUNT_CURRENCY, account.getCurrency().toString());
+        addTableRow(accountInformationTable, AccountStatementUtil.BALANCE, FormatterUtil.convertNumberToFormalExpression(account.getBalance()));
 
         XWPFTable transactionInformationTable = createNestedTable(mainTable.getRow(0).getCell(1));
 
-        addTableRow(transactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE + TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)));
-        addTableRow(transactionInformationTable, AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
+        addTableRow(transactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)));
+        addTableRow(transactionInformationTable, AccountStatementUtil.INQUIRY_CRITERIA, AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
     }
 
-    private void addTableRow(XWPFTable table, String text) {
+    private void addTableRow(XWPFTable table, String inputText, String outputText) {
         XWPFTableRow row = table.createRow();
         row.addNewTableCell();
 
         XWPFTableCell cell = row.getCell(0);
-        cell.setVerticalAlignment(XWPFTableCell.XWPFVertAlign.CENTER);
-
         XWPFParagraph paragraph = cell.getParagraphs().getFirst();
-        paragraph.setAlignment(ParagraphAlignment.CENTER);
 
         XWPFRun run = paragraph.createRun();
-        run.setText(text);
+        run.setBold(true);
+        run.setText(inputText);
+
+        row.addNewTableCell();
+
+        cell = row.getCell(1);
+        cell.setText(outputText);
     }
 
     private XWPFTable createNestedTable(XWPFTableCell tableCell) {

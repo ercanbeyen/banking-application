@@ -67,6 +67,7 @@ public class ExcelExporter {
         style.setFillForegroundColor(IndexedColors.DARK_BLUE.index);
         style.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
 
         int columnIndex = BEGINNING_INDEX;
 
@@ -82,10 +83,12 @@ public class ExcelExporter {
         XSSFFont font = (XSSFFont) workbook.createFont();
         font.setFontHeight(14);
         style.setFont(font);
+        style.setAlignment(HorizontalAlignment.CENTER);
 
         for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
             Row row = sheet.createRow(rowIndex++);
             int columnIndex = BEGINNING_INDEX;
+
             writeCell(row, columnIndex++, TimeUtil.getLocalDateTimeStatement(accountActivityPreview.createdAt()), style, sheet);
             writeCell(row, columnIndex++, accountActivityPreview.activityType().getValue(), style, sheet);
             writeCell(row, columnIndex, FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)), style, sheet);
@@ -155,25 +158,26 @@ public class ExcelExporter {
         valueColumnStyle.setFont(font);
 
         Row row = sheet.createRow(rowIndex++);
-        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.writeFullName(customer.getName()), fieldColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_FULL_NAME, fieldColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfAccountInformationTable,customer.getName(), valueColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, fieldColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfTransactionInformationTable, TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NUMBER, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getId(), valueColumnStyle, sheet);
+        writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.INQUIRY_CRITERIA, fieldColumnStyle, sheet);
+        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeInquiryCriteria(fromDate, toDate), valueColumnStyle, sheet);
 
         Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, ExporterUtil.maskField(entry), valueColumnStyle, sheet);
-        writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfTransactionInformationTable, TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.BRANCH, fieldColumnStyle, sheet);
         writeCell(row, valueColumnIndexOfAccountInformationTable, account.getBranch().getName(), valueColumnStyle, sheet);
-        writeCell(row, fieldColumnIndexOfTransactionInformationTable, AccountStatementUtil.INQUIRY_CRITERIA, fieldColumnStyle, sheet);
-        writeCell(row, valueColumnIndexOfTransactionInformationTable, AccountStatementUtil.writeInquiryCriteria(fromDate, toDate), valueColumnStyle, sheet);
 
         row = sheet.createRow(rowIndex++);
         writeCell(row, fieldColumnIndexOfAccountInformationTable, AccountStatementUtil.ACCOUNT_IDENTITY, fieldColumnStyle, sheet);

@@ -26,7 +26,8 @@ public class AccountActivityUtil {
     public String getAttachmentFileName(String id, String requestedFileType, AttachmentFile attachmentFile) {
         String fileType = switch (requestedFileType) {
             case MediaType.APPLICATION_PDF_VALUE -> "pdf";
-            case MediaType.APPLICATION_OCTET_STREAM_VALUE -> "xlsx";
+            case FileUtil.APPLICATION_EXCEL_VALUE -> "xlsx";
+            case FileUtil.APPLICATION_DOCX_VALUE -> "docx";
             default -> throw new BadRequestException("Unknown file type");
         };
 
