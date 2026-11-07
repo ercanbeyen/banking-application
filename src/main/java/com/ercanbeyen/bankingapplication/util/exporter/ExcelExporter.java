@@ -17,6 +17,7 @@ import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 
+import java.io.ByteArrayOutputStream;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,8 +33,9 @@ public class ExcelExporter {
     private final int CENTER_COLUMN_INDEX = 1;
     private int rowIndex = 0;
 
-    public Workbook generateAccountStatementWorkbook(Account account, ZoneId zoneId, List<AccountActivityPreview> accountActivityPreviews, LocalDate fromDate, LocalDate toDate) throws IOException {
+    public ByteArrayOutputStream generateAccountStatement(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws IOException {
         Workbook workbook = new XSSFWorkbook();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
         String name = "Account Activities - " + account.getId();
 
         writeHeader(name, workbook);
@@ -47,7 +49,10 @@ public class ExcelExporter {
 
         writeFooter(name, workbook);
 
-        return workbook;
+        workbook.write(outputStream);
+        workbook.close();
+
+        return outputStream;
     }
 
     private void writeAccountActivityTable(String name, Workbook workbook, List<AccountActivityPreview> accountActivityPreviews) {

@@ -6,7 +6,6 @@ import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.dto.option.AccountActivityFilteringOption;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 
 import java.time.LocalDate;
 import java.util.Optional;
@@ -23,12 +22,11 @@ public class AccountActivityUtil {
         checkDates(request.fromDate(), request.toDate());
     }
 
-    public String getAttachmentFileName(String id, String requestedFileType, AttachmentFile attachmentFile) {
-        String fileType = switch (requestedFileType) {
-            case MediaType.APPLICATION_PDF_VALUE -> "pdf";
-            case FileUtil.APPLICATION_EXCEL_VALUE -> "xlsx";
-            case FileUtil.APPLICATION_DOCX_VALUE -> "docx";
-            default -> throw new BadRequestException("Unknown file type");
+    public String getAttachmentFileName(String id, AttachmentFile attachmentFile, AttachmentFile.Format fileFormat) {
+        String fileType = switch (fileFormat) {
+            case AttachmentFile.Format.PDF -> "pdf";
+            case AttachmentFile.Format.EXCEL -> "xlsx";
+            case AttachmentFile.Format.WORD -> "docx";
         };
 
         String fileNameTemplate = switch (attachmentFile) {

@@ -78,7 +78,7 @@ public class PdfExporter {
         return outputStream;
     }
 
-    public ByteArrayOutputStream generateAccountStatementPdf(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws DocumentException, IOException {
+    public ByteArrayOutputStream generateAccountStatement(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 

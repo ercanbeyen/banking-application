@@ -15,6 +15,7 @@ import org.apache.poi.xwpf.usermodel.*;
 import org.apache.xmlbeans.XmlCursor;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.math.BigInteger;
 import java.nio.file.Files;
@@ -28,8 +29,9 @@ import java.util.Map;
 
 @UtilityClass
 public class WordExporter {
-    public XWPFDocument generateAccountStatementWord(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws IOException, InvalidFormatException {
+    public ByteArrayOutputStream generateAccountStatement(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws IOException, InvalidFormatException {
         XWPFDocument document = new XWPFDocument();
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         writeHeader(document);
         writeTitle(document);
@@ -40,7 +42,10 @@ public class WordExporter {
 
         writerFooter(document);
 
-        return document;
+        document.write(outputStream);
+        document.close();
+
+        return outputStream;
     }
 
     private void writeAccountStatementBody(XWPFDocument document, Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) {
@@ -252,9 +257,13 @@ public class WordExporter {
         run.setTextPosition(20);
 
         Path imagePath = Paths.get(ExporterUtil.getLogoPath()).toAbsolutePath();
-        run.addPicture(Files.newInputStream(imagePath),
-                XWPFDocument.PICTURE_TYPE_PNG, imagePath.getFileName().toString(),
-                Units.toEMU(50), Units.toEMU(50));
+        run.addPicture(
+                Files.newInputStream(imagePath),
+                XWPFDocument.PICTURE_TYPE_PNG,
+                imagePath.getFileName().toString(),
+                Units.toEMU(50),
+                Units.toEMU(50)
+        );
     }
 
     private void addNewLine(XWPFDocument document) {

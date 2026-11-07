@@ -58,7 +58,7 @@ public class AccountActivityController {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(AccountActivityUtil.getAttachmentFileName(id, MediaType.APPLICATION_PDF_VALUE, AttachmentFile.RECEIPT))
+                .filename(AccountActivityUtil.getAttachmentFileName(id, AttachmentFile.RECEIPT, AttachmentFile.Format.PDF))
                 .build());
         headers.setContentLength(outputStream.size());
 
@@ -76,7 +76,7 @@ public class AccountActivityController {
         emailService.sendEmail(
                 email,
                 attachmentFile.getValue(),
-                AccountActivityUtil.getAttachmentFileName(id, MediaType.APPLICATION_PDF_VALUE, attachmentFile),
+                AccountActivityUtil.getAttachmentFileName(id, attachmentFile, AttachmentFile.Format.PDF),
                 outputStream.toByteArray()
         );
 
