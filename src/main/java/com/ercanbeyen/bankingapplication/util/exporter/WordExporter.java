@@ -9,8 +9,10 @@ import com.ercanbeyen.bankingapplication.util.ExporterUtil;
 import com.ercanbeyen.bankingapplication.util.FormatterUtil;
 import com.ercanbeyen.bankingapplication.util.TimeUtil;
 import lombok.experimental.UtilityClass;
+import org.apache.poi.common.usermodel.PictureType;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.apache.poi.util.Units;
+import org.apache.poi.wp.usermodel.HeaderFooterType;
 import org.apache.poi.xwpf.usermodel.*;
 import org.apache.xmlbeans.XmlCursor;
 import org.openxmlformats.schemas.wordprocessingml.x2006.main.*;
@@ -32,6 +34,8 @@ public class WordExporter {
     public ByteArrayOutputStream generateAccountStatement(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws IOException, InvalidFormatException {
         XWPFDocument document = new XWPFDocument();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
+        addPageNumber(document);
 
         writeHeader(document);
         writeTitle(document);
@@ -259,11 +263,46 @@ public class WordExporter {
         Path imagePath = Paths.get(ExporterUtil.getLogoPath()).toAbsolutePath();
         run.addPicture(
                 Files.newInputStream(imagePath),
-                XWPFDocument.PICTURE_TYPE_PNG,
+                PictureType.PNG,
                 imagePath.getFileName().toString(),
                 Units.toEMU(50),
                 Units.toEMU(50)
         );
+    }
+
+    private void addPageNumber(XWPFDocument document) {
+        XWPFFooter footer = document.createFooter(HeaderFooterType.DEFAULT);
+        XWPFParagraph paragraph = footer.createParagraph();
+        paragraph.setAlignment(ParagraphAlignment.RIGHT);
+
+        XWPFRun run = paragraph.createRun();
+        run.setText("Page ");
+        addField(paragraph, "PAGE");
+
+        run = paragraph.createRun();
+        run.setText(" / ");
+        addField(paragraph, "NUMPAGES");
+    }
+
+    private void addField(XWPFParagraph paragraph, String fieldName) {
+        XWPFRun run = paragraph.createRun();
+        run.getCTR()
+                .addNewFldChar()
+                .setFldCharType(STFldCharType.BEGIN);
+
+        run = paragraph.createRun();
+        run.getCTR()
+                .addNewInstrText()
+                .setStringValue(" " + fieldName + " ");
+        run.getCTR()
+                .addNewFldChar()
+                .setFldCharType(STFldCharType.SEPARATE);
+
+        run = paragraph.createRun();
+        run.setText("1");
+        run.getCTR()
+                .addNewFldChar()
+                .setFldCharType(STFldCharType.END);
     }
 
     private void addNewLine(XWPFDocument document) {
