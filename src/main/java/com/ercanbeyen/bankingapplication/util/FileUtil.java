@@ -16,6 +16,7 @@ import java.util.Optional;
 @UtilityClass
 public class FileUtil {
     private final int FILE_NAME_LENGTH_THRESHOLD = 100;
+    public final String APPLICATION_EXCEL_VALUE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
     public final String APPLICATION_DOC_VALUE = "application/msword";
     public final String APPLICATION_DOCX_VALUE = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 

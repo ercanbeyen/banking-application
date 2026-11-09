@@ -11,4 +11,10 @@ public enum AttachmentFile {
     RECEIPT("Receipt");
 
     private final String value;
+
+    public enum Format {
+        PDF,
+        EXCEL,
+        WORD
+    }
 }

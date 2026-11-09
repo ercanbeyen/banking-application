@@ -35,6 +35,8 @@ import java.util.function.BiConsumer;
 
 @UtilityClass
 public class PdfExporter {
+    private final BorderEvent borderEvent = new BorderEvent();
+
     public ByteArrayOutputStream generatePdfStreamOfFinancialStatusReport(Customer customer, Double netBalanceOfCustomer, Map<AccountType, Double> netBalancesOfAccountTypes, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
@@ -44,7 +46,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "financial status");
+        writeTitle(document, "FINANCIAL STATUS");
         addNewLine(document);
 
         writeFinancialStatusReportBody(document, customer, netBalanceOfCustomer, netBalancesOfAccountTypes, financialStatusesOfAccountTypesWithConvertedCurrencies);
@@ -64,7 +66,7 @@ public class PdfExporter {
         document.open();
 
         writeHeader(document);
-        writeTitle(document, "receipt");
+        writeTitle(document, "RECEIPT");
         addNewLine(document);
 
         writeReceiptBody(document, accountActivity);
@@ -76,7 +78,7 @@ public class PdfExporter {
         return outputStream;
     }
 
-    public ByteArrayOutputStream generateAccountStatementPdf(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws DocumentException, IOException {
+    public ByteArrayOutputStream generateAccountStatement(Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate, List<AccountActivityPreview> accountActivityPreviews) throws DocumentException, IOException {
         Document document = new Document();
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
@@ -99,24 +101,21 @@ public class PdfExporter {
     private void writeTitle(Document document, String title) throws DocumentException {
         Font font = new Font(Font.FontFamily.HELVETICA, 15, Font.BOLD, BaseColor.RED);
 
-        Paragraph paragraph = new Paragraph(title.toUpperCase(), font);
+        Paragraph paragraph = new Paragraph(title, font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
 
         document.add(paragraph);
     }
 
     private void writeFinancialStatusReportBody(Document document, Customer customer, Double netBalanceOfCustomer, Map<AccountType, Double> netBalancesOfAccountTypes, Map<AccountType, List<List<AccountFinancialStatus>>> financialStatusesOfAccountTypesWithConvertedCurrencies) throws DocumentException {
-        final Font boldFont = new Font();
-        boldFont.setStyle(Font.BOLD);
+        final Font inputChunkFont = new Font();
+        inputChunkFont.setStyle(Font.BOLD);
 
-        Chunk fullNameInputChunk = new Chunk(SummaryField.FULL_NAME + ": ", boldFont);
+        Chunk fullNameInputChunk = new Chunk(SummaryField.FULL_NAME + ": ", inputChunkFont);
         Chunk fullNameOutputChunk = new Chunk(customer.getFullName());
 
-        Chunk dateInputChunk = new Chunk("  Date: ", boldFont);
-
-        String todayDateTime = TimeUtil.getLocalDateTimeStatement((LocalDateTime.now(ZoneId.systemDefault())));
-
-        Chunk dateOutputChunk = new Chunk(todayDateTime);
+        Chunk dateInputChunk = new Chunk("  Date: ", inputChunkFont);
+        Chunk dateOutputChunk = new Chunk(TimeUtil.getLocalDateTimeStatement((LocalDateTime.now(ZoneId.systemDefault()))));
 
         Phrase chunkPhrase = new Phrase();
         chunkPhrase.addAll(List.of(fullNameInputChunk, fullNameOutputChunk, dateInputChunk, dateOutputChunk));
@@ -333,43 +332,56 @@ public class PdfExporter {
     }
 
     private void writeInformationTable(Document document, Account account, ZoneId zoneId, LocalDate fromDate, LocalDate toDate) throws DocumentException {
-        BorderEvent borderEvent = new BorderEvent();
+        PdfPTable mainTable = new PdfPTable(2);
+        mainTable.setHorizontalAlignment(Element.ALIGN_CENTER);
+        mainTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        mainTable.setTableEvent(borderEvent);
 
-        PdfPTable table = new PdfPTable(2);
-        table.getDefaultCell().setBorder(Rectangle.NO_BORDER);
-        table.setTableEvent(borderEvent);
-
-        PdfPTable accountInformationTable = new PdfPTable(1);
-        accountInformationTable.setHorizontalAlignment(Element.ALIGN_CENTER);
-        accountInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
-        accountInformationTable.setTableEvent(borderEvent);
+        PdfPTable accountInformationTable = createNestedTable();
 
         Customer customer = account.getCustomer();
         Map.Entry<String, Object> entry = Map.entry(SummaryField.NATIONAL_IDENTITY, customer.getNationalId());
 
-        accountInformationTable.addCell(AccountStatementUtil.writeFullName(customer.getName()));
-        accountInformationTable.addCell(new Phrase(new Paragraph("\n")));
-        accountInformationTable.addCell(AccountStatementUtil.CUSTOMER_NUMBER + customer.getId());
-        accountInformationTable.addCell(AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER + ExporterUtil.maskField(entry));
-        accountInformationTable.addCell(AccountStatementUtil.BRANCH + account.getBranch().getName());
-        accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_IDENTITY + account.getId());
-        accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_TYPE + account.getType());
-        accountInformationTable.addCell(AccountStatementUtil.ACCOUNT_CURRENCY + account.getCurrency());
-        accountInformationTable.addCell(AccountStatementUtil.BALANCE + FormatterUtil.convertNumberToFormalExpression(account.getBalance()));
+        addCell(accountInformationTable, AccountStatementUtil.CUSTOMER_FULL_NAME, customer.getName());
+        addCell(accountInformationTable, AccountStatementUtil.CUSTOMER_NUMBER, customer.getId().toString());
+        addCell(accountInformationTable, AccountStatementUtil.CUSTOMER_NATIONAL_IDENTITY_NUMBER, ExporterUtil.maskField(entry));
+        addCell(accountInformationTable, AccountStatementUtil.BRANCH, account.getBranch().getName());
+        addCell(accountInformationTable, AccountStatementUtil.ACCOUNT_IDENTITY, account.getId().toString());
+        addCell(accountInformationTable, AccountStatementUtil.ACCOUNT_TYPE, account.getType().toString());
+        addCell(accountInformationTable, AccountStatementUtil.ACCOUNT_CURRENCY, account.getCurrency().toString());
+        addCell(accountInformationTable, AccountStatementUtil.BALANCE, FormatterUtil.convertNumberToFormalExpression(account.getBalance()));
 
-        table.addCell(accountInformationTable);
+        mainTable.addCell(accountInformationTable);
 
-        PdfPTable transactionInformationTable = new PdfPTable(1);
-        transactionInformationTable.setHorizontalAlignment(Element.ALIGN_RIGHT);
-        transactionInformationTable.getDefaultCell().setBorder(Rectangle.NO_BORDER);
-        transactionInformationTable.setTableEvent(borderEvent);
+        PdfPTable transactionInformationTable = createNestedTable();
 
-        transactionInformationTable.addCell(AccountStatementUtil.DOCUMENT_ISSUE_DATE + TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)));
-        transactionInformationTable.addCell(AccountStatementUtil.INQUIRY_CRITERIA + AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
+        addCell(transactionInformationTable, AccountStatementUtil.DOCUMENT_ISSUE_DATE, TimeUtil.getLocalDateTimeStatement(LocalDateTime.now(zoneId)));
+        addCell(transactionInformationTable, AccountStatementUtil.INQUIRY_CRITERIA, AccountStatementUtil.writeInquiryCriteria(fromDate, toDate));
 
-        table.addCell(transactionInformationTable);
+        mainTable.addCell(transactionInformationTable);
 
-        document.add(table);
+        document.add(mainTable);
+    }
+
+    private void addCell(PdfPTable table, String inputText, String outputText) {
+        final Font font = new Font();
+        font.setStyle(Font.BOLD);
+
+        Chunk fullNameInputChunk = new Chunk(inputText, font);
+        Chunk fullNameOutputChunk = new Chunk(outputText);
+
+        Phrase chunkPhrase = new Phrase();
+        chunkPhrase.addAll(List.of(fullNameInputChunk, fullNameOutputChunk));
+
+        table.addCell(chunkPhrase);
+    }
+
+    private PdfPTable createNestedTable() {
+        PdfPTable table = new PdfPTable(1);
+        table.getDefaultCell().setBorder(Rectangle.NO_BORDER);
+        table.setTableEvent(borderEvent);
+
+        return table;
     }
 
     private void writeAccountActivityTable(Document document, List<AccountActivityPreview> accountActivityPreviews) throws DocumentException {
@@ -381,9 +393,20 @@ public class PdfExporter {
 
         /* Data rows */
         for (AccountActivityPreview accountActivityPreview : accountActivityPreviews) {
-            table.addCell(new PdfPCell(new Phrase(TimeUtil.getLocalDateTimeStatement(accountActivityPreview.createdAt()))));
-            table.addCell(new PdfPCell(new Phrase(accountActivityPreview.activityType().getValue())));
-            table.addCell(new PdfPCell(new Phrase(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview)))));
+            PdfPCell cell = new PdfPCell(new Phrase(TimeUtil.getLocalDateTimeStatement(accountActivityPreview.createdAt())));
+            cell.setVerticalAlignment(Element.ALIGN_CENTER);
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            table.addCell(cell);
+
+            cell = new PdfPCell(new Phrase(accountActivityPreview.activityType().getValue()));
+            cell.setVerticalAlignment(Element.ALIGN_CENTER);
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            table.addCell(cell);
+
+            cell = new PdfPCell(new Phrase(FormatterUtil.convertNumberToFormalExpression(ExporterUtil.calculateAmountForDataLine(accountActivityPreview))));
+            cell.setVerticalAlignment(Element.ALIGN_CENTER);
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            table.addCell(cell);
         }
 
         document.add(table);
@@ -392,18 +415,21 @@ public class PdfExporter {
     private final BiConsumer<List<String>, PdfPTable> writeHeaderRowOfTable = (fields, table) -> {
         final Font font = new Font(Font.FontFamily.HELVETICA, Font.DEFAULTSIZE, Font.BOLD, BaseColor.WHITE);
         fields.forEach(field -> {
-            PdfPCell header = new PdfPCell();
-            header.setBackgroundColor(BaseColor.BLUE);
-            header.setBorderWidth(1);
+            PdfPCell cell = new PdfPCell();
+            cell.setBackgroundColor(BaseColor.BLUE);
+            cell.setBorderWidth(1);
             Phrase phrase = new Phrase(field, font);
-            header.setPhrase(phrase);
-            table.addCell(header);
+            cell.setPhrase(phrase);
+            cell.setHorizontalAlignment(Element.ALIGN_CENTER);
+            cell.setVerticalAlignment(Element.ALIGN_CENTER);
+            table.addCell(cell);
         });
     };
 
     private void writeFinancialStatusReportFooter(Document document) throws DocumentException {
         Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
         String message = "Our immediate banking exchange rates were used in calculating the equivalents for foreign currency assets.";
+
         Paragraph paragraph = new Paragraph(message, font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
@@ -416,7 +442,9 @@ public class PdfExporter {
 
         Paragraph paragraph = new Paragraph(ExporterUtil.getBankName(), font);
         paragraph.setAlignment(Element.ALIGN_CENTER);
+
         document.add(paragraph);
+
         writeLogo(document);
     }
 
@@ -424,7 +452,6 @@ public class PdfExporter {
         Font font = new Font(Font.FontFamily.HELVETICA, 8, Font.ITALIC);
 
         Paragraph paragraph = new Paragraph(ExporterUtil.getLawMessage(), font);
-
         paragraph.setAlignment(Element.ALIGN_CENTER);
         document.add(paragraph);
 
@@ -439,6 +466,7 @@ public class PdfExporter {
                         .toAbsolutePath()
                         .toString()
         );
+
         image.scalePercent(10);
         image.setAlignment(Element.ALIGN_CENTER);
         document.add(image);

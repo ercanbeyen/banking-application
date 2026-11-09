@@ -247,7 +247,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         headers.setContentType(MediaType.APPLICATION_PDF);
         headers.setContentLength(byteArrayOutputStream.size());
         headers.setContentDisposition(ContentDisposition.attachment()
-                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, AttachmentFile.FINANCIAL_STATUS_REPORT))
+                .filename(AccountActivityUtil.getAttachmentFileName(Integer.toString(id), AttachmentFile.FINANCIAL_STATUS_REPORT, AttachmentFile.Format.PDF))
                 .build());
 
         return ResponseEntity.ok()
@@ -264,7 +264,7 @@ public class CustomerController extends BaseController<CustomerDto, CustomerFilt
         emailService.sendEmail(
                 email,
                 attachmentFile.getValue(),
-                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), MediaType.APPLICATION_PDF_VALUE, attachmentFile),
+                AccountActivityUtil.getAttachmentFileName(Integer.toString(id), attachmentFile, AttachmentFile.Format.PDF),
                 byteArrayOutputStream.toByteArray()
         );
 
