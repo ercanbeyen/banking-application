@@ -150,14 +150,17 @@ public class BranchOrderServiceImpl implements BranchOrderService {
 
         BranchOrder branchOrder = findById(branchOrderId);
 
-        /*
+         /*
             Branch Order Status Flow:
-            canceled <-> pending -> in process -> completed
-                                            |
-                                            -> incompleted
+            canceled <-> pending -> in process <-> approval -> incompleted
+                                         |                       ^
+                                         |                       |
+                                         -------------------------> completed
          */
+
         boolean statusFlowApplied = (branchOrder.getStatus() == BranchOrderStatus.PENDING && status == BranchOrderStatus.IN_PROCESS)
-                || (branchOrder.getStatus() == BranchOrderStatus.IN_PROCESS && (status == BranchOrderStatus.COMPLETED || status == BranchOrderStatus.INCOMPLETED));
+                || (branchOrder.getStatus() == BranchOrderStatus.APPROVAL && (status == BranchOrderStatus.IN_PROCESS || status == BranchOrderStatus.INCOMPLETED))
+                || (branchOrder.getStatus() == BranchOrderStatus.IN_PROCESS && (status == BranchOrderStatus.APPROVAL || status == BranchOrderStatus.COMPLETED || status == BranchOrderStatus.INCOMPLETED));
 
         if (!statusFlowApplied) {
             throw new ResourceConflictException(ResponseMessage.BRANCH_ORDER_STATUS_VIOLATED);
@@ -206,7 +209,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
         String entity = Entity.BRANCH_ORDER.getValue();
 
         Optional.ofNullable(file).ifPresentOrElse(petitionRequest -> {
-            String customFileName = customer.getFullName() + " " + request.activityType().getValue() + " " + Entity.BRANCH_ORDER.getValue() + " on " + LocalDate.now(ZoneId.systemDefault());
+                    String customFileName = customer.getFullName() + " " + request.activityType().getValue() + " " + Entity.BRANCH_ORDER.getValue() + " on " + LocalDate.now(ZoneId.systemDefault());
                     FileUploadRequest fileUploadRequest = FileUtil.createFileUploadRequest(petitionRequest, customFileName);
                     fileService.saveFile(fileUploadRequest)
                             .thenAccept(petition -> {

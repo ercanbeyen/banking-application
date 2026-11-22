@@ -5,7 +5,6 @@ import com.ercanbeyen.bankingapplication.dto.option.BaseFilteringOption;
 import com.ercanbeyen.bankingapplication.service.BaseService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +12,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RequiredArgsConstructor
-@Slf4j
 public abstract class BaseController<T extends BaseDto, V extends BaseFilteringOption> {
     private final BaseService<T, V> baseService;
 

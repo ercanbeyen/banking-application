@@ -1,7 +1,8 @@
 package com.ercanbeyen.bankingapplication.constant.enums;
 
 public enum ERole {
-    USER,
+    ADMIN,
+    MANAGER,
     TELLER,
-    ADMIN
+    USER
 }

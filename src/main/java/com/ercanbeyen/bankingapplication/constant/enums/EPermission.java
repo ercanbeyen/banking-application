@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.constant.enums;
 
 public enum EPermission {
-    READ_DATA,
-    MANAGE_ENTITY
+    MANAGE_ENTITY,
+    APPROVE_BRANCH_ORDER,
+    READ_DATA
 }
