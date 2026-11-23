@@ -35,8 +35,8 @@ public class FileServiceImpl implements FileService {
                 File file = new File(request.name(), request.contentType(), request.data());
                 return fileRepository.save(file);
         }).exceptionally(exception -> {
-            log.error(LogMessage.EXCEPTION, exception.getMessage());
-            throw new ResourceExpectationFailedException(exception.getMessage());
+            log.error(LogMessage.FILE_UPLOAD_ERROR, exception.getMessage());
+            throw new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR);
         });
     }
 
@@ -46,10 +46,9 @@ public class FileServiceImpl implements FileService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         List<File> files = new ArrayList<>();
+        String entity = Entity.FILE.getValue().toLowerCase();
 
         for (FileUploadRequest fileUploadRequest : fileUploadRequests) {
-            String entity = Entity.FILE.getValue();
-
             try {
                 File file = new File(fileUploadRequest.name(), fileUploadRequest.contentType(), fileUploadRequest.data());
                 File savedFile = fileRepository.save(file);
@@ -61,7 +60,7 @@ public class FileServiceImpl implements FileService {
             }
         }
 
-        log.info("Multiple file saves are completed!");
+        log.info("Multiple {} saves are completed!", entity);
 
         return CompletableFuture.completedFuture(files);
     }

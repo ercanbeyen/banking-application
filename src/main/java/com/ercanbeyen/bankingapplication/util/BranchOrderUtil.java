@@ -3,8 +3,10 @@ package com.ercanbeyen.bankingapplication.util;
 import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
+import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.BranchOrderDto;
 import com.ercanbeyen.bankingapplication.exception.BadRequestException;
+import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import lombok.experimental.UtilityClass;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
@@ -41,18 +43,43 @@ public class BranchOrderUtil {
     }
 
     public void checkBranchOrderStatusUpdate(BranchOrderStatus status, String accountActivityId) {
-        String entity = Entity.BRANCH_ORDER.getValue();
-
-        if (!TimeUtil.isLocalDateTimeInWorkDaysAndHours(LocalDateTime.now(ZoneId.systemDefault()))) {
-            throw new BadRequestException(String.format("%ss may be processed on business days and hours.", entity));
-        }
+        isTimeInWorkDaysAndHours();
 
         if (status == BranchOrderStatus.PENDING || status == BranchOrderStatus.CANCELED) {
-            throw new BadRequestException(String.format("Invalid %s status update for the teller", entity.toLowerCase()));
+            throw new BadRequestException(ResponseMessage.INVALID_BRANCH_ORDER_STATUS_UPDATE);
         }
 
         if (status == BranchOrderStatus.COMPLETED && Optional.ofNullable(accountActivityId).isEmpty()) {
             throw new BadRequestException(String.format("%s id is empty!", Entity.ACCOUNT_ACTIVITY.getValue()));
+        }
+
+    }
+
+    public void checkBranchOrderStatusFlow(BranchOrderStatus currentStatus, BranchOrderStatus nextStatus) {
+         /*
+            Branch Order Status Flow:
+            canceled <-> pending -> in process <-> approval -> incompleted
+                                         |                       ^
+                                         |                       |
+                                         -------------------------> completed
+         */
+
+        List<BranchOrderStatus> possibleNextBranchOrderStatuses = switch (currentStatus) {
+            case CANCELED -> List.of(BranchOrderStatus.PENDING);
+            case PENDING -> List.of(BranchOrderStatus.CANCELED, BranchOrderStatus.IN_PROCESS);
+            case IN_PROCESS -> List.of(BranchOrderStatus.APPROVAL, BranchOrderStatus.INCOMPLETED, BranchOrderStatus.COMPLETED);
+            case APPROVAL -> List.of(BranchOrderStatus.IN_PROCESS, BranchOrderStatus.INCOMPLETED);
+            default -> throw new BadRequestException(ResponseMessage.BRANCH_ORDER_STATUS_VIOLATED);
+        };
+
+        if (!possibleNextBranchOrderStatuses.contains(nextStatus)) {
+            throw new ResourceConflictException(ResponseMessage.BRANCH_ORDER_STATUS_VIOLATED);
+        }
+    }
+
+    public void isTimeInWorkDaysAndHours() {
+        if (!TimeUtil.isLocalDateTimeInWorkDaysAndHours(LocalDateTime.now(ZoneId.systemDefault()))) {
+            throw new BadRequestException(String.format("%ss may be processed on business days and hours.", Entity.BRANCH_ORDER.getValue()));
         }
     }
 

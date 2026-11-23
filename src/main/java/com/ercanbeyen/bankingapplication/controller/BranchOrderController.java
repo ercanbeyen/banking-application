@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.controller;
 
+import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderApprovalStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
@@ -78,15 +79,26 @@ public class BranchOrderController {
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
-    @PreAuthorize("hasRole('TELLER')")
-    @PatchMapping("/{id}")
+    @PreAuthorize("hasAuthority('READ_DATA')")
+    @PatchMapping("/{id}/update")
     public ResponseEntity<MessageResponse<String>> updateBranchOrderStatus(
-            @PathVariable("id") String branchOrderId,
-            @RequestParam("status") BranchOrderStatus status,
+            @PathVariable(value = "id") String id,
+            @RequestParam(value = "status") BranchOrderStatus status,
             @RequestParam(value = "account-activity-id", required = false) String accountActivityId) {
         BranchOrderUtil.checkBranchOrderStatusUpdate(status, accountActivityId);
-        branchOrderService.updateBranchOrderStatus(branchOrderId, status, accountActivityId);
-        MessageResponse<String> response = new MessageResponse<>(String.format("%s status is successfully updated!", Entity.BRANCH_ORDER.getValue()));
+        branchOrderService.updateBranchOrderStatus(id, status, accountActivityId);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.BRANCH_ORDER_STATUS_UPDATE_SUCCESS);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PreAuthorize("hasAuthority('APPROVE_BRANCH_ORDER')")
+    @PatchMapping("/{id}/approval")
+    public ResponseEntity<MessageResponse<String>> approveBranchOrder(
+            @PathVariable(value = "id") String id,
+            @RequestParam(value = "status") BranchOrderApprovalStatus approvalStatus) {
+        BranchOrderUtil.isTimeInWorkDaysAndHours();
+        branchOrderService.approveBranchOrder(id, approvalStatus);
+        MessageResponse<String> response = new MessageResponse<>(ResponseMessage.BRANCH_ORDER_STATUS_UPDATE_SUCCESS);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }

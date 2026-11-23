@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.service.impl;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderApprovalStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.Entity;
 import com.ercanbeyen.bankingapplication.constant.message.LogMessage;
@@ -8,12 +9,14 @@ import com.ercanbeyen.bankingapplication.constant.message.ResponseMessage;
 import com.ercanbeyen.bankingapplication.dto.BranchOrderDto;
 import com.ercanbeyen.bankingapplication.dto.request.FileUploadRequest;
 import com.ercanbeyen.bankingapplication.entity.*;
+import com.ercanbeyen.bankingapplication.exception.BadRequestException;
 import com.ercanbeyen.bankingapplication.exception.ResourceConflictException;
 import com.ercanbeyen.bankingapplication.exception.ResourceExpectationFailedException;
 import com.ercanbeyen.bankingapplication.exception.ResourceNotFoundException;
 import com.ercanbeyen.bankingapplication.mapper.BranchOrderMapper;
 import com.ercanbeyen.bankingapplication.repository.BranchOrderRepository;
 import com.ercanbeyen.bankingapplication.service.*;
+import com.ercanbeyen.bankingapplication.util.BranchOrderUtil;
 import com.ercanbeyen.bankingapplication.util.FileUtil;
 import com.ercanbeyen.bankingapplication.util.LoggingUtil;
 import lombok.RequiredArgsConstructor;
@@ -130,17 +133,11 @@ public class BranchOrderServiceImpl implements BranchOrderService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         BranchOrder branchOrder = findById(id);
-        BranchOrderStatus status = branchOrder.getStatus();
+        BranchOrderStatus nextStatus = BranchOrderStatus.CANCELED;
 
-        if (status == BranchOrderStatus.CANCELED) {
-            throw new ResourceConflictException(String.format("%s has already been cancelled before!", Entity.BRANCH_ORDER.getValue()));
-        }
+        BranchOrderUtil.checkBranchOrderStatusFlow(branchOrder.getStatus(), nextStatus);
 
-        if (status != BranchOrderStatus.PENDING) {
-            throw new ResourceConflictException(String.format(ResponseMessage.BRANCH_ORDER_IS_NOT_AVAILABLE, "cancellation"));
-        }
-
-        branchOrder.setStatus(BranchOrderStatus.CANCELED);
+        branchOrder.setStatus(nextStatus);
         branchOrderRepository.save(branchOrder);
     }
 
@@ -149,35 +146,49 @@ public class BranchOrderServiceImpl implements BranchOrderService {
         log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
 
         BranchOrder branchOrder = findById(branchOrderId);
+        String entity = Entity.BRANCH_ORDER.getValue();
 
-         /*
-            Branch Order Status Flow:
-            canceled <-> pending -> in process <-> approval -> incompleted
-                                         |                       ^
-                                         |                       |
-                                         -------------------------> completed
-         */
-
-        boolean statusFlowApplied = (branchOrder.getStatus() == BranchOrderStatus.PENDING && status == BranchOrderStatus.IN_PROCESS)
-                || (branchOrder.getStatus() == BranchOrderStatus.APPROVAL && (status == BranchOrderStatus.IN_PROCESS || status == BranchOrderStatus.INCOMPLETED))
-                || (branchOrder.getStatus() == BranchOrderStatus.IN_PROCESS && (status == BranchOrderStatus.APPROVAL || status == BranchOrderStatus.COMPLETED || status == BranchOrderStatus.INCOMPLETED));
-
-        if (!statusFlowApplied) {
-            throw new ResourceConflictException(ResponseMessage.BRANCH_ORDER_STATUS_VIOLATED);
+        if (branchOrder.getStatus() == BranchOrderStatus.APPROVAL) {
+            throw new BadRequestException(entity + " is in approval!");
         }
 
+        BranchOrderUtil.checkBranchOrderStatusFlow(branchOrder.getStatus(), status);
 
         if (status == BranchOrderStatus.COMPLETED) {
+            if (Optional.ofNullable(branchOrder.getApprovalStatus()).isEmpty()) {
+                throw new BadRequestException(ResponseMessage.BRANCH_ORDER_STATUS_VIOLATED);
+            }
+
             AccountActivity accountActivity = accountActivityService.findById(accountActivityId);
 
             if (!ActivityType.getBranchOrderActivities().contains(accountActivity.getType())) {
-                throw new ResourceConflictException(String.format("%s is improper for %s", Entity.ACCOUNT_ACTIVITY.getValue(), Entity.BRANCH_ORDER.getValue()));
+                throw new ResourceConflictException(String.format("%s is improper for %s", Entity.ACCOUNT_ACTIVITY.getValue(), entity));
             }
 
             branchOrder.setAccountActivity(accountActivity);
+        } else if (status == BranchOrderStatus.IN_PROCESS && Optional.ofNullable(branchOrder.getApprovalStatus()).isEmpty()) {
+            branchOrder.setApprovalStatus(BranchOrderApprovalStatus.REVIEW);
         }
 
         branchOrder.setStatus(status);
+        branchOrderRepository.save(branchOrder);
+    }
+
+    @Override
+    public void approveBranchOrder(String id, BranchOrderApprovalStatus status) {
+        log.info(LogMessage.ECHO, LoggingUtil.getCurrentClassName(), LoggingUtil.getCurrentMethodName());
+
+        BranchOrder branchOrder = findById(id);
+
+        BranchOrderStatus nextBranchOrderStatus = switch (status) {
+            case REVIEW -> BranchOrderStatus.APPROVAL;
+            case APPROVED -> BranchOrderStatus.IN_PROCESS;
+            case REJECTED -> BranchOrderStatus.INCOMPLETED;
+        };
+
+        branchOrder.setStatus(nextBranchOrderStatus);
+        branchOrder.setApprovalStatus(status);
+
         branchOrderRepository.save(branchOrder);
     }
 
@@ -207,6 +218,7 @@ public class BranchOrderServiceImpl implements BranchOrderService {
         }
 
         String entity = Entity.BRANCH_ORDER.getValue();
+        BranchOrderStatus status = BranchOrderStatus.PENDING;
 
         Optional.ofNullable(file).ifPresentOrElse(petitionRequest -> {
                     String customFileName = customer.getFullName() + " " + request.activityType().getValue() + " " + Entity.BRANCH_ORDER.getValue() + " on " + LocalDate.now(ZoneId.systemDefault());
@@ -215,7 +227,8 @@ public class BranchOrderServiceImpl implements BranchOrderService {
                             .thenAccept(petition -> {
                                 branchOrder.setCustomer(customer);
                                 branchOrder.setBranch(branch);
-                                branchOrder.setStatus(BranchOrderStatus.PENDING);
+                                branchOrder.setStatus(status);
+                                branchOrder.setApprovalStatus(null);
                                 branchOrder.setPetition(petition);
                                 branchOrder.setContent(null);
 
@@ -223,13 +236,14 @@ public class BranchOrderServiceImpl implements BranchOrderService {
                                 log.info(LogMessage.RESOURCE_CREATE_SUCCESS, entity, savedBranchOrder.getId());
                             })
                             .exceptionally(exception -> {
-                                log.error("Unable to upload {}. Error: {}", Entity.FILE.getValue().toLowerCase(), exception.getMessage());
-                                throw new ResourceExpectationFailedException("Unable to upload petition!");
+                                log.error(LogMessage.FILE_UPLOAD_ERROR, exception.getMessage());
+                                throw new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR);
                             });
                 }, () -> {
                     branchOrder.setCustomer(customer);
                     branchOrder.setBranch(branch);
-                    branchOrder.setStatus(BranchOrderStatus.PENDING);
+                    branchOrder.setStatus(status);
+                    branchOrder.setApprovalStatus(null);
                     branchOrder.setPetition(null);
                     branchOrder.setContent(request.content());
 

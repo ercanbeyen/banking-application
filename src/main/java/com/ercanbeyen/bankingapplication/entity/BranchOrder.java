@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.entity;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderApprovalStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import jakarta.persistence.*;
 import lombok.Data;
@@ -27,6 +28,8 @@ public class BranchOrder {
     private ActivityType activityType;
     @Enumerated(EnumType.STRING)
     private BranchOrderStatus status;
+    @Enumerated(EnumType.STRING)
+    private BranchOrderApprovalStatus approvalStatus;
     @OneToOne(cascade = CascadeType.REMOVE, orphanRemoval = true)
     @JoinColumn(name = "petition")
     private File petition;
