@@ -1,9 +1,10 @@
 package com.ercanbeyen.bankingapplication.constant.enums;
 
 public enum BranchOrderStatus {
+    CANCELED,
     PENDING,
     IN_PROCESS,
-    CANCELED,
+    APPROVAL,
     INCOMPLETED,
     COMPLETED
 }

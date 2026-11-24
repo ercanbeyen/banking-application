@@ -24,7 +24,6 @@ import com.ercanbeyen.bankingapplication.service.CustomerService;
 import com.itextpdf.text.DocumentException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
-import lombok.extern.slf4j.Slf4j;
 import org.hibernate.validator.constraints.Range;
 import org.springframework.http.*;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -39,7 +38,6 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/v1/customers")
-@Slf4j
 @SecurityRequirement(name = "Bearer Authentication")
 public class CustomerController extends BaseController<CustomerDto, CustomerFilteringOption> {
     private final CustomerService customerService;

@@ -1,5 +1,6 @@
 package com.ercanbeyen.bankingapplication.service;
 
+import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderApprovalStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.ercanbeyen.bankingapplication.dto.BranchOrderDto;
 import org.springframework.web.multipart.MultipartFile;
@@ -14,4 +15,5 @@ public interface BranchOrderService {
     void deleteBranchOrder(String id);
     void cancelBranchOrder(String id);
     void updateBranchOrderStatus(String branchOrderId, BranchOrderStatus status, String accountActivityId);
+    void approveBranchOrder(String id, BranchOrderApprovalStatus status);
 }

@@ -212,8 +212,8 @@ public class CustomerServiceImpl implements CustomerService {
                     customerRepository.save(customer);
                 }) // Profile photo upload
                 .exceptionally(exception -> {
-                    log.error("Unable to upload photo. Error: {}", exception.getMessage());
-                    throw new ResourceExpectationFailedException(exception.getMessage());
+                    log.error(LogMessage.FILE_UPLOAD_ERROR, exception.getMessage());
+                    throw new ResourceExpectationFailedException(ResponseMessage.FILE_UPLOAD_ERROR);
                 });
     }
 

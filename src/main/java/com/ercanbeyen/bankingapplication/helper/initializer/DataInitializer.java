@@ -41,10 +41,12 @@ public class DataInitializer {
 
     public void createRolesAndPermissions() {
         Permission manageEntityPermission = permissionService.createPermission(EPermission.MANAGE_ENTITY.toString());
-        Permission readUserPermission = permissionService.createPermission(EPermission.READ_DATA.toString());
+        Permission approveBranchOrderPermission = permissionService.createPermission(EPermission.APPROVE_BRANCH_ORDER.toString());
+        Permission readDataPermission = permissionService.createPermission(EPermission.READ_DATA.toString());
 
-        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntityPermission, readUserPermission)));
-        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readUserPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.ADMIN, Set.of(manageEntityPermission, approveBranchOrderPermission, readDataPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.MANAGER, Set.of(approveBranchOrderPermission, readDataPermission)));
+        roleService.createRole(new CreateRoleRequest(ERole.TELLER, Set.of(readDataPermission)));
         roleService.createRole(new CreateRoleRequest(ERole.USER, Set.of()));
 
         log.warn("{}s and {}s are created!", Entity.ROLE.getValue(), Entity.PERMISSION.getValue());

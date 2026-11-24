@@ -1,6 +1,7 @@
 package com.ercanbeyen.bankingapplication.dto;
 
 import com.ercanbeyen.bankingapplication.constant.enums.ActivityType;
+import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderApprovalStatus;
 import com.ercanbeyen.bankingapplication.constant.enums.BranchOrderStatus;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.validation.constraints.NotBlank;
@@ -18,6 +19,7 @@ public record BranchOrderDto(
         @NotNull(message = "Activity type should not be null")
         ActivityType activityType,
         BranchOrderStatus status,
+        BranchOrderApprovalStatus approvalStatus,
         String fileId,
         String content,
         @JsonFormat(

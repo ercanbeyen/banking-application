@@ -36,7 +36,6 @@ import com.itextpdf.text.DocumentException;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
-import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.openxml4j.exceptions.InvalidFormatException;
 import org.springframework.http.*;
 import org.springframework.security.access.AccessDeniedException;
@@ -61,7 +60,6 @@ import java.util.function.UnaryOperator;
 
 @RestController
 @RequestMapping("/api/v1/accounts")
-@Slf4j
 @SecurityRequirement(name = "Bearer Authentication")
 public class AccountController extends BaseController<AccountDto, AccountFilteringOption> {
     private final AccountService accountService;

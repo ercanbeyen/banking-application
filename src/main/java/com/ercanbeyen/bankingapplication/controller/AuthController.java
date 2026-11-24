@@ -26,7 +26,6 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.parameters.P;
@@ -38,7 +37,6 @@ import java.util.Set;
 
 @RestController
 @RequestMapping("/api/v1/auth")
-@Slf4j
 @RequiredArgsConstructor
 public class AuthController {
     private final AuthService authService;

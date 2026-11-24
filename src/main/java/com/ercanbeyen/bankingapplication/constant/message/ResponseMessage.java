@@ -11,6 +11,7 @@ public final class ResponseMessage {
     public static final String DELETE_SUCCESS = "%s is successfully deleted";
     public static final String FILE_UPLOAD_APPROVAL = "The file has been uploaded to the system. It is being processed in the background...";
     public static final String FILES_UPLOAD_APPROVAL = "The files have been uploaded to the system. They are being processed in the background...";
+    public static final String FILE_UPLOAD_ERROR = "Unable to upload " + Entity.FILE.getValue().toLowerCase() + "!";
     public static final String EMAIL_SENT_SUCCESS = "Email is successfully sent!";
     public static final String INVALID_CONTENT_TYPE = "Invalid content type";
     public static final String INVALID_PHOTO_CONTENT_TYPE = INVALID_CONTENT_TYPE + ". Valid content types for photo are " + PhotoUtil.getPlainContentTypes();
@@ -23,8 +24,10 @@ public final class ResponseMessage {
     public static final String TRANSACTION_FEE_CANNOT_BE_PAYED = "Transaction fee cannot be payed";
     public static final String PASSWORD_SHOULD_BE_DIFFERENT = "New password should be different from your last " + AuthUtil.getPasswordHistoryMaxSize() + " passwords!";
     public static final String BRANCH_ORDER_IS_NOT_AVAILABLE = "The status of the " + Entity.BRANCH_ORDER.getValue() + " is not suitable for %s!";
-    public static final String UNACCEPTABLE_CHANNEL = "Unacceptable channel!";
+    public static final String BRANCH_ORDER_STATUS_UPDATE_SUCCESS = Entity.BRANCH_ORDER.getValue() + " status is successfully updated!";
+    public static final String INVALID_BRANCH_ORDER_STATUS_UPDATE = "Invalid " + Entity.BRANCH_ORDER.getValue().toLowerCase() + " status update!";
     public static final String BRANCH_ORDER_STATUS_VIOLATED =  Entity.BRANCH_ORDER.getValue() + " status flow is violated!";
+    public static final String UNACCEPTABLE_CHANNEL = "Unacceptable channel!";
     public static final String USER_CANNOT_ACCESS_TO_ACCOUNT = "User cannot access to this " + Entity.ACCOUNT.getValue().toLowerCase() + "!";
     public static final String ACCESS_DENIED = "{\"error\": \"Access Denied - %s\"}";
 
